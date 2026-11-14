@@ -293,7 +293,8 @@ Measured over three runs of every round of eight seasons (2010, 2012, 2014, 2017
 - **Choosing a team here is for one race.** In a career the team is chosen once and kept.
 - **The figure-of-eight at Suzuka** draws its pit lane on the side that is "inside" for most of the
   lap. Circuit drawings get their polish in Stage 8, with the three sketched ones.
-- **No sound.** The brief does not ask for any.
+- **No sound yet.** The brief did not ask for any at the time; its version of 14 November adds sound
+  effects to the polish stage (Stage 8), with a weather forecast for the coming laps.
 
 ### Stand-ins
 
