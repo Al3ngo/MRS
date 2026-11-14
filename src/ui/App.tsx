@@ -6,7 +6,7 @@ import { useStore } from '../app/store';
 import { AlmanacScreen } from './screens/AlmanacScreen';
 import { CareerScreen } from './screens/CareerScreen';
 import { CareersScreen } from './screens/CareersScreen';
-import { RaceBenchScreen } from './screens/RaceBenchScreen';
+import { RaceScreen } from './screens/RaceScreen';
 import { SystemScreen } from './screens/SystemScreen';
 import { Toasts } from './Toasts';
 
@@ -26,15 +26,15 @@ export function App() {
       {current.screen === 'careers' && <CareersScreen />}
       {current.screen === 'career' && <CareerScreen key={current.slot} slot={current.slot} />}
       {current.screen === 'almanac' && <AlmanacScreen season={current.season} />}
-      {current.screen === 'bench' && (
-        <RaceBenchScreen
+      {current.screen === 'race' && (
+        <RaceScreen
           key={`${current.season}-${current.round}`}
           season={current.season}
           round={calendar(current.season)[current.round - 1]!}
         />
       )}
       {current.screen === 'system' && <SystemScreen />}
-      <Toasts aboveBar={current.screen === 'career' || current.screen === 'bench'} />
+      <Toasts aboveBar={current.screen === 'career' || current.screen === 'race'} />
     </>
   );
 }

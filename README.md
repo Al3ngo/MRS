@@ -3,13 +3,13 @@
 A single-player motorsport team management game for the phone, covering the 2010 to 2026 seasons.
 It installs to the home screen and plays with no network at all. A personal project.
 
-**Status: Stage 3 of 8 is built.** The app installs, runs offline and keeps three save slots
-(Stage 1); it carries the real data of all 17 seasons (Stage 2); and it now has its race engine:
-practice setups, knockout qualifying, and races with tyres, fuel, energy, weather, overtaking,
-incidents and safety cars, under the rules of each year (Stage 3). There is no race view yet: for
-now a race is run through a bench that shows the result (open the season almanac, pick a round,
-then **Simulate this race**). The career screen is still a test bench too. The build plan is in the
-brief; choices made along the way are in [DECISIONS.md](DECISIONS.md).
+**Status: Stage 4 of 8 is built.** The app installs, runs offline and keeps three save slots
+(Stage 1); it carries the real data of all 17 seasons (Stage 2); it has its race engine (Stage 3);
+and a race can now be watched and run from the pit wall (Stage 4): the circuit from above, the
+running order, engine and battery modes, pit stops, the driver on the radio, and 1x, 2x, 4x or
+skip. To race, open the season almanac, pick a round, then **Race this round** and choose a team.
+There is no season yet: each race stands alone, and the career screen is still a test bench. The
+build plan is in the brief; choices made along the way are in [DECISIONS.md](DECISIONS.md).
 
 ## Run it
 
@@ -36,7 +36,7 @@ npm run preview
 
 ## Put it on a phone
 
-`npm run build` writes the whole game to `dist/`: 15 files, about 505 kB. Upload that folder to any
+`npm run build` writes the whole game to `dist/`: 15 files, about 535 kB. Upload that folder to any
 static web host that serves **https** (GitHub Pages, Cloudflare Pages, Netlify, your own server). It
 works from the root of a site or from any sub-folder, with no configuration.
 
@@ -79,7 +79,7 @@ era. That last part takes most of a minute.
 
 `npm run e2e` builds the game twice and drives it in a real browser at phone size: first visit,
 offline reloads, a cold start with the server gone, backup and restore, an update arriving, hosting
-from a sub-folder, the almanac and the race bench. It needs Playwright with Chromium to be
+from a sub-folder, the almanac, and a race from the grid to its result. It needs Playwright with Chromium to be
 available to Node; it is deliberately not a dependency of the project.
 
 ## The balance lab
@@ -136,6 +136,7 @@ src/game/sim/           the race engine: practice, qualifying, the race, the pit
 src/platform/           the browser: save store, backup files, service worker, storage
 src/app/                app state, screen addresses, the actions screens call
 src/ui/                 screens and components
+src/ui/race/            the race view: circuit map, drawing, race clock, wording
 src/styles/             design tokens and styles
 src/dev/                staged save states for screenshots (left out of normal builds)
 scripts/                data generator, icon maker, the balance lab

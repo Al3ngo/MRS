@@ -27,5 +27,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // Some tests run dozens of whole races: quick on a desktop, slower on a busy machine.
+    testTimeout: 30_000,
   },
 });

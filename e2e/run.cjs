@@ -4,7 +4,7 @@
  *   Stage 1: it installs, it runs with no network, saves survive, backups round-trip, and a new
  *            version takes over only when asked.
  *   Stage 2: the season almanac shows the real calendars, teams, drivers and rules, offline too.
- *   Stage 3: a real round runs through the race engine to a full result, repeatably.
+ *   Stages 3 and 4: a real round is raced from the grid to a full result, with the pit wall's controls.
  *
  *   npm run e2e            (builds twice, then runs this)
  *
@@ -680,38 +680,103 @@ async function main() {
       expectEqual(log, [], 'browser errors in the almanac');
     });
 
-    // ── 7. Stage 3: the race engine, through its bench ──────────────────────────────────────
-    await check('race bench: a real round runs through the engine to a full result, offline', async () => {
+    // ── 7. Stages 3 and 4: a race, from the grid to the result ───────────────────────────────
+    const results = () => rows('.result');
+    const toResult = async () => {
+      await page.getByRole('button', { name: 'Skip to the end' }).click();
+      await page.locator('dialog').getByRole('button', { name: 'Skip to the end' }).click();
+      await page.getByRole('button', { name: 'Race it again' }).waitFor();
+    };
+
+    await check('race: a round leads to a choice of team, then the grid with a plan for each car', async () => {
       // Still offline from the check before.
       await page.goto(site.url + '#/almanac/2012');
       await page.getByRole('heading', { name: 'Season 2012' }).waitFor();
       await page.getByRole('button', { name: /British Grand Prix/ }).click();
-      await page.getByRole('button', { name: 'Simulate this race' }).click();
+      await page.getByRole('button', { name: 'Race this round' }).click();
       await page.getByRole('heading', { name: '2012 British Grand Prix' }).waitFor();
-      const result = await rows('.result');
+      expectEqual(await page.locator('.driver').count(), 13, 'twelve teams and the choice to watch');
+      await page.getByRole('button', { name: /^Ferrari/ }).click();
+      await page.getByRole('button', { name: 'Start the race' }).waitFor();
+      expectEqual((await results()).length, 24, 'cars on the grid');
+      expectEqual(await page.locator('.result--mine').count(), 2, 'the two Ferraris marked on the grid');
+      const plans = await page.locator('.plan__words').allInnerTexts();
+      expectEqual(plans.length, 2, 'a plan for each car');
+      expect(plans.every((plan) => /^Start on (soft|medium|hard|intermediate|wet)/.test(plan)), `plans: ${plans.join(' / ')}`);
+      await shot(page, '16-race-grid');
+    });
+
+    await check('race: the race runs on the map, and the pit wall can call a stop', async () => {
+      await page.getByRole('button', { name: 'Start the race' }).click();
+      await page.locator('.tower__row--mine').first().waitFor();
+      expectEqual(await page.locator('.tower__row:not(.tower__head)').count(), 24, 'cars in the running order');
+      expectEqual(await page.locator('.carcard').count(), 2, 'cards for the two cars');
+      await page.getByRole('button', { name: 'Speed 4x' }).click();
+      await page.waitForFunction(() => /Lap [3-9]/.test(document.querySelector('.race__lap')?.textContent ?? ''), null, { timeout: 30000 });
+      // The map is drawn: the canvas is not blank, and holds more than the grey of the track.
+      const colours = await page.locator('.race__map canvas').evaluate((canvas) => {
+        const { data } = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+        const seen = new Set();
+        for (let i = 0; i < data.length; i += 16) seen.add((data[i] >> 4) + ',' + (data[i + 1] >> 4) + ',' + (data[i + 2] >> 4));
+        return seen.size;
+      });
+      expect(colours > 6, `colours on the map: ${colours}`);
+      expect((await page.locator('.feed__line').count()) > 0, 'the feed has lines');
+
+      await page.getByRole('button', { name: 'Push' }).click();
+      expectEqual(await page.getByRole('button', { name: 'Push' }).getAttribute('aria-pressed'), 'true', 'engine mode set to push');
+      await page.getByRole('button', { name: 'Pause' }).click();
+      const lap = await page.locator('.race__lap').innerText();
+      await page.waitForTimeout(700);
+      expectEqual(await page.locator('.race__lap').innerText(), lap, 'the lap while paused');
+
+      await page.getByRole('button', { name: /^Pit/ }).click();
+      await page.getByRole('heading', { name: /^Pit stop: / }).waitFor();
+      await page.getByRole('radio', { name: /Hard/ }).click();
+      await shot(page, '17-race-pit');
+      await page.getByRole('button', { name: 'Box this lap' }).click();
+      await page.getByRole('button', { name: 'Box: Hard' }).waitFor();
+      await page.getByRole('button', { name: 'Speed 4x' }).click();
+      await page.locator('.feed__line', { hasText: 'Pit stop: hard tyres' }).first().waitFor({ timeout: 30000 });
+      await shot(page, '18-race-live');
+    });
+
+    await check('race: skipping runs it to a full result', async () => {
+      await toResult();
+      const result = await results();
       expectEqual(result.length, 24, 'cars classified in the 2012 British Grand Prix');
-      expect(/^1 \| .+ \| .+ · started \d+(st|nd|rd|th) \| Winner \| \d stops? · 2[56] pts$/.test(result[0]), `winner's row: "${result[0]}"`);
-      expect(/^2 \| .+ \| \+\d+\.\d \| \d stops? · 18 pts$/.test(result[1]), `second place: "${result[1]}"`);
+      expect(/^1 \| .+ \| .+ · started \d+(st|nd|rd|th) \| Winner \| \d stops? · 25 pts$/.test(result[0]), `winner's row: "${result[0]}"`);
+      expectEqual(await page.locator('.result--mine').count(), 2, 'the two Ferraris marked in the result');
       const facts = await rows('.facts .row');
       expect(facts.some((row) => /^Pole \| .+, 1:[2-5]\d\.\d{3}( on a wet track)?$/.test(row)), `pole lap shown: ${facts[0]}`);
       expect(facts.some((row) => /^Overtakes \| \d+ fought for, \d+ through errors$/.test(row)), 'overtakes counted');
       expect(facts.some((row) => /^Pit stops \| \d+, on Medium, Hard$/.test(row)), `tyres of the weekend: ${facts.join(' / ')}`);
-      await shot(page, '16-race-bench');
+      expect(/finished \d+(st|nd|rd|th)|retired/.test(await subtitle()), `how the cars did: "${await subtitle()}"`);
+      await shot(page, '19-race-result');
     });
 
-    await check('race bench: the same run is the same race; another run is another race', async () => {
-      const first = await rows('.result');
-      await page.reload();
-      await page.getByRole('heading', { name: '2012 British Grand Prix' }).waitFor();
-      expectEqual(await rows('.result'), first, 'run 1 after a reload');
-      await page.getByRole('button', { name: 'Run it again' }).click();
-      await page.getByRole('heading', { name: 'Run 2' }).waitFor();
-      const second = await rows('.result');
-      expectEqual(second.length, 24, 'cars classified in run 2');
-      expect(JSON.stringify(second) !== JSON.stringify(first), 'run 2 differs from run 1');
+    await check('race: watched without a team, the same race is the same every time; the next is another', async () => {
+      const watch = async () => {
+        await page.goto(site.url + '#/race/2019/12');
+        await page.reload();
+        await page.getByRole('button', { name: /Watch without a team/ }).click();
+        await page.getByRole('button', { name: 'Start the race' }).click();
+        await page.locator('.tower__row').first().waitFor();
+        expectEqual(await page.locator('.carcard').count(), 0, 'no car cards when watching');
+        await toResult();
+        return results();
+      };
+      const first = await watch();
+      expectEqual(first.length, 20, 'cars classified in the 2019 Hungarian Grand Prix');
+      expectEqual(await watch(), first, 'race 1, run again from a fresh page');
+      await page.getByRole('button', { name: 'Race it again' }).click();
+      await page.getByRole('button', { name: 'Start the race' }).click();
+      await toResult();
+      await page.getByRole('heading', { name: 'Race 2' }).waitFor();
+      expect(JSON.stringify(await results()) !== JSON.stringify(first), 'race 2 differs from race 1');
       await page.getByRole('button', { name: 'Almanac' }).click();
-      await page.getByRole('heading', { name: 'Season 2012' }).waitFor();
-      expectEqual(log, [], 'browser errors in the race bench');
+      await page.getByRole('heading', { name: 'Season 2019' }).waitFor();
+      expectEqual(log, [], 'browser errors in the race');
     });
 
     await context.close();

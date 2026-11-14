@@ -337,10 +337,10 @@ function RoundSheet({ round, season, onClose }: { round: RoundFact; season: numb
           class="button button--block button--primary"
           onClick={() => {
             onClose();
-            navigate({ screen: 'bench', season, round: round.round });
+            navigate({ screen: 'race', season, round: round.round });
           }}
         >
-          Simulate this race
+          Race this round
         </button>
         <button type="button" class="button button--block button--secondary" onClick={onClose}>
           Close

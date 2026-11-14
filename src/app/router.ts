@@ -11,7 +11,7 @@ export type Route =
   | { screen: 'careers' }
   | { screen: 'career'; slot: SlotId }
   | { screen: 'almanac'; season: number }
-  | { screen: 'bench'; season: number; round: number }
+  | { screen: 'race'; season: number; round: number }
   | { screen: 'system' };
 
 export function parseRoute(hash: string): Route {
@@ -25,10 +25,10 @@ export function parseRoute(hash: string): Route {
     const season = Number(parts[1]);
     return { screen: 'almanac', season: Number.isInteger(season) && season >= FIRST_SEASON && season <= LAST_SEASON ? season : FIRST_SEASON };
   }
-  if (parts[0] === 'bench') {
+  if (parts[0] === 'race') {
     const season = Number(parts[1]);
     const round = Number(parts[2]);
-    if (ROUNDS[season]?.some((entry) => entry.round === round)) return { screen: 'bench', season, round };
+    if (ROUNDS[season]?.some((entry) => entry.round === round)) return { screen: 'race', season, round };
   }
   return { screen: 'careers' };
 }
@@ -41,8 +41,8 @@ export function routeHash(route: Route): string {
       return `#/career/${route.slot}`;
     case 'almanac':
       return `#/almanac/${route.season}`;
-    case 'bench':
-      return `#/bench/${route.season}/${route.round}`;
+    case 'race':
+      return `#/race/${route.season}/${route.round}`;
     case 'system':
       return '#/system';
   }

@@ -241,7 +241,61 @@ Measured over three runs of every round of eight seasons (2010, 2012, 2014, 2017
   fastest car of a season wins more often than it really did, most of all in 2010 and 2012. Stage 8
   is for this; a career also stops following the real pecking order as soon as cars are developed.
 
+## Stage 4: the race view and its controls
+
+### The screen
+
+- **One screen that does not scroll.** From the top: lap and flag, the circuit from above, a
+  two-line feed, the running order, the player's two cars, their controls, and the pit and speed
+  buttons under the thumb. Only the running order scrolls.
+- **The map is flat shapes:** the circuit as one thick line, each car a dot in its team's colour,
+  the player's two larger, ringed in white and named. The line turns blue as the track gets wet and
+  gains a yellow edge under a safety car. Cars in the pits run beside the track; the safety car is
+  a yellow dot.
+- **Cars slow for the corners.** The engine only knows how far round the lap a car is; the map
+  works out how fast each part of a circuit can be taken from how sharply the real outline turns,
+  so cars bunch into the slow corners and stretch out on the straights.
+- **A circuit taller than it is wide is drawn on its side** when that lets it be drawn larger
+  (Monaco, for one). North is no longer up there; the space on a phone matters more.
+- **Hue stays with data**, as everywhere else: team colours, tyre colours, flags and warnings.
+  Controls are white and grey.
+
+### Time
+
+- **1x is ten times real time.** A real race lasts an hour and a half; nobody wants that on a
+  phone. At 1x a race takes about nine minutes, at 2x under five, at 4x a little over two. Golden
+  Lap's races are of that order.
+- **Skip runs the rest of the race at once**, after asking. The pit wall takes over the player's
+  cars for it, so they still make their stops.
+- **Opening a sheet stops the clock.** Nobody should lose places while choosing tyres.
+
+### The pit wall
+
+- **Two cars, one set of controls.** Tap a car's card to select it; the controls below act on it.
+  Each card shows position, tyre and its life left, fuel in hand (laps more or fewer than the
+  distance needs) and battery charge.
+- **Engine: save, standard, push. Battery: the modes of the season** (none in 2010; bank, normal,
+  boost with KERS; harvest, balanced, attack, overtake with a hybrid).
+- **The plan is chosen before the start** from the quickest few the pit wall can find, each with
+  its cost against the best. Planned stops are made without being called.
+- **A stop can be called at any time**, for any tyre. A stop called ahead of the plan takes the
+  place of the next one planned, so one early stop does not become two.
+- **A car can be handed to the pit wall and taken back**, from the same sheet.
+- **The feed follows the player's cars closely** (every pass, stop and radio message) and the rest
+  of the field only for what changes the race: flags, rain, retirements, the lead, fastest laps.
+
+### Left simple, or for later
+
+- **A race is not kept if the app is closed.** A race in progress is plain data and could be saved;
+  it will be, as part of a career, in Stage 5. For now leaving a race gives it up.
+- **Qualifying is run for you** before the grid is shown. Its own screen, and practice, belong to
+  the weekend in Stage 5.
+- **Choosing a team here is for one race.** In a career the team is chosen once and kept.
+- **The figure-of-eight at Suzuka** draws its pit lane on the side that is "inside" for most of the
+  lap. Circuit drawings get their polish in Stage 8, with the three sketched ones.
+- **No sound.** The brief does not ask for any.
+
 ### Stand-ins
 
-- **The race bench** (almanac, a round, Simulate this race) shows a result and the story of a
-  race. It is there so the engine can be tried on a phone before it has a race view.
+- **Racing a round from the almanac** is how a race is reached until there is a season to play. It
+  is close to the quick-race mode the brief lists as an extra, and will become it.

@@ -785,6 +785,7 @@ function enterPits(state: RaceState, car: CarState, crossedAt: number): void {
   const { setup } = state;
   const entrant = setup.grid[car.entrant]!;
   const call = car.pitCall!;
+  const forced = car.forcedStop;
   car.pitCall = null;
   car.forcedStop = false;
 
@@ -818,7 +819,10 @@ function enterPits(state: RaceState, car: CarState, crossedAt: number): void {
   if (!car.usedCompounds.includes(call.compound)) car.usedCompounds.push(call.compound);
   car.stops += 1;
   car.damage = 0;
+  const planned = car.plan.some((stop) => stop.lap <= car.lap);
   car.plan = car.plan.filter((stop) => stop.lap > car.lap);
+  // A stop the player called ahead of the plan is the plan's next stop, made early.
+  if (!car.auto && !forced && !planned) car.plan.shift();
   delete car.told['tyres-going'];
   delete car.told['tyres-gone'];
   note(state, { type: 'pit', car: car.id, compound: call.compound, stationary: Math.round(stationary * 10) / 10 });

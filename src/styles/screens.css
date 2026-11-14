@@ -663,3 +663,444 @@ button.slot__main:disabled .slot__go {
   flex: 1;
   min-width: 0;
 }
+
+.result--mine {
+  background: var(--raised);
+}
+
+/* ── The race (Stage 4) ────────────────────────────────────────────────────────────────────── */
+
+/* One screen, no page scroll: map, feed and controls keep their place; only the order scrolls. */
+.race {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: calc(var(--canvas) + 2 * var(--page));
+  height: 100dvh;
+  margin-inline: auto;
+  padding: env(safe-area-inset-top) max(var(--page), env(safe-area-inset-right)) 0
+    max(var(--page), env(safe-area-inset-left));
+  overflow: hidden;
+}
+
+.race__bar {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+}
+
+.race__bar .back {
+  justify-self: start;
+}
+
+.race__lap {
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.race__laps {
+  color: var(--faint);
+}
+
+.race__status {
+  justify-self: end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.race__weather {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.race__map {
+  flex: none;
+  height: clamp(150px, 28dvh, 290px);
+}
+
+.race__map canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.feed {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  height: 48px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.feed__line {
+  display: flex;
+  gap: 8px;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.feed__line--flag {
+  font-weight: 600;
+}
+
+.feed__line--old {
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.feed__who {
+  flex: none;
+  width: 32px;
+  font-family: var(--font-figure);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.feed__line--old .feed__who {
+  opacity: 0.6;
+}
+
+.feed__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tower {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+}
+
+.tower__row {
+  display: grid;
+  grid-template-columns: 22px 4px 40px minmax(0, 1fr) 42px 16px;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px 0 10px;
+  font-size: 13px;
+}
+
+.tower__row + .tower__row {
+  border-top: 1px solid var(--rule);
+}
+
+.tower__row--mine {
+  background: var(--raised);
+}
+
+.tower__head {
+  position: sticky;
+  top: 0;
+  height: 24px;
+  background: var(--surface);
+  color: var(--faint);
+}
+
+.tower__head .tower__gap,
+.tower__head .tower__tyre,
+.tower__head .tower__stops {
+  font-size: 11px;
+}
+
+.tower__head .tower__stops {
+  margin-left: -8px;
+}
+
+.tower__row--out {
+  color: var(--faint);
+}
+
+.tower__place {
+  font-size: 16px;
+  text-align: right;
+}
+
+.tower__colour {
+  flex: none;
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+}
+
+.tower__code {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tower__gap {
+  overflow: hidden;
+  font-size: 15px;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tower__tyre {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.tower__stops {
+  color: var(--faint);
+  font-size: 15px;
+  text-align: right;
+}
+
+/* A tyre, as the colour of its sidewall marking. */
+.tyre {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.tyre--large {
+  width: 16px;
+  height: 16px;
+}
+
+.pitwall {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.pitwall__cars {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.carcard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 10px;
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+.carcard--on {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.carcard__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.carcard__code {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.carcard__aid {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.carcard__place {
+  margin-left: auto;
+  font-size: 18px;
+}
+
+.carcard__line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.carcard__line--warn {
+  color: var(--warning);
+}
+
+/* Battery charge: a cell that empties, and the figure beside it. */
+.battery {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.battery__cell {
+  width: 18px;
+  height: 9px;
+  padding: 1.5px;
+  border-radius: 3px;
+  background: var(--control);
+}
+
+.battery__level {
+  display: block;
+  height: 100%;
+  border-radius: 1.5px;
+  background: var(--text);
+}
+
+.battery + .carcard__place {
+  margin-left: 0;
+}
+
+.control {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.control__name {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+/* A choice of a few settings, one of them on. */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.segmented__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.segmented__option.figure {
+  font-size: 16px;
+}
+
+.segmented__option--on {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.segmented__option:disabled {
+  color: var(--control);
+}
+
+.dock {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+}
+
+.dock__pit {
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.dock__speed {
+  flex: none;
+  width: 204px;
+}
+
+.dock__speed:only-child {
+  flex: 1;
+  width: auto;
+}
+
+/* A list of options in a sheet: wells in the surface, the chosen one raised. */
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 16px;
+  border-radius: var(--radius-inner);
+  background: var(--ground);
+  text-align: left;
+}
+
+.choice--on {
+  background: var(--raised);
+}
+
+.choice__name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.choice__detail {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.choice__note {
+  flex: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.choice__note.figure {
+  font-size: 16px;
+}
+
+.plan {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.plan__words {
+  color: var(--muted);
+  font-size: 13px;
+}
