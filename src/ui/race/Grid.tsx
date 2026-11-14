@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'preact/hooks';
 import { command, options, type CarState, type RaceState } from '../../game/sim';
 import { Sheet } from '../Sheet';
+import { placeWords } from './words';
 
 const tyreName = (state: RaceState, id: string): string => state.setup.compounds.find((tyre) => tyre.id === id)!.name;
 
@@ -28,7 +29,7 @@ export function Grid({ state, onChange }: { state: RaceState; onChange: () => vo
             <div class="plan" key={car.id}>
               <span class="round__text">
                 <span class="round__name">
-                  {grid[car.entrant]!.driverName} · P{car.entrant + 1}
+                  {grid[car.entrant]!.driverName}, starts {placeWords(car.entrant + 1)}
                 </span>
                 <span class="plan__words">{planWords(state, car)}</span>
               </span>
@@ -41,7 +42,7 @@ export function Grid({ state, onChange }: { state: RaceState; onChange: () => vo
           ))}
           <p class="muted">
             {dryStart
-              ? 'Planned stops are made for you. In the race you can stop sooner, change tyres or change your mind.'
+              ? 'Planned stops are made for you. During the race you can stop sooner, pick other tyres, or change the plan.'
               : 'The track is wet, so the cars start on wet-weather tyres. When to stop is yours to call.'}
           </p>
         </section>
@@ -98,7 +99,7 @@ function PlanSheet({ state, car, onClose }: { state: RaceState; car: CarState; o
   return (
     <Sheet title={`Plan: ${entrant.driverName}`} onClose={onClose}>
       <p class="sheet__text">
-        The quickest ways to run {setup.laps} laps here, by the pit wall's sums. Times are against the quickest.
+        The quickest ways to run {setup.laps} laps here, as the team works it out. Each shows the time it would lose against the quickest plan.
       </p>
       <div class="choices" role="radiogroup" aria-label="Race plan">
         {choices.map((choice) => {
@@ -126,11 +127,13 @@ function PlanSheet({ state, car, onClose }: { state: RaceState; car: CarState; o
                 <span class="choice__detail">
                   {choice.stops.length === 0
                     ? 'No stop'
-                    : `Stop on lap ${choice.stops.map((stop) => stop.after).join(' and ')}`}
+                    : choice.stops.length === 1
+                      ? `One stop, on lap ${choice.stops[0]!.after}`
+                      : `${choice.stops.length} stops, on laps ${choice.stops.map((stop) => stop.after).join(' and ')}`}
                 </span>
               </span>
               <span class="figure choice__note">
-                {choice.cost - best < 0.05 ? 'Quickest' : `+${(choice.cost - best).toFixed(1)} s`}
+                {choice.cost - best < 0.05 ? 'Quickest' : `+${(choice.cost - best).toFixed(1)}s`}
               </span>
             </button>
           );

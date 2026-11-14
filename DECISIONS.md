@@ -413,3 +413,66 @@ the clean measure is the one with no traffic, above. A test keeps that shape.
   the season's allowance is for Stage 6.
 - **The design checker warns of empty space on a desktop-sized window** on short screens (one card
   above the pinned action). The game is laid out for a phone held upright, where it passes.
+
+## Readability pass (before Stage 6)
+
+Asked for in chat: bars instead of percentages, explained setup options, arrows for the driver's
+feedback, and plain English throughout. The brief file I have does not include these items; this
+follows the chat. Nothing in the race engine or the balance changed: the code changes in the game
+logic are wording, one export, and a record of the setup each practice run was made with.
+
+### Bars
+
+- **Tyres, fuel, battery, track wetness and driver stress are bars**, wherever they appear: the car
+  cards, the timing tower (each car's tyre life beside its tyre colour), the race header (track
+  wetness), the pit-stop sheet (tyres now) and the session screens (track wetness, inline).
+- **One colour scale for all of them: green is fine, amber is worth watching, red needs action.**
+  The colour is a single flat colour picked from the scale, not a gradient. The bar's length
+  carries the same news, for anyone who does not tell red from green.
+- **What each bar measures**: tyre life left (full when new); fuel left, with the colour saying
+  whether it reaches the flag (green with half a lap or more to spare, red if it falls short);
+  battery charge; track wetness (empty when dry, full and red when flooded); stress (empty and green
+  when calm, red on the limit). Stress was not on the list, but it is the same kind of reading, so
+  it uses the same bar.
+- **No reading is shown as a percentage any more** (tyres were "59% left", the battery a figure).
+  Chances of rain and of a safety car on the circuit sheet stay as percentages: they are odds, not
+  readings.
+
+### Setup
+
+- **Under each end of each setting, one plain line on what it does in the race**: low drag is
+  faster on the straights with less grip in the corners, downforce the opposite; a stable rear is
+  steady and kind to the tyres but slow to turn in, a sharp front turns in quickly but the rear can
+  slide; soft suspension rides bumps and kerbs but leans in fast corners, stiff is sharp in fast
+  corners but jumpy over bumps. These describe the real cars. In the game the best setting depends
+  on the circuit (more wing where corners matter more), the driver and the weekend, and the
+  driver's feedback finds it.
+- **The driver's feedback is an arrow on the slider.** A small mark shows the setting he drove;
+  the arrow starts there and points the way to move, short for a little and long for a lot, with a
+  green ring for "spot on". The words ("Driver: raise it a lot") sit beside the setting's name. The
+  arrow stays where he drove when the dial is moved, so it is clear how far the setting has come
+  since.
+- **The slider fills in grey**, not the team colour: a red slider (Ferrari's) read like the red end
+  of the bars.
+
+### Plain English
+
+- **The race screen**: a "?" in the top bar opens a guide to every term on it (the timing tower's
+  columns, the bars, tyre colours, the two-tyre rule, DRS, the safety car and the virtual one, red
+  and chequered flags), listing only what that season has. A line under the controls says what the
+  setting just chosen does ("Harvest: slower, but charges the battery"). On short phones that line
+  gives way to the running order.
+- **Words changed**: "Box" is now "Stop at the end of this lap"; "pit wall" is "the team"; "Pole"
+  is "Started first"; "P4" is "4th"; "Q1" is "part 1 (Q1)" with the knockout explained;
+  "constructors" is "teams" (with the official name given once); "podium" is "top-three finish";
+  "compound" is "tyre type"; "downforce matters" is "cornering grip matters"; gaps carry an "s"
+  for seconds. Failure causes read as phrases ("retires with a KERS boost failure", not "retires:
+  kers"). Each season's rule changes are rewritten so that terms like power unit, MGU-H, active
+  aero and ground effect are said in plain words. Driver ratings each carry a line on what they
+  mean.
+- **Kept as they are**: the tyre names (Soft, Supersoft, Intermediate), DRS, KERS and the safety
+  car are the words the sport uses, and each is explained where it appears. Three-letter driver
+  codes stay in the timing tower, where full names do not fit, and the guide explains them; the
+  feed and the results use surnames.
+- **A name fix found on the way**: Pedro de la Rosa and Lucas di Grassi showed as "Rosa" and
+  "Grassi" in team lists; surnames now come from the record.

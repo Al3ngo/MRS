@@ -54,7 +54,7 @@ const toStep = (value: number): number => clamp(Math.round(value / 5) * 5, 0, 10
 
 /** Practice as it starts: the engineers' baseline on each car, no runs made. */
 export function startPractice(career: CareerState): PracticeState {
-  const practice: PracticeState = { dials: {}, runs: {}, hints: {} };
+  const practice: PracticeState = { dials: {}, runs: {}, hints: {}, tested: {} };
   for (const entrant of playerCars(career)) {
     const ideal = idealFor(career, entrant);
     const luck = { rng: seedOf(career, entrant.id, 'baseline') };
@@ -76,7 +76,12 @@ export function practiceRun(career: CareerState, practice: PracticeState, carId:
   if (!entrant || runs >= PRACTICE_RUNS) return practice;
   const luck = { rng: seedOf(career, carId, 'run', runs) };
   const hints = setupFeedback(luck, practice.dials[carId]!, idealFor(career, entrant), feedbackPrecision(entrant.ratings.consistency));
-  return { ...practice, runs: { ...practice.runs, [carId]: runs + 1 }, hints: { ...practice.hints, [carId]: hints } };
+  return {
+    ...practice,
+    runs: { ...practice.runs, [carId]: runs + 1 },
+    hints: { ...practice.hints, [carId]: hints },
+    tested: { ...practice.tested, [carId]: { ...practice.dials[carId]! } },
+  };
 }
 
 export function setDial(practice: PracticeState, carId: string, dial: (typeof DIALS)[number], value: number): PracticeState {

@@ -654,7 +654,7 @@ async function main() {
       await offlineReady(page);
       await page.getByRole('button', { name: /Season almanac/ }).click();
       await page.getByRole('heading', { name: 'Season 2010' }).waitFor();
-      expectEqual(await subtitle(), '19 races, 12 teams. Rule changes.', '2010 summary');
+      expectEqual(await subtitle(), '19 races, 12 teams. Some rule changes.', '2010 summary');
       const calendar = await rows('.round');
       expectEqual(calendar.length, 19, 'rounds listed for 2010');
       expect(/^Bahrain Grand Prix \| Bahrain · 14 Mar \| 1$/.test(calendar[0]), `first round of 2010: "${calendar[0]}"`);
@@ -693,7 +693,7 @@ async function main() {
 
       await page.getByRole('button', { name: '2014', exact: true }).click();
       await page.getByRole('tab', { name: 'Rules' }).click();
-      expectEqual(await subtitle(), '19 races, 11 teams. Major rules reset.', '2014 summary');
+      expectEqual(await subtitle(), '19 races, 11 teams. Big rule changes.', '2014 summary');
       await page.getByText('Double points', { exact: true }).waitFor();
       await page.getByText('1.6 litre V6 turbo hybrid', { exact: true }).waitFor();
       await shot(page, '15-almanac-rules');
@@ -704,7 +704,7 @@ async function main() {
       await page.goto(site.url + '#/almanac/2026');
       await page.reload();
       await page.getByRole('heading', { name: 'Season 2026' }).waitFor();
-      expectEqual(await subtitle(), '23 races, 11 teams. Major rules reset.', '2026 summary');
+      expectEqual(await subtitle(), '23 races, 11 teams. Big rule changes.', '2026 summary');
       const calendar = await rows('.round');
       expect(/^Bahrain Grand Prix \| Sepang · 4 Oct \| 16$/.test(calendar[15]), `round 16 of 2026: "${calendar[15]}"`);
       expect(!calendar.some((row) => row.includes('Saudi')), 'no Saudi Arabian Grand Prix in 2026');
@@ -778,8 +778,8 @@ async function main() {
       await page.getByRole('heading', { name: /^Pit stop: / }).waitFor();
       await page.getByRole('radio', { name: /Hard/ }).click();
       await shot(page, '17-race-pit');
-      await page.getByRole('button', { name: 'Box this lap' }).click();
-      await page.getByRole('button', { name: 'Box: Hard' }).waitFor();
+      await page.getByRole('button', { name: 'Stop at the end of this lap' }).click();
+      await page.getByRole('button', { name: 'Stopping: Hard' }).waitFor();
       await page.getByRole('button', { name: 'Speed 4x' }).click();
       await page.locator('.feed__line', { hasText: 'Pit stop: hard tyres' }).first().waitFor({ timeout: 30000 });
       await shot(page, '18-race-live');
@@ -792,9 +792,9 @@ async function main() {
       expect(/^1 \| .+ \| .+ · started \d+(st|nd|rd|th) \| Winner \| \d stops? · 25 pts$/.test(result[0]), `winner's row: "${result[0]}"`);
       expectEqual(await page.locator('.result--mine').count(), 2, 'the two Ferraris marked in the result');
       const facts = await rows('.facts .row');
-      expect(facts.some((row) => /^Pole \| .+, 1:[2-5]\d\.\d{3}( on a wet track)?$/.test(row)), `pole lap shown: ${facts[0]}`);
-      expect(facts.some((row) => /^Overtakes \| \d+ fought for, \d+ through errors$/.test(row)), 'overtakes counted');
-      expect(facts.some((row) => /^Pit stops \| \d+, on Medium, Hard$/.test(row)), `tyres of the weekend: ${facts.join(' / ')}`);
+      expect(facts.some((row) => /^Started first \| .+, 1:[2-5]\d\.\d{3} in qualifying( \(wet\))?$/.test(row)), `pole lap shown: ${facts[0]}`);
+      expect(facts.some((row) => /^Overtakes \| \d+(, plus \d+ past a car in trouble)?$/.test(row)), 'overtakes counted');
+      expect(facts.some((row) => /^Pit stops \| \d+ in all, on medium, hard tyres$/.test(row)), `tyres of the weekend: ${facts.join(' / ')}`);
       expect(/finished \d+(st|nd|rd|th)|retired/.test(await subtitle()), `how the cars did: "${await subtitle()}"`);
       await shot(page, '19-race-result');
     });
@@ -838,19 +838,22 @@ async function main() {
 
       await page.getByRole('button', { name: 'Go to practice' }).click();
       await page.getByRole('button', { name: 'Do a run (4 left)' }).click();
-      expectEqual(await page.locator('.dial__hint').count(), 3, 'feedback on each of the three settings');
-      const wing = page.getByLabel(/^Wing \d+$/);
+      expectEqual(await page.locator('.dial__said').count(), 3, 'feedback on each of the three settings, in words');
+      const arrows = (await page.locator('.dial__arrow').count()) + (await page.locator('.dial__spot').count());
+      expectEqual(arrows, 3, 'an arrow (or a spot-on mark) on each slider');
+      expectEqual(await page.locator('.dial__end').count(), 6, 'a plain line under each end of each setting');
+      const wing = page.locator('.dial').first().locator('.dial__value');
       const before = Number((await wing.innerText()).trim());
-      await page.getByRole('button', { name: before >= 100 ? 'Wing lower' : 'Wing higher' }).click();
+      await page.getByRole('button', { name: before >= 100 ? 'Wing: towards low drag' : 'Wing: towards downforce' }).click();
       expect(Number((await wing.innerText()).trim()) !== before, 'the wing setting moves');
       await page.getByRole('button', { name: 'Do a run (3 left)' }).waitFor();
       await shot(page, '21-career-practice');
       await page.getByRole('button', { name: 'Finish practice' }).click();
 
       expectEqual(await meta(), 'Qualifying', 'after practice');
-      for (const [part, cars] of [['Q1', 24], ['Q2', 17], ['Q3', 10]]) {
-        await page.getByRole('button', { name: `Run ${part}` }).click();
-        await page.getByRole('heading', { name: part, exact: true }).waitFor();
+      for (const [part, cars] of [[1, 24], [2, 17], [3, 10]]) {
+        await page.getByRole('button', { name: `Run part ${part} (Q${part})` }).click();
+        await page.getByRole('heading', { name: `Part ${part} times (Q${part})` }).waitFor();
         expectEqual(await page.locator('.result').count(), cars, `cars timed in ${part}`);
       }
       await shot(page, '22-career-qualifying');
@@ -885,10 +888,10 @@ async function main() {
       const points = await page.locator('.standing .standing__points').allInnerTexts();
       expectEqual(points[0], '25', 'points for the win, 2010 rules');
       expectEqual(await page.locator('.standing--mine').count(), 2, 'both McLaren drivers marked');
-      await page.getByRole('button', { name: 'Constructors' }).click();
+      await page.getByRole('button', { name: 'Teams', exact: true }).click();
       expect(Number((await page.locator('.standing .standing__points').first().innerText())) >= 25, 'constructors lead');
       await page.getByRole('tab', { name: 'Calendar' }).click();
-      expect(/won · You: /.test(await page.locator('.round').first().innerText()), 'round 1 shows its winner and our result');
+      expect(/won · Your cars: /.test(await page.locator('.round').first().innerText()), 'round 1 shows its winner and our result');
       await shot(page, '24-career-calendar');
       await backToCareers(page);
       const [first] = await slotTexts(page);

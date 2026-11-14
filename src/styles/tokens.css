@@ -34,6 +34,11 @@
   --accent: #c6f24e;
 
   /* Status, as a hue on a dark tint of itself */
+  /* Readings shown as bars (Meter.tsx): fine, worth watching, act now. */
+  --good: #52c26a;
+  --fair: #e5a93b;
+  --bad: #e5484d;
+
   --positive: #c6f24e;
   --negative: #e5484d;
   --warning: #e5a93b;

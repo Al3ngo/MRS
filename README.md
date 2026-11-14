@@ -11,7 +11,9 @@ sessions on sprint weekends and the race, round after round on the real calendar
 drivers' and constructors' championships scored by each year's rules, from 2010 to the end of
 2026. Between races there is nothing to manage yet: money, development, staff and contracts are
 Stage 6, and until then every team runs the drivers and car it really had. A single race can still
-be run from the season almanac. The build plan is in the brief; choices made along the way are in
+be run from the season almanac. A readability pass since then shows tyres, fuel, battery, track
+wetness and stress as coloured bars, explains every setup option, draws the driver's feedback as
+arrows on the setup sliders, and puts the whole game in plain English. The build plan is in the brief; choices made along the way are in
 [DECISIONS.md](DECISIONS.md).
 
 ## Run it

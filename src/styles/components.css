@@ -544,3 +544,51 @@ dialog.sheet[open]::backdrop {
     opacity: 0;
   }
 }
+
+/* ── Meters: readings as bars ──────────────────────────────────────────────────────────────── */
+
+.meter {
+  display: inline-block;
+  flex: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--raised);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.card .meter,
+.sheet .meter,
+.carcard--on .meter,
+.tower__row--mine .meter {
+  background: var(--control);
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.meter--small {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.meter--thin {
+  height: 3px;
+  border-radius: 0;
+}
+
+/* A reading inside a line of text: a short bar between its name and its word. */
+.reading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.reading__bar {
+  width: 32px;
+}

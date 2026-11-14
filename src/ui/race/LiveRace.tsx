@@ -2,25 +2,39 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { circuit as circuitById } from '../../game/data';
 import {
   PUSH_LEVELS,
-  STRESS_FREE,
-  STRESS_RAGGED,
   command,
   energyEffect,
   energyModes,
   idealKind,
   rainAt,
+  startFuel,
   tyreCare,
   type CarState,
   type Compound,
   type EngineMode,
   type RaceState,
 } from '../../game/sim';
-import { IconBack, IconPause, IconSkip } from '../icons';
+import { IconBack, IconHelp, IconPause, IconSkip } from '../icons';
+import { Meter, batteryMeter, fuelMeter, stressMeter, tyreMeter, wetMeter } from '../Meter';
 import { ConfirmSheet, Sheet } from '../Sheet';
 import { RaceClock, SPEEDS, type Speed } from './clock';
 import { drawScene, trackPath, type CarMark, type Scene } from './draw';
 import { fitTrack, trackMap, type Fit } from './track';
-import { ENGINE_WORDS, PUSH_WORDS, energyWords, feedLine, trackWords, type FeedLine } from './words';
+import {
+  ENGINE_HELP,
+  ENGINE_WORDS,
+  PUSH_HELP,
+  PUSH_WORDS,
+  STRESS_HELP,
+  causeLabel,
+  energyHelp,
+  energyWords,
+  feedLine,
+  placeWords,
+  raceGuide,
+  trackWords,
+  type FeedLine,
+} from './words';
 
 /**
  * The race as it runs: the circuit from above, the running order, the player's two cars and the
@@ -29,9 +43,8 @@ import { ENGINE_WORDS, PUSH_WORDS, energyWords, feedLine, trackWords, type FeedL
 
 const ENGINE_MODES: readonly EngineMode[] = ['save', 'standard', 'push'];
 
-/** How a stress figure reads: calm, rising, or on the limit. */
-const stressTone = (stress: number): string =>
-  stress >= STRESS_RAGGED ? ' stress--high' : stress >= STRESS_FREE ? ' stress--rising' : '';
+/** Which control the line under the controls is explaining. */
+type Help = 'push' | 'engine' | 'energy' | 'stress';
 
 interface Props {
   state: RaceState;
@@ -59,7 +72,8 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
   const [, setBeat] = useState(0);
   const [speed, setSpeed] = useState<Speed>(startPaused ? 0 : 1);
   const [selected, setSelected] = useState(0);
-  const [sheet, setSheet] = useState<'pit' | 'skip' | 'leave' | null>(null);
+  const [sheet, setSheet] = useState<'pit' | 'skip' | 'leave' | 'guide' | null>(null);
+  const [help, setHelp] = useState<Help>('push');
   const [feed, setFeed] = useState<FeedLine[]>([]);
   const canvas = useRef<HTMLCanvasElement>(null);
   const finished = useRef(onFinish);
@@ -183,10 +197,15 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
   return (
     <div class="race">
       <header class="race__bar">
-        <button type="button" class="back" onClick={() => setSheet('leave')}>
-          <IconBack />
-          Leave
-        </button>
+        <span class="race__left">
+          <button type="button" class="back" aria-label="Leave the race" onClick={() => setSheet('leave')}>
+            <IconBack />
+            <span class="race__leave">Leave</span>
+          </button>
+          <button type="button" class="icon-button" aria-label="What everything means" onClick={() => setSheet('guide')}>
+            <IconHelp />
+          </button>
+        </span>
         <span class="race__lap figure" aria-label={`Lap ${lap} of ${setup.laps}`}>
           Lap {lap}
           <span class="race__laps"> / {setup.laps}</span>
@@ -194,8 +213,9 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
         <span class="race__status">
           <FlagPill state={state} />
           <span class="race__weather">
+            <Meter {...wetMeter(state.wetness)} size="small" class="race__wet" label={`Track: ${trackWords(state.wetness).toLowerCase()}`} />
             {trackWords(state.wetness)}
-            {raining ? ', rain' : ''}
+            {raining ? ', raining' : ''}
           </span>
         </span>
       </header>
@@ -224,7 +244,7 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
           <span />
           <span class="tower__gap">Gap ahead</span>
           <span class="tower__tyre">Tyre</span>
-          <span class="tower__stops">Pit</span>
+          <span class="tower__stops">Stops</span>
         </li>
         {order.map((entry) => (
           <TowerRow key={entry.id} state={state} car={entry} />
@@ -245,12 +265,10 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
             ))}
           </div>
           <div class="control control--large">
-            <span class={`control__name stress${stressTone(car.stress)}`} role="img" aria-label={`Stress ${Math.round(car.stress)}%`}>
-              <span>Stress</span>
-              <span class="stress__gauge">
-                <span class="stress__level" style={{ width: `${Math.round(car.stress)}%` }} />
-              </span>
-            </span>
+            <button type="button" class="control__name stress" onClick={() => setHelp('stress')}>
+              <span class={car.stress >= 70 ? 'stress__word--high' : undefined}>Stress</span>
+              <Meter {...stressMeter(car.stress)} size="small" label={`Driver stress: ${stressMeter(car.stress).words}`} />
+            </button>
             <div class="segmented segmented--large" role="group" aria-label={`Push level, ${setup.grid[car.entrant]!.code}`}>
               {PUSH_LEVELS.map((level) => (
                 <button
@@ -259,7 +277,10 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
                   class={`segmented__option${car.push === level ? ' segmented__option--on' : ''}`}
                   aria-pressed={car.push === level}
                   disabled={car.status === 'out' || car.status === 'finished'}
-                  onClick={() => give({ type: 'push', car: car.id, level })}
+                  onClick={() => {
+                    give({ type: 'push', car: car.id, level });
+                    setHelp('push');
+                  }}
                 >
                   {PUSH_WORDS[level]}
                 </button>
@@ -276,7 +297,10 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
                   class={`segmented__option${car.engineMode === mode ? ' segmented__option--on' : ''}`}
                   aria-pressed={car.engineMode === mode}
                   disabled={car.status === 'out' || car.status === 'finished'}
-                  onClick={() => give({ type: 'engine-mode', car: car.id, mode })}
+                  onClick={() => {
+                    give({ type: 'engine-mode', car: car.id, mode });
+                    setHelp('engine');
+                  }}
                 >
                   {ENGINE_WORDS[mode]}
                 </button>
@@ -298,7 +322,10 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
                       car.status === 'finished' ||
                       (car.battery <= 0 && energyEffect(setup.rules, mode, true).charge < 0)
                     }
-                    onClick={() => give({ type: 'energy-mode', car: car.id, mode })}
+                    onClick={() => {
+                      give({ type: 'energy-mode', car: car.id, mode });
+                      setHelp('energy');
+                    }}
                   >
                     {energyWords(setup.rules, mode)}
                   </button>
@@ -306,6 +333,15 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
               </div>
             </div>
           )}
+          <p class="control__help" aria-live="polite">
+            {help === 'stress'
+              ? STRESS_HELP
+              : help === 'engine'
+                ? ENGINE_HELP[car.engineMode]
+                : help === 'energy' && setup.rules.recovery !== 'none'
+                  ? energyHelp(setup.rules, car.energyMode)
+                  : PUSH_HELP[car.push]}
+          </p>
         </section>
       )}
 
@@ -354,7 +390,7 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
           title="Skip to the end?"
           lines={[
             mine.length > 0
-              ? 'The rest of the race is run at once. The pit wall takes over your cars and makes their calls.'
+              ? 'The rest of the race is run at once. The team takes over your cars and makes their calls.'
               : 'The rest of the race is run at once.',
           ]}
           confirmLabel="Skip to the end"
@@ -365,6 +401,23 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
           }}
           onCancel={() => setSheet(null)}
         />
+      )}
+      {sheet === 'guide' && (
+        <Sheet title="What everything means" onClose={() => setSheet(null)}>
+          <dl class="guide">
+            {raceGuide(setup.rules).map((entry) => (
+              <div class="guide__entry" key={entry.term}>
+                <dt class="guide__term">{entry.term}</dt>
+                <dd class="guide__meaning">{entry.meaning}</dd>
+              </div>
+            ))}
+          </dl>
+          <div class="sheet__actions">
+            <button type="button" class="button button--block button--secondary" onClick={() => setSheet(null)}>
+              Close
+            </button>
+          </div>
+        </Sheet>
       )}
       {sheet === 'leave' && (
         <ConfirmSheet
@@ -388,8 +441,8 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
 function FlagPill({ state }: { state: RaceState }) {
   if (state.phase === 'finished' || state.chequered) return <span class="pill">Chequered flag</span>;
   if (state.flag.kind === 'safety-car') return <span class="pill pill--warning">Safety car</span>;
-  if (state.flag.kind === 'virtual-safety-car') return <span class="pill pill--warning">Virtual SC</span>;
-  return <span class="pill pill--positive">Green</span>;
+  if (state.flag.kind === 'virtual-safety-car') return <span class="pill pill--warning">Virtual safety car</span>;
+  return <span class="pill pill--positive">Green flag</span>;
 }
 
 const tyreOf = (state: RaceState, car: CarState): Compound =>
@@ -397,21 +450,21 @@ const tyreOf = (state: RaceState, car: CarState): Compound =>
 
 function pitLabel(state: RaceState, car: CarState): string {
   if (car.status === 'pit') return 'In the pits';
-  if (car.pitCall) return `Box: ${state.setup.compounds.find((tyre) => tyre.id === car.pitCall!.compound)!.name}`;
+  if (car.pitCall) return `Stopping: ${state.setup.compounds.find((tyre) => tyre.id === car.pitCall!.compound)!.name}`;
   const next = car.plan[0];
-  return next ? `Pit (lap ${next.lap})` : 'Pit stop';
+  return next ? `Pit stop (lap ${next.lap})` : 'Pit stop';
 }
 
 function TowerRow({ state, car }: { state: RaceState; car: CarState }) {
   const entrant = state.setup.grid[car.entrant]!;
   const tyre = tyreOf(state, car);
   let gap: string;
-  if (car.status === 'out') gap = car.retiredWith ?? 'Out';
+  if (car.status === 'out') gap = causeLabel(car.retiredWith ?? 'Out');
   else if (car.status === 'finished') gap = 'Finished';
   else if (car.status === 'pit') gap = 'In pits';
   else if (car.position === 1) gap = 'Leader';
   else if (car.lapsDown > 0) gap = `+${car.lapsDown} lap${car.lapsDown === 1 ? '' : 's'}`;
-  else gap = `+${car.interval.toFixed(1)}`;
+  else gap = `+${car.interval.toFixed(1)}s`;
   const gone = car.status === 'out';
   return (
     <li class={`tower__row${entrant.player ? ' tower__row--mine' : ''}${gone ? ' tower__row--out' : ''}`}>
@@ -421,7 +474,9 @@ function TowerRow({ state, car }: { state: RaceState; car: CarState }) {
       <span class="figure tower__gap">{gap}</span>
       <span class="tower__tyre">
         <span class="tyre" style={{ background: tyre.colour }} />
-        <span class="figure">{Math.floor(car.tyreLaps)}</span>
+        {(car.status === 'running' || car.status === 'pit') && (
+          <Meter {...tyreMeter(car.wear)} size="small" label={`${tyre.name} tyres, ${tyreMeter(car.wear).words}`} />
+        )}
       </span>
       <span class="figure tower__stops">{car.stops}</span>
     </li>
@@ -432,54 +487,52 @@ function CarCard({ state, car, on, onSelect }: { state: RaceState; car: CarState
   const { setup } = state;
   const entrant = setup.grid[car.entrant]!;
   const tyre = tyreOf(state, car);
-  const left = Math.round((1 - car.wear) * 100);
-  const spare = car.fuel - (setup.laps - Math.max(0, car.pos));
-  let first: string;
-  let second: string;
   const racing = car.status === 'running' || car.status === 'pit';
-  const charge = setup.rules.recovery !== 'none' && racing ? Math.round(car.battery) : null;
-  if (car.status === 'out') {
-    first = `Out: ${(car.retiredWith ?? 'retired').toLowerCase()}`;
-    second = `After ${car.lap} laps`;
-  } else if (car.status === 'finished') {
-    first = 'Finished';
-    second = `${car.stops} ${car.stops === 1 ? 'stop' : 'stops'}`;
-  } else {
-    first = `${tyre.name}, ${left > 0 ? `${left}% left` : 'worn out'}`;
-    second = `Fuel ${spare >= 0 ? '+' : '−'}${Math.abs(spare).toFixed(1)} laps`;
-  }
+  const spare = car.fuel - (setup.laps - Math.max(0, car.pos));
+  const tyres = tyreMeter(car.wear);
+  const fuel = fuelMeter(car.fuel, startFuel(setup), spare);
+  const battery = batteryMeter(car.battery);
+  const stress = stressMeter(car.stress);
   return (
     <button type="button" class={`carcard${on ? ' carcard--on' : ''}`} aria-pressed={on} onClick={onSelect}>
       <span class="carcard__head">
         <span class="tower__colour" style={{ background: entrant.colour }} />
         <span class="carcard__code">{entrant.code}</span>
-        {car.aidOpen && <span class="carcard__aid">DRS</span>}
-        {charge !== null && (
-          <span class="battery" role="img" aria-label={`Battery ${charge}%`}>
-            <span class="battery__cell">
-              <span class="battery__level" style={{ width: `${charge}%` }} />
+        {car.aidOpen && <span class="carcard__aid">DRS open</span>}
+        <span class="figure carcard__place">{car.status === 'out' ? '–' : placeWords(car.position)}</span>
+      </span>
+      {racing ? (
+        <span class="carcard__meters">
+          <span class="carcard__meter">
+            <span class="carcard__label">
+              <span class="tyre" style={{ background: tyre.colour }} />
+              Tyres
             </span>
-            <span class="figure">{charge}</span>
+            <Meter fill={tyres.fill} good={tyres.good} size="small" label={`${tyre.name} tyres, ${tyres.words}`} />
           </span>
-        )}
-        <span class="figure carcard__place">{car.status === 'out' ? '–' : `P${car.position}`}</span>
-      </span>
-      <span class={`carcard__line${left <= 12 && car.status === 'running' ? ' carcard__line--warn' : ''}`}>
-        {racing && <span class="tyre" style={{ background: tyre.colour }} />}
-        {racing ? `${left > 0 ? `${left}%` : 'Worn'}` : first}
-        {racing && <span class="carcard__full">{tyre.name.toLowerCase()}</span>}
-        {racing && (
-          <span class={`carcard__short${spare < 0 ? ' carcard__line--warn' : ''}`}>
-            · Fuel {spare >= 0 ? '+' : '−'}
-            {Math.abs(spare).toFixed(1)}
+          <span class="carcard__meter">
+            <span class="carcard__label">Fuel</span>
+            <Meter fill={fuel.fill} good={fuel.good} size="small" label={`Fuel: ${fuel.words}`} />
           </span>
-        )}
-      </span>
-      <span class={`carcard__line${spare < 0 && car.status === 'running' ? ' carcard__line--warn' : ''}`}>{second}</span>
-      {racing && (
-        <span class={`carcard__stress stress${stressTone(car.stress)}`} aria-hidden="true">
-          <span class="stress__level" style={{ width: `${Math.round(car.stress)}%` }} />
+          {setup.rules.recovery !== 'none' && (
+            <span class="carcard__meter">
+              <span class="carcard__label">Battery</span>
+              <Meter fill={battery.fill} good={battery.good} size="small" label={`Battery ${battery.words}`} />
+            </span>
+          )}
         </span>
+      ) : (
+        <>
+          <span class="carcard__line">
+            {car.status === 'out' ? `Out: ${causeLabel(car.retiredWith ?? 'Retired').toLowerCase()}` : 'Finished'}
+          </span>
+          <span class="carcard__line">
+            {car.status === 'out' ? `After ${car.lap} laps` : `${car.stops} ${car.stops === 1 ? 'stop' : 'stops'}`}
+          </span>
+        </>
+      )}
+      {racing && (
+        <Meter fill={stress.fill} good={stress.good} size="thin" class="carcard__stress" label={`Driver stress: ${stress.words}`} />
       )}
     </button>
   );
@@ -520,7 +573,15 @@ function PitSheet({
         {lapsLeft} {lapsLeft === 1 ? 'lap' : 'laps'} to go after this one. On {fitted.name.toLowerCase()} tyres for{' '}
         {Math.floor(car.tyreLaps)} laps.
       </p>
-      {owes && <p class="notice">A second dry compound still has to be used before the finish.</p>}
+      <div class="sheet__meter">
+        <span class="sheet__meter-label">Tyres now</span>
+        <Meter {...tyreMeter(car.wear)} label={`Tyres now: ${tyreMeter(car.wear).words}`} />
+      </div>
+      {owes && (
+        <p class="notice">
+          The rules say a car must use two different dry tyre types in a dry race. This car has used only one so far.
+        </p>
+      )}
       <div class="choices" role="radiogroup" aria-label="Tyres to fit">
         {setup.compounds.map((tyre) => (
           <button
@@ -534,7 +595,7 @@ function PitSheet({
             <span class="tyre tyre--large" style={{ background: tyre.colour }} />
             <span class="choice__name">{tyre.name}</span>
             <span class="choice__note">
-              {tyre.kind === 'dry' ? `about ${lasts(tyre)} laps` : tyre.kind === 'inter' ? 'for a wet track' : 'for heavy rain'}
+              {tyre.kind === 'dry' ? `lasts about ${lasts(tyre)} laps` : tyre.kind === 'inter' ? 'for a damp track' : 'for heavy rain'}
             </span>
           </button>
         ))}
@@ -545,7 +606,7 @@ function PitSheet({
           {car.plan
             .map((stop) => `lap ${stop.lap}, ${setup.compounds.find((tyre) => tyre.id === stop.compound)!.name.toLowerCase()}`)
             .join('; ')}
-          . A stop called now takes the place of the next one planned.
+          . A stop made now replaces the next planned one.
         </p>
       )}
       <div class="sheet__actions">
@@ -557,7 +618,7 @@ function PitSheet({
             onClose();
           }}
         >
-          Box this lap
+          Stop at the end of this lap
         </button>
         {car.pitCall && !car.forcedStop && (
           <button
@@ -579,7 +640,7 @@ function PitSheet({
             onClose();
           }}
         >
-          {car.auto ? 'Take this car back from the pit wall' : 'Let the pit wall run this car'}
+          {car.auto ? 'Make this car\'s calls yourself again' : 'Let the team make this car\'s calls'}
         </button>
         <button type="button" class="button button--block button--quiet" onClick={onClose}>
           Close

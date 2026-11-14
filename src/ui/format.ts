@@ -35,9 +35,9 @@ export function formatRaceTime(seconds: number): string {
   return `${hours}:${String(minutes).padStart(2, '0')}:${rest}`;
 }
 
-/** A gap to the car ahead or the winner: +4.2, +1:04.9. */
+/** A gap to the car ahead or the winner: +4.2s, +1:04.9. */
 export function formatGap(seconds: number): string {
-  if (seconds < 60) return `+${seconds.toFixed(1)}`;
+  if (seconds < 60) return `+${seconds.toFixed(1)}s`;
   const minutes = Math.floor(seconds / 60);
   return `+${minutes}:${(seconds - minutes * 60).toFixed(1).padStart(4, '0')}`;
 }

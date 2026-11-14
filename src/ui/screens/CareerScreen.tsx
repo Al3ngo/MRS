@@ -11,7 +11,8 @@ import {
   type CareerState,
   type SeasonRecord,
 } from '../../game/career';
-import { calendar, circuit as circuitById, teamsIn } from '../../game/data';
+import { calendar, circuit as circuitById, rulesFor, teamsIn } from '../../game/data';
+import { causeLabel } from '../race/words';
 import { driverStandings, teamStandings, type RoundResult } from '../../game/season/standings';
 import { sessionName, weekendSessions } from '../../game/season/weekend';
 import type { SlotId } from '../../platform/saves';
@@ -20,7 +21,16 @@ import { IconBack } from '../icons';
 import { ordinal } from '../race/Result';
 import { ConfirmSheet } from '../Sheet';
 import { TrackOutline } from '../TrackOutline';
-import { driverCode, driverName, teamLabel } from '../career/names';
+import { driverCode, driverLast, driverName, teamLabel } from '../career/names';
+
+/** "1 pt", "25 pts". */
+const points = (value: number): string => `${Number.isInteger(value) ? value : value.toFixed(1)} ${value === 1 ? 'pt' : 'pts'}`;
+
+/** How a season pays: "25 points for a win, down to 1 for tenth." */
+function pointsRule(season: number): string {
+  const table = rulesFor(season).racePoints;
+  return `Each race pays ${table[0]} points for a win, down to ${table.at(-1)} for ${ordinal(table.length)}.`;
+}
 import { StandingsTable } from '../career/Standings';
 
 /**
@@ -115,7 +125,7 @@ function TeamChoice({ career }: { career: CareerState }) {
                 <span class="round__text">
                   <span class="round__name">{team.name}</span>
                   <span class="round__where">
-                    {team.engineName} · {team.drivers.slice(0, 2).map((entry) => driverName(entry.id).split(' ').at(-1)).join(', ')}
+                    {team.engineName} · {team.drivers.slice(0, 2).map((entry) => driverLast(entry.id)).join(', ')}
                   </span>
                 </span>
                 <span class="team__figures">
@@ -275,6 +285,12 @@ function ThisWeekend({ career }: { career: CareerState }) {
           );
         })}
       </ol>
+      {round.sprintLaps !== null && (
+        <p class="muted">
+          A sprint weekend: as well as the Grand Prix there is a sprint, a short race of {round.sprintLaps} laps that pays
+          points to the top {rulesFor(season).sprintPoints.length}.
+        </p>
+      )}
       <ResultsSoFar career={career} />
     </section>
   );
@@ -287,14 +303,14 @@ function ResultsSoFar({ career }: { career: CareerState }) {
   const ours = sprint.filter((finish) => finish.team === career.team);
   return (
     <p class="muted">
-      Sprint: {ours.map((finish) => `${driverName(finish.driver).split(' ').at(-1)} ${finish.classified ? `P${finish.position}` : finish.status.toLowerCase()}`).join(', ')}.
+      Sprint: {ours.map((finish) => `${driverLast(finish.driver)} ${finish.classified ? ordinal(finish.position) : causeLabel(finish.status).toLowerCase()}`).join(', ')}.
       Won by {driverName(sprint[0]!.driver)}.
     </p>
   );
 }
 
 function finishWords(position: number, classified: boolean, status: string): string {
-  return classified ? ordinal(position) : status;
+  return classified ? ordinal(position) : causeLabel(status);
 }
 
 function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team: string; seasonOver: boolean }) {
@@ -321,7 +337,7 @@ function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team:
                   <dt class="row__label">{driverName(finish.driver)}</dt>
                   <dd class="row__value">
                     {finishWords(finish.position, finish.classified, finish.status)}
-                    {finish.points > 0 ? `, ${finish.points} pts` : ''}
+                    {finish.points > 0 ? `, ${points(finish.points)}` : ''}
                   </dd>
                 </div>
               ))}
@@ -340,10 +356,10 @@ function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team:
       ) : (
         <section class="card card--list" aria-labelledby="table-now">
           <h2 class="card__title card__title--list" id="table-now">
-            Constructors{ourTeam ? `: you are ${ordinal(ourTeam.position)}` : ''}
+            Teams' championship{ourTeam ? `: you are ${ordinal(ourTeam.position)}` : ''}
           </h2>
-          <StandingsTable rows={teams} kind="teams" season={season} team={team} limit={5} label="Constructors' championship" />
-          <h2 class="card__title card__title--list">Drivers</h2>
+          <StandingsTable rows={teams} kind="teams" season={season} team={team} limit={5} label="Teams' championship" />
+          <h2 class="card__title card__title--list">Drivers' championship</h2>
           <StandingsTable rows={drivers} kind="drivers" season={season} team={team} limit={5} label="Drivers' championship" />
         </section>
       )}
@@ -387,22 +403,22 @@ function SeasonReview({ record, team }: { record: SeasonRecord; team: string }) 
       </h2>
       <dl class="facts facts--tight">
         <div class="row">
-          <dt class="row__label">Drivers' champion</dt>
+          <dt class="row__label">Champion driver</dt>
           <dd class="row__value">
-            {driverName(champion.id)}, {champion.points} pts
+            {driverName(champion.id)}, {points(champion.points)}
           </dd>
         </div>
         <div class="row">
-          <dt class="row__label">Constructors' champion</dt>
+          <dt class="row__label">Champion team</dt>
           <dd class="row__value">
-            {teamLabel(constructors.id, record.season).name}, {constructors.points} pts
+            {teamLabel(constructors.id, record.season).name}, {points(constructors.points)}
           </dd>
         </div>
         {ours && (
           <div class="row">
             <dt class="row__label">{record.teamName}</dt>
             <dd class="row__value">
-              {ordinal(ours.position)}, {ours.points} pts
+              {ordinal(ours.position)}, {points(ours.points)}
             </dd>
           </div>
         )}
@@ -410,7 +426,7 @@ function SeasonReview({ record, team }: { record: SeasonRecord; team: string }) 
           <div class="row" key={row.id}>
             <dt class="row__label">{driverName(row.id)}</dt>
             <dd class="row__value">
-              {ordinal(row.position)}, {row.points} pts
+              {ordinal(row.position)}, {points(row.points)}
             </dd>
           </div>
         ))}
@@ -449,11 +465,11 @@ function CareerSummary({ slot, career, team }: { slot: SlotId; career: CareerSta
         </p>
         <dl class="facts facts--tight">
           <div class="row">
-            <dt class="row__label">Constructors' titles</dt>
+            <dt class="row__label">Teams' championships won</dt>
             <dd class="row__value">{titles}</dd>
           </div>
           <div class="row">
-            <dt class="row__label">Drivers' titles</dt>
+            <dt class="row__label">Drivers' championships won</dt>
             <dd class="row__value">{driverTitles}</dd>
           </div>
           <div class="row">
@@ -461,12 +477,12 @@ function CareerSummary({ slot, career, team }: { slot: SlotId; career: CareerSta
             <dd class="row__value">{wins}</dd>
           </div>
           <div class="row">
-            <dt class="row__label">Podiums</dt>
+            <dt class="row__label">Top-three finishes</dt>
             <dd class="row__value">{podiums}</dd>
           </div>
           <div class="row">
             <dt class="row__label">Best season</dt>
-            <dd class="row__value">{best < 99 ? `${ordinal(best)} in the constructors'` : '—'}</dd>
+            <dd class="row__value">{best < 99 ? `${ordinal(best)} among the teams` : '—'}</dd>
           </div>
         </dl>
       </section>
@@ -510,12 +526,12 @@ function PastSeasons({ seasons, team }: { seasons: readonly SeasonRecord[]; team
                 <span class="round__text">
                   <span class="round__name">{driverName(record.drivers[0]!.id)}</span>
                   <span class="round__where">
-                    Constructors: {teamLabel(record.teams[0]!.id, record.season).name}
+                    Champion team: {teamLabel(record.teams[0]!.id, record.season).name}
                   </span>
                 </span>
                 <span class="team__figures">
                   <span class="figure">{ours ? ordinal(ours.position) : '—'}</span>
-                  <span class="round__where">{ours ? `${ours.points} pts` : ''}</span>
+                  <span class="round__where">{ours ? points(ours.points) : ''}</span>
                 </span>
               </div>
             </li>
@@ -545,7 +561,7 @@ function Calendar({ career, team }: { career: CareerState; team: string }) {
                   <span class="round__name">{round.name}</span>
                   <span class="round__where">
                     {winner
-                      ? `${driverName(winner.driver)} won · You: ${ours.map((finish) => (finish.classified ? `P${finish.position}` : 'out')).join(', ')}`
+                      ? `${driverLast(winner.driver)} won · Your cars: ${ours.map((finish) => (finish.classified ? ordinal(finish.position) : 'retired')).join(', ')}`
                       : `${circuitById(round.circuit).name} · ${raceDay(round.date)}`}
                   </span>
                 </span>
@@ -580,21 +596,22 @@ function Championships({ career, team }: { career: CareerState; team: string }) 
             aria-pressed={kind === option}
             onClick={() => setKind(option)}
           >
-            {option === 'drivers' ? 'Drivers' : 'Constructors'}
+            {option === 'drivers' ? 'Drivers' : 'Teams'}
           </button>
         ))}
       </div>
-      <section class="card card--list" aria-label={`${season} ${kind === 'drivers' ? 'drivers' : 'constructors'}`}>
+      <section class="card card--list" aria-label={`${season} ${kind === 'drivers' ? "drivers'" : "teams'"} championship`}>
         <StandingsTable
           rows={rows}
           kind={kind}
           season={season}
           team={team}
-          label={kind === 'drivers' ? "Drivers' championship" : "Constructors' championship"}
+          label={kind === 'drivers' ? "Drivers' championship" : "Teams' championship"}
         />
         <p class="list-note">
-          After {career.results.length} of {roundsIn(season)} rounds. Points as the {season} rules paid them
-          {career.results.some((result) => result.sprint) ? ', sprints included' : ''}.
+          After {career.results.length} of {roundsIn(season)} rounds. {pointsRule(season)}
+          {career.results.some((result) => result.sprint) ? ' Sprints pay points too.' : ''}
+          {kind === 'teams' ? " The teams' championship (officially the constructors') adds up both cars' points." : ''}
         </p>
       </section>
       <PastSeasons seasons={career.history} team={team} />

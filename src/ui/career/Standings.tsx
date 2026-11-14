@@ -32,7 +32,7 @@ export function StandingsTable({
             : row.wins > 0
               ? `${row.wins} ${row.wins === 1 ? 'win' : 'wins'}`
               : row.podiums > 0
-                ? `${row.podiums} ${row.podiums === 1 ? 'podium' : 'podiums'}`
+                ? `${row.podiums} top-three ${row.podiums === 1 ? 'finish' : 'finishes'}`
                 : '';
         return (
           <li key={row.id} class={`standing${row.team === team ? ' standing--mine' : ''}`}>

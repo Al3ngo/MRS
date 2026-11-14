@@ -93,7 +93,7 @@ export function SystemScreen() {
                   {net.status === 'preparing' && 'Stay online until this says Stored.'}
                   {net.status === 'failed' && 'The download did not finish. Reload the page while online to try again.'}
                   {net.status === 'unsupported' &&
-                    'This browser window cannot store the game. It needs a secure (https) address and a browser with service workers.'}
+                    'This browser window cannot store the game. Open it from its web address (one starting with https) in an up-to-date browser, not a private window.'}
                 </p>
               </div>
 

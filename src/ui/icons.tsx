@@ -46,3 +46,12 @@ export const IconForward = () => (
     <path d="M7.5 4.5 13 10l-5.5 5.5" />
   </svg>
 );
+
+/** A question mark in a ring: what does this mean? */
+export const IconHelp = () => (
+  <svg {...base}>
+    <circle cx="10" cy="10" r="7.5" />
+    <path d="M7.9 7.7a2.2 2.2 0 1 1 3.2 2c-.7.4-1.1.9-1.1 1.6v.4" />
+    <circle cx="10" cy="14.2" r=".6" fill="currentColor" />
+  </svg>
+);

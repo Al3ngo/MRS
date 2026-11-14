@@ -31,7 +31,7 @@ type Tab = (typeof TABS)[number];
 const dayMonth = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const raceDay = (iso: string): string => dayMonth.format(new Date(`${iso}T00:00:00Z`));
 
-const RESET_WORDS = { none: 'Rules carried over', minor: 'Rule changes', major: 'Major rules reset' } as const;
+const RESET_WORDS = { none: 'Same rules as last year', minor: 'Some rule changes', major: 'Big rule changes' } as const;
 
 export function AlmanacScreen({ season }: { season: number }) {
   const [tab, setTab] = useState<Tab>('Calendar');
@@ -195,7 +195,8 @@ export function AlmanacScreen({ season }: { season: number }) {
         {tab === 'Rules' && <RulesCard rules={data.rules} cars={data.teams.length * 2} sprints={sprints} />}
 
         <p class="smallprint">
-          Facts from F1DB {SOURCES.f1db}. Ratings, colours and money are the game's own assessments.
+          Facts from F1DB, an open record of the sport ({SOURCES.f1db.split(' ')[0]}). Ratings, colours and money are the
+          game's own judgement.
         </p>
       </main>
 
@@ -231,30 +232,44 @@ const ENGINE_WORDS = {
   hybrid: '1.6 litre V6 turbo hybrid',
   'hybrid-2026': '1.6 litre V6 turbo, half the power electric',
 } as const;
-const RECOVERY_WORDS = { none: 'None', kers: 'KERS boost button', ers: 'Hybrid, with deployment modes' } as const;
-const AID_WORDS = { none: 'None', drs: 'DRS', 'active-aero': 'Active aero and overtake boost' } as const;
+// The hybrid engine's name is shown as it was called, with a plain gloss in the season's changes.
+const RECOVERY_WORDS = {
+  none: 'None',
+  kers: 'KERS: a boost button charged by braking',
+  ers: 'Hybrid battery, used in modes from Harvest to Overtake',
+} as const;
+const AID_WORDS = {
+  none: 'None',
+  drs: 'DRS: a rear-wing flap that opens on the straights',
+  'active-aero': 'Wings that flatten on the straights, and an electric overtake boost',
+} as const;
 const SHORT_RACE_WORDS = {
-  half: 'Half points below three-quarter distance',
-  'scale-if-not-resumed': 'Sliding scale, if stopped and not restarted',
-  scale: 'Sliding scale below three-quarter distance',
+  half: 'Half points if less than three quarters is run',
+  'scale-if-not-resumed': 'Fewer points the less is run, if stopped and not restarted',
+  scale: 'Fewer points the less is run, below three quarters',
 } as const;
 
 function RulesCard({ rules, cars, sprints }: { rules: Rules; cars: number; sprints: number }) {
   const [first, second] = knockoutCuts(cars);
   const facts: [string, string][] = [
     ['Engine', ENGINE_WORDS[rules.engine]],
-    ['Energy recovery', RECOVERY_WORDS[rules.recovery]],
-    ['Overtaking aid', AID_WORDS[rules.overtakingAid]],
-    ['Engines per car', rules.batteryAllowance === null ? `${rules.engineAllowance}` : `${rules.engineAllowance}, with ${rules.batteryAllowance} batteries`],
-    ['Tyres', `${rules.tyreSupplier}, ${rules.compoundsPerRace} dry compounds a race`],
+    ['Extra power', RECOVERY_WORDS[rules.recovery]],
+    ['Overtaking help', AID_WORDS[rules.overtakingAid]],
+    [
+      'Engines per car',
+      rules.batteryAllowance === null
+        ? `${rules.engineAllowance} for the season`
+        : `${rules.engineAllowance} for the season, and ${rules.batteryAllowance} batteries`,
+    ],
+    ['Tyres', `${rules.tyreSupplier}, ${rules.compoundsPerRace} dry types a race`],
     ['Wheels', `${rules.wheelInches} inch`],
-    ['Halo', rules.halo ? 'Yes' : 'No'],
+    ['Halo (head protection)', rules.halo ? 'Yes' : 'No'],
     ['Virtual safety car', rules.virtualSafetyCar ? 'Yes' : 'No'],
-    ['Budget cap', rules.budgetCap === null ? 'None' : `${rules.budgetCap}`],
-    ['Qualifying', `${cars} cars: ${first} out, ${second} out, 10 for pole`],
+    ['Budget cap (spending limit)', rules.budgetCap === null ? 'None' : `${rules.budgetCap}`],
+    ['Qualifying', `${cars} cars in three parts: ${first} out, then ${second} out, then 10 fight for the front`],
     ['Race points', rules.racePoints.join(' ')],
     ['Sprint points', sprints > 0 ? rules.sprintPoints.join(' ') : 'No sprints'],
-    ['Fastest lap', rules.fastestLapPoint ? '1 point, for a top-ten finisher' : 'No point'],
+    ['Fastest lap', rules.fastestLapPoint ? '1 point, if the driver finishes in the top ten' : 'No point'],
     ['Short race', SHORT_RACE_WORDS[rules.shortRace]],
   ];
   if (rules.doublePointsFinale) facts.splice(11, 0, ['Last race', 'Double points']);
@@ -284,7 +299,7 @@ function RulesCard({ rules, cars, sprints }: { rules: Rules; cars: number; sprin
             </div>
           ))}
         </dl>
-        <div class="compounds" aria-label="Dry tyre compounds, softest first">
+        <div class="compounds" aria-label="Dry tyre types, softest first">
           {rules.dryCompounds.map((compound) => (
             <span class="compound" key={compound.name}>
               <span class="compound__ring" style={{ borderColor: compound.colour }} />
@@ -307,12 +322,12 @@ function RoundSheet({ round, season, onClose }: { round: RoundFact; season: numb
     ['Circuit', `${venue.fullName}, ${venue.country}`],
     ['Race', `${round.laps} laps of ${round.lapKm.toFixed(3)} km`],
     ['Layout', `${round.turns} turns, ${venue.direction}, ${venue.type === 'permanent' ? 'permanent circuit' : `${venue.type} circuit`}`],
-    ['Power matters', SCALE_WORDS[traits.power]!],
-    ['Downforce matters', SCALE_WORDS[traits.downforce]!],
+    ['Engine power matters', SCALE_WORDS[traits.power]!],
+    ['Cornering grip matters', SCALE_WORDS[traits.downforce]!],
     ['Tyre wear', SCALE_WORDS[traits.tyreWear]!],
-    ['Overtaking', SCALE_WORDS[traits.overtaking]!],
-    ['Safety car', percent(traits.safetyCar)],
-    ['Rain', percent(traits.rain)],
+    ['Room to overtake', SCALE_WORDS[traits.overtaking]!],
+    ['Chance of a safety car', percent(traits.safetyCar)],
+    ['Chance of rain', percent(traits.rain)],
   ];
   if (round.sprintLaps !== null) facts.splice(2, 0, ['Sprint', `${round.sprintLaps} laps`]);
   return (
@@ -321,7 +336,7 @@ function RoundSheet({ round, season, onClose }: { round: RoundFact; season: numb
         <TrackOutline circuit={venue} stroke={2.2} />
       </div>
       {venue.outlineSource === 'sketched' && (
-        <p class="notice">This outline is a rough hand sketch, not a survey. See the Stage 2 notes.</p>
+        <p class="notice">This map is a rough sketch drawn by hand; the real track's shape differs a little.</p>
       )}
       <dl class="facts facts--tight">
         {facts.map(([label, value]) => (
@@ -350,13 +365,13 @@ function RoundSheet({ round, season, onClose }: { round: RoundFact; season: numb
   );
 }
 
-const RATING_NAMES: [keyof Ratings, string][] = [
-  ['pace', 'Pace'],
-  ['racecraft', 'Racecraft'],
-  ['consistency', 'Consistency'],
-  ['tyres', 'Tyre management'],
-  ['wet', 'Wet skill'],
-  ['aggression', 'Aggression'],
+const RATING_NAMES: [keyof Ratings, string, string][] = [
+  ['pace', 'Pace', 'Raw speed over one lap.'],
+  ['racecraft', 'Racecraft', 'Overtaking, defending and starts.'],
+  ['consistency', 'Consistency', 'How rarely he makes a mistake.'],
+  ['tyres', 'Tyre management', 'How long he makes his tyres last.'],
+  ['wet', 'Wet skill', 'Speed in the rain.'],
+  ['aggression', 'Aggression', 'How much risk he takes. Neither good nor bad.'],
 ];
 
 function DriverSheet({ entry, season, onClose }: { entry: DriverSeason; season: number; onClose: () => void }) {
@@ -368,9 +383,12 @@ function DriverSheet({ entry, season, onClose }: { entry: DriverSeason; season: 
         {entry.rookie ? ', this season' : ''}.
       </p>
       <dl class="ratings">
-        {RATING_NAMES.map(([key, label]) => (
+        {RATING_NAMES.map(([key, label, meaning]) => (
           <div class="rating" key={key}>
-            <dt>{label}</dt>
+            <dt>
+              {label}
+              <span class="rating__meaning">{meaning}</span>
+            </dt>
             <dd>
               <span class="rating__track">
                 <span class="rating__fill" style={{ width: `${entry.ratings[key]}%` }} />

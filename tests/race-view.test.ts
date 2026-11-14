@@ -173,15 +173,21 @@ describe('the words of a race', () => {
   });
 
   it('follow the player\'s cars closely and the field only for what matters', () => {
-    expect(say({ ...at, type: 'overtake', car: mine.id, on: other.id, position: 4, error: false })!.text).toMatch(/^Passes .+ for P4\.$/);
-    expect(say({ ...at, type: 'overtake', car: other.id, on: mine.id, position: 4, error: false })!.text).toMatch(/^Loses P4 to /);
+    expect(say({ ...at, type: 'overtake', car: mine.id, on: other.id, position: 4, error: false })!.text).toMatch(/^Passes .+ for 4th\.$/);
+    expect(say({ ...at, type: 'overtake', car: other.id, on: mine.id, position: 4, error: false })!.text).toMatch(/^Loses 4th to /);
     const [third, fourth] = race.setup.grid.filter((entrant) => !entrant.player);
     expect(say({ ...at, type: 'overtake', car: third!.id, on: fourth!.id, position: 9, error: false })).toBeNull();
     expect(say({ ...at, type: 'overtake', car: third!.id, on: fourth!.id, position: 1, error: false })!.text).toMatch(/^Takes the lead/);
     expect(say({ ...at, type: 'pit', car: other.id, compound: 'soft', stationary: 2.4 })).toBeNull();
-    expect(say({ ...at, type: 'pit', car: mine.id, compound: 'soft', stationary: 2.4 })!.text).toBe('Pit stop: soft tyres, 2.4 seconds.');
-    expect(say({ ...at, type: 'safety-car', reason: 'Accident' })).toMatchObject({ kind: 'flag', text: 'Safety car. Accident.' });
-    expect(say({ ...at, type: 'failure', car: other.id, cause: 'Gearbox', out: true })!.text).toBe('Retires: gearbox.');
+    expect(say({ ...at, type: 'pit', car: mine.id, compound: 'soft', stationary: 2.4 })!.text).toBe(
+      'Pit stop: soft tyres, 2.4 seconds standing still.',
+    );
+    expect(say({ ...at, type: 'safety-car', reason: 'Accident' })).toMatchObject({
+      kind: 'flag',
+      text: 'Safety car, for a crash. No overtaking.',
+    });
+    expect(say({ ...at, type: 'failure', car: other.id, cause: 'Gearbox', out: true })!.text).toBe('Retires with a gearbox failure.');
+    expect(say({ ...at, type: 'failure', car: other.id, cause: 'KERS', out: true })!.text).toBe('Retires with a KERS boost failure.');
     expect(say({ ...at, type: 'failure', car: other.id, cause: 'Gearbox', out: false })).toBeNull();
     expect(say({ ...at, type: 'finish', car: other.id, position: 1 })!.text).toBe(`${other.driverName} wins.`);
   });

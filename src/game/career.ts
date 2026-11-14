@@ -48,6 +48,8 @@ export interface PracticeState {
   dials: Record<string, CarSetup>;
   runs: Record<string, number>;
   hints: Record<string, Record<Dial, Hint> | null>;
+  /** The setup each car had on its last run: what the driver's hints refer to. Missing in older saves. */
+  tested?: Record<string, CarSetup | null>;
 }
 
 /** The round in progress. Cleared at the start of each round. */

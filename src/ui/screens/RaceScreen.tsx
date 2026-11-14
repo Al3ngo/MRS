@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'preact/hooks';
 import { goBack } from '../../app/router';
-import type { RoundFact } from '../../game/data';
+import { driver as driverById, type RoundFact } from '../../game/data';
 import {
   quickRace,
   realEntrants,
@@ -13,7 +13,7 @@ import { IconBack } from '../icons';
 import { Grid } from '../race/Grid';
 import { LiveRace } from '../race/LiveRace';
 import { RaceResult, ordinal, poleOf, type Pole } from '../race/Result';
-import { trackWords } from '../race/words';
+import { TrackReading } from '../race/TrackReading';
 
 /**
  * A race at a real round: choose a team (or none, to watch), look over the grid and the plan, run
@@ -63,7 +63,7 @@ export function RaceScreen({ season, round }: { season: number; round: RoundFact
         <main class="canvas">
           <div class="title-row">
             <h1 class="title">{title}</h1>
-            <p class="subtitle">Choose the team to run. Its two cars are yours for the race.</p>
+            <p class="subtitle">Choose the team to run. Its two cars are yours to manage for the race.</p>
           </div>
           <TeamList
             season={season}
@@ -71,6 +71,7 @@ export function RaceScreen({ season, round }: { season: number; round: RoundFact
             onPick={(picked) => {
               setTeam(picked);
               setStep('grid');
+              window.scrollTo(0, 0);
             }}
           />
         </main>
@@ -82,8 +83,8 @@ export function RaceScreen({ season, round }: { season: number; round: RoundFact
             <div class="title-row">
               <h1 class="title">{title}</h1>
               <p class="subtitle">
-                {prepared.state.setup.laps} laps. Track: {trackWords(prepared.state.wetness).toLowerCase()}. Pole:{' '}
-                {prepared.state.setup.grid[0]!.driverName}, {formatLap(prepared.pole.time ?? 0)}.
+                {prepared.state.setup.laps} laps. <TrackReading wetness={prepared.state.wetness} /> Starting first:{' '}
+                {prepared.state.setup.grid[0]!.driverName}, fastest in qualifying ({formatLap(prepared.pole.time ?? 0)}).
               </p>
             </div>
             <Grid state={prepared.state} onChange={() => setBeat((beat) => beat + 1)} />
@@ -138,7 +139,7 @@ function resultLine(state: RaceState): string {
   }
   return mine
     .map((car) => {
-      const name = grid[car.entrant]!.driverName.split(' ').at(-1);
+      const name = driverById(grid[car.entrant]!.driver).lastName;
       return car.status === 'out' ? `${name} retired` : `${name} finished ${ordinal(car.position)}`;
     })
     .join(', ')
@@ -171,7 +172,7 @@ function TeamList({ season, round, onPick }: { season: number; round: number; on
           <button type="button" class="driver" onClick={() => onPick(null)}>
             <span class="round__text">
               <span class="round__name">Watch without a team</span>
-              <span class="round__where">Every car is run by its own pit wall</span>
+              <span class="round__where">Every team makes its own calls; you just watch</span>
             </span>
           </button>
         </li>

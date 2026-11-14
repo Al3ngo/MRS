@@ -8,6 +8,7 @@ import {
   type ResultRow,
 } from '../../game/sim';
 import { formatGap, formatLap, formatRaceTime } from '../format';
+import { causeLabel, causePhrase } from './words';
 
 /** What a finished race is shown as: its numbers, its result and its turning points. */
 
@@ -50,23 +51,26 @@ function summary({ state, rows, pole }: Outcome): [string, string][] {
 
   const cautions = [
     count('safety-car') > 0 ? plural(count('safety-car'), 'safety car') : '',
-    count('virtual-safety-car') > 0 ? `${count('virtual-safety-car')} virtual` : '',
+    count('virtual-safety-car') > 0 ? plural(count('virtual-safety-car'), 'virtual safety car') : '',
     state.redFlags > 0 ? plural(state.redFlags, 'red flag') : '',
   ].filter(Boolean);
 
   const winner = rows[0]!;
   const facts: [string, string][] = [
     [
-      'Pole',
+      'Started first',
       pole.time === null
-        ? `${driverById(pole.driver).lastName}, from the sprint`
-        : `${driverById(pole.driver).lastName}, ${formatLap(pole.time)}${pole.wet ? ' on a wet track' : ''}`,
+        ? `${driverById(pole.driver).lastName}, as sprint winner`
+        : `${driverById(pole.driver).lastName}, ${formatLap(pole.time)} in qualifying${pole.wet ? ' (wet)' : ''}`,
     ],
     ['Race time', winner.time !== null ? formatRaceTime(winner.time) : `${winner.laps} laps`],
     ['Weather', weather],
     ['Safety car', cautions.join(', ') || 'None'],
-    ['Overtakes', `${fought} fought for, ${passes.length - fought} through errors`],
-    ['Pit stops', `${count('pit')}, on ${dry.join(', ')}`],
+    [
+      'Overtakes',
+      passes.length - fought > 0 ? `${fought}, plus ${passes.length - fought} past a car in trouble` : `${fought}`,
+    ],
+    ['Pit stops', `${count('pit')} in all, on ${dry.join(', ').toLowerCase()} tyres`],
   ];
   if (state.fastestLap) {
     const holder = setup.grid.find((entrant) => entrant.id === state.fastestLap!.car)!;
@@ -86,13 +90,13 @@ function story(state: RaceState): { lap: number; text: string }[] {
   const lines: { lap: number; text: string }[] = [];
   for (const event of state.events) {
     let text: string | null = null;
-    if (event.type === 'safety-car') text = `Safety car: ${event.reason.toLowerCase()}`;
-    else if (event.type === 'virtual-safety-car') text = `Virtual safety car: ${event.reason.toLowerCase()}`;
+    if (event.type === 'safety-car') text = `Safety car, for ${causePhrase(event.reason)}`;
+    else if (event.type === 'virtual-safety-car') text = `Virtual safety car, for ${causePhrase(event.reason)}`;
     else if (event.type === 'green') text = 'Racing again';
-    else if (event.type === 'red-flag') text = event.resumed ? 'Red flag. The race is restarted later' : 'Red flag. The race is not restarted';
+    else if (event.type === 'red-flag') text = event.resumed ? 'Red flag: stopped, then restarted later' : 'Red flag: stopped for good';
     else if (event.type === 'rain' && event.state !== 'coming') text = event.state === 'started' ? 'Rain begins' : 'The rain stops';
     else if (event.type === 'crash') text = `${name(event.car)} crashes out`;
-    else if (event.type === 'failure' && event.out) text = `${name(event.car)} retires: ${event.cause.toLowerCase()}`;
+    else if (event.type === 'failure' && event.out) text = `${name(event.car)} retires with ${causePhrase(event.cause)}`;
     else if (event.type === 'out-of-fuel') text = `${name(event.car)} runs out of fuel`;
     else if (event.type === 'collision' && event.out.length > 0) {
       text = `${name(event.car)} and ${name(event.with)} collide: ${event.out.map(name).join(' and ')} out`;
@@ -132,7 +136,7 @@ export function RaceResult({ state, pole, title }: { state: RaceState; pole: Pol
                 ? 'Winner'
                 : row.time !== null && winner.time !== null
                   ? formatGap(row.time - winner.time)
-                  : row.status;
+                  : causeLabel(row.status);
             return (
               <li key={row.car}>
                 <div class={`result${row.classified ? '' : ' result--out'}${entrant.player ? ' result--mine' : ''}`}>

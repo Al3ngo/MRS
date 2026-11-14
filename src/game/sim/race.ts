@@ -129,7 +129,7 @@ function tell(state: RaceState, car: CarState, message: RadioMessage, every: num
 // ── Setting up ──────────────────────────────────────────────────────────────────────────────
 
 /** Fuel at the start: the distance at standard mode, and a little over. */
-const startFuel = (setup: SessionSetup): number => setup.laps * 1.012 + 0.3;
+export const startFuel = (setup: SessionSetup): number => setup.laps * 1.012 + 0.3;
 
 function newCar(state: RaceState, entrant: Entrant, index: number): CarState {
   const { setup } = state;

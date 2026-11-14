@@ -592,9 +592,16 @@ button.slot__main:disabled .slot__go {
 }
 
 .rating dt {
+  display: flex;
+  flex-direction: column;
   margin-bottom: 4px;
-  color: var(--muted);
+  color: var(--text);
   font-size: 13px;
+}
+
+.rating__meaning {
+  color: var(--faint);
+  font-size: 12px;
 }
 
 .rating dd {
@@ -686,17 +693,22 @@ button.slot__main:disabled .slot__go {
 .race__bar {
   flex: none;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   height: 52px;
 }
 
-.race__bar .back {
-  justify-self: start;
+.race__left {
+  display: flex;
+  align-items: center;
 }
 
 .race__lap {
+  justify-self: center;
+}
+
+.race__lap.figure {
   font-size: 20px;
   white-space: nowrap;
 }
@@ -714,10 +726,28 @@ button.slot__main:disabled .slot__go {
 }
 
 .race__weather {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   font-size: 12px;
   line-height: 16px;
   white-space: nowrap;
+}
+
+.race__wet {
+  width: 28px;
+}
+
+/* On the narrowest phones "Leave" is the arrow alone; its name stays for screen readers. */
+@media (max-width: 389px) {
+  .race__leave {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
 }
 
 .race__map {
@@ -785,7 +815,7 @@ button.slot__main:disabled .slot__go {
 
 .tower__row {
   display: grid;
-  grid-template-columns: 22px 4px 40px minmax(0, 1fr) 42px 16px;
+  grid-template-columns: 22px 4px 40px minmax(0, 1fr) 40px 32px;
   align-items: center;
   gap: 8px;
   height: 34px;
@@ -816,7 +846,7 @@ button.slot__main:disabled .slot__go {
 }
 
 .tower__head .tower__stops {
-  margin-left: -8px;
+  text-align: right;
 }
 
 .tower__row--out {
@@ -852,8 +882,16 @@ button.slot__main:disabled .slot__go {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 5px;
   font-size: 15px;
+}
+
+.tower__tyre .meter {
+  width: 22px;
+}
+
+.tower__head .tower__tyre {
+  justify-content: center;
 }
 
 .tower__stops {
@@ -915,8 +953,7 @@ button.slot__main:disabled .slot__go {
   left: 0;
   right: 0;
   bottom: 0;
-  display: block;
-  height: 3px;
+  width: auto;
 }
 
 .carcard--on {
@@ -963,43 +1000,34 @@ button.slot__main:disabled .slot__go {
   color: var(--warning);
 }
 
-.carcard__short {
-  display: none;
-  white-space: pre;
-}
-
-.carcard__full {
-  white-space: pre;
-}
-
-/* Battery charge: a cell that empties, and the figure beside it. */
-.battery {
-  display: inline-flex;
-  align-items: center;
+.carcard__meters {
+  display: flex;
+  flex-direction: column;
   gap: 5px;
-  margin-left: auto;
+  margin-top: 4px;
+}
+
+.carcard__meter {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.carcard__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 11px;
+  line-height: 14px;
 }
 
-.battery__cell {
-  width: 18px;
-  height: 9px;
-  padding: 1.5px;
-  border-radius: 3px;
-  background: var(--control);
+.carcard__label .tyre {
+  width: 8px;
+  height: 8px;
 }
 
-.battery__level {
-  display: block;
-  height: 100%;
-  border-radius: 1.5px;
-  background: var(--text);
-}
-
-.battery + .carcard__place {
-  margin-left: 0;
-}
 
 .control {
   display: grid;
@@ -1024,38 +1052,53 @@ button.slot__main:disabled .slot__go {
   font-weight: 600;
 }
 
-/* Driver stress: a gauge that fills, grey while harmless, white as it rises, amber at the limit. */
+/* Driver stress: the label above its bar. A button: tapping it explains stress. */
 .stress {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 6px;
+  min-height: 44px;
+  justify-content: center;
+  text-align: left;
 }
 
-.stress__gauge {
-  display: block;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--raised);
-  overflow: hidden;
+.stress__word--high {
+  color: var(--bad);
 }
 
-.stress__level {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  background: var(--faint);
+/* What the chosen setting does, in a line under the controls. */
+.control__help {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
 }
 
-.stress--rising .stress__level {
-  background: var(--text);
+/* The race guide: terms and their meanings. */
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.stress--high .stress__level {
-  background: var(--warning);
+.guide__term {
+  font-weight: 600;
 }
 
-.stress--high > span:first-child {
-  color: var(--warning);
+.guide__meaning {
+  color: var(--muted);
+}
+
+.sheet__meter {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.sheet__meter-label {
+  color: var(--muted);
 }
 
 /* A choice of a few settings, one of them on. */
@@ -1193,13 +1236,18 @@ button.slot__main:disabled .slot__go {
     padding: 8px 10px;
   }
 
-  .carcard__line + .carcard__line,
-  .carcard__full {
-    display: none;
+  .carcard__meters {
+    gap: 3px;
+    margin-top: 2px;
   }
 
-  .carcard__short {
-    display: inline;
+  .carcard__label {
+    font-size: 10px;
+    line-height: 12px;
+  }
+
+  .control__help {
+    display: none;
   }
 
   .pitwall {
@@ -1332,7 +1380,7 @@ button.slot__main:disabled .slot__go {
 .dial__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   min-height: 28px;
 }
 
@@ -1340,11 +1388,31 @@ button.slot__main:disabled .slot__go {
   font-weight: 600;
 }
 
+/* What the driver said, in words, beside the setting's name. */
+.dial__said {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dial__said--good {
+  color: var(--good);
+}
+
+.dial__value {
+  margin-left: auto;
+  font-size: 20px;
+}
+
 .dial__control {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .dial__step {
@@ -1353,8 +1421,18 @@ button.slot__main:disabled .slot__go {
   font-size: 22px;
 }
 
+/* The slider: a bar, the thumb where the setting is, and the driver's arrow above the bar. */
 .dial__track {
+  position: relative;
   flex: 1;
+  height: 48px;
+}
+
+.dial__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 28px;
   height: 8px;
   border-radius: 4px;
   background: var(--raised);
@@ -1364,25 +1442,100 @@ button.slot__main:disabled .slot__go {
 .dial__fill {
   display: block;
   height: 100%;
-  border-radius: 4px;
-  background: var(--accent);
+  background: var(--faint);
 }
 
-.dial__value {
-  width: 30px;
-  font-size: 20px;
-  text-align: right;
+.dial__thumb {
+  position: absolute;
+  top: 25px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+/* Where the car was set on the last run: the arrow starts here. */
+.dial__tested {
+  position: absolute;
+  top: 6px;
+  width: 2px;
+  height: 18px;
+  margin-left: -1px;
+  background: var(--muted);
+}
+
+.dial__arrow {
+  position: absolute;
+  top: 13px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--text);
+}
+
+/* The arrowhead: a triangle drawn with borders, at the end the driver wants. */
+.dial__arrow::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  border-top: 7.5px solid transparent;
+  border-bottom: 7.5px solid transparent;
+}
+
+.dial__arrow--right::after {
+  right: -10px;
+  border-left: 11px solid var(--text);
+}
+
+.dial__arrow--left::after {
+  left: -10px;
+  border-right: 11px solid var(--text);
+}
+
+/* "Spot on": a green ring round the setting he drove. */
+.dial__spot {
+  position: absolute;
+  top: 8px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border: 2px solid var(--good);
+  border-radius: 50%;
 }
 
 .dial__ends {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.dial__end {
   display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  padding: 0 60px;
-  color: var(--faint);
+  flex-direction: column;
+  gap: 2px;
+  color: var(--muted);
   font-size: 12px;
+  line-height: 16px;
+}
+
+.dial__end--high {
+  text-align: right;
+}
+
+.dial__end-name {
+  color: var(--text);
+  font-weight: 500;
 }
 
 .control--wide {
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 92px minmax(0, 1fr);
+}
+
+.control--wide .control__name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

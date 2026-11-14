@@ -171,27 +171,30 @@ const CHANGES: Readonly<Record<number, { reset: Reset; changes: readonly string[
   2011: {
     reset: 'minor',
     changes: [
-      'DRS: a movable rear wing for overtaking.',
-      'KERS returns: a boost button fed by braking energy.',
+      'DRS: a flap in the rear wing that opens on the straights for a car within a second of the one ahead, to help it overtake.',
+      'KERS returns: a boost button charged by energy saved when braking.',
       'Pirelli replaces Bridgestone as tyre supplier.',
     ],
   },
   2014: {
     reset: 'major',
     changes: [
-      '1.6 litre V6 turbo hybrid power units replace the V8s: engine, turbo, two motor-generators, battery.',
-      'Fuel flow is limited and each car has 100 kg of fuel for the race.',
-      'Five of each power unit part per car; more means grid penalties.',
+      'New engines: a smaller 1.6 litre turbo with a hybrid system (electric motors and a battery) replaces the V8.',
+      'Fuel is limited: 100 kg for the race, and a cap on how fast it can be used.',
+      'Five of each engine part per car for the season; using more means starting further back (a grid penalty).',
       'The last race of the season scores double points (this season only).',
     ],
   },
   2015: {
     reset: 'none',
-    changes: ['Virtual safety car introduced.', 'Double points dropped. Four power units per car.'],
+    changes: [
+      'Virtual safety car: all cars slow to a set speed while a crash is cleared, without a car to follow.',
+      'Double points dropped. Four engines per car for the season.',
+    ],
   },
   2016: {
     reset: 'none',
-    changes: ['Three dry tyre compounds per race instead of two, with a new Ultrasoft.'],
+    changes: ['Three types of dry tyre at each race instead of two, with a new, softer Ultrasoft.'],
   },
   2017: {
     reset: 'major',
@@ -199,7 +202,7 @@ const CHANGES: Readonly<Record<number, { reset: Reset; changes: readonly string[
   },
   2018: {
     reset: 'none',
-    changes: ['The halo cockpit protection becomes mandatory.', 'Three engines per car for the season.'],
+    changes: ['The halo, a strong hoop over the driver\'s head, becomes compulsory.', 'Three engines per car for the season.'],
   },
   2019: {
     reset: 'minor',
@@ -212,15 +215,15 @@ const CHANGES: Readonly<Record<number, { reset: Reset; changes: readonly string[
   2021: {
     reset: 'minor',
     changes: [
-      'Budget cap introduced. Driver and top-staff salaries sit outside it.',
-      'Sprint races introduced at selected rounds.',
-      'Floors trimmed to cut downforce.',
+      'Budget cap: a limit on what each team may spend. Driver and top-staff pay does not count towards it.',
+      'Sprints: a short extra race on Saturday at some rounds.',
+      'Smaller floors, to cut the grip the air gives the cars.',
     ],
   },
   2022: {
     reset: 'major',
     changes: [
-      'Ground-effect cars: downforce from the floor, built to race closely.',
+      'Ground-effect cars: most of the grip comes from air flowing under the floor, so cars can follow each other closely.',
       '18-inch wheels.',
       'Sprint points for the top eight. Budget cap lowered.',
     ],
@@ -236,8 +239,8 @@ const CHANGES: Readonly<Record<number, { reset: Reset; changes: readonly string[
   2026: {
     reset: 'major',
     changes: [
-      'New power units: no MGU-H, about half the power electric, sustainable fuel.',
-      'Active aerodynamics replace DRS, with an overtake boost for a car close behind.',
+      'New engines: a simpler hybrid system, about half the power from electricity, and sustainable fuel.',
+      'Wings that flatten by themselves on the straights replace DRS; a car within a second of another gets an extra electric boost.',
       'Smaller, lighter cars.',
     ],
   },

@@ -11,7 +11,7 @@ import {
   type CareerState,
   type PracticeState,
 } from '../../game/career';
-import { calendar } from '../../game/data';
+import { calendar, driver as driverById, knockoutCuts } from '../../game/data';
 import {
   PRACTICE_RUNS,
   finishesOf,
@@ -33,7 +33,7 @@ import { IconBack } from '../icons';
 import { Grid } from '../race/Grid';
 import { LiveRace } from '../race/LiveRace';
 import { RaceResult, poleOf, type Pole } from '../race/Result';
-import { trackWords } from '../race/words';
+import { TrackReading } from '../race/TrackReading';
 import { teamLabel } from '../career/names';
 
 /**
@@ -110,19 +110,109 @@ const roundOf = (career: CareerState) => calendar(career.seasonYear)[career.roun
 
 // ── Practice ────────────────────────────────────────────────────────────────────────────────
 
-const DIAL_WORDS: Readonly<Record<Dial, { name: string; low: string; high: string }>> = {
-  wing: { name: 'Wing', low: 'Low drag', high: 'Downforce' },
-  balance: { name: 'Balance', low: 'Stable rear', high: 'Sharp front' },
-  ride: { name: 'Suspension', low: 'Soft', high: 'Stiff' },
+/** Each setting, its two ends, and what each end does in the race, in a plain line. */
+const DIAL_WORDS: Readonly<
+  Record<Dial, { name: string; low: string; lowDoes: string; high: string; highDoes: string }>
+> = {
+  wing: {
+    name: 'Wing',
+    low: 'Low drag',
+    lowDoes: 'Faster on the straights, less grip in the corners.',
+    high: 'Downforce',
+    highDoes: 'More grip in the corners, slower on the straights.',
+  },
+  balance: {
+    name: 'Balance',
+    low: 'Stable rear',
+    lowDoes: 'Steady and kind to the tyres, but slow to turn in.',
+    high: 'Sharp front',
+    highDoes: 'Turns into corners quickly, but the rear can slide.',
+  },
+  ride: {
+    name: 'Suspension',
+    low: 'Soft',
+    lowDoes: 'Rides bumps and kerbs well, but leans in fast corners.',
+    high: 'Stiff',
+    highDoes: 'Sharp in fast corners, but jumpy over bumps.',
+  },
 };
 
-const HINT_WORDS: Readonly<Record<Hint, string>> = {
-  'much-lower': 'Much lower',
-  lower: 'Lower',
-  good: 'Right',
-  higher: 'Higher',
-  'much-higher': 'Much higher',
+/** What the driver said about a setting, and how far his arrow reaches (in points of the dial). */
+const HINT_WORDS: Readonly<Record<Hint, { words: string; reach: number }>> = {
+  'much-lower': { words: 'Lower it a lot', reach: -26 },
+  lower: { words: 'Lower it a little', reach: -11 },
+  good: { words: 'Spot on', reach: 0 },
+  higher: { words: 'Raise it a little', reach: 11 },
+  'much-higher': { words: 'Raise it a lot', reach: 26 },
 };
+
+/**
+ * One setup dial: its two ends and what they do, the slider, and the driver's verdict drawn on the
+ * slider as an arrow from the setting he drove, pointing the way to move it.
+ */
+function DialRow({
+  dial,
+  value,
+  hint,
+  tested,
+  onStep,
+}: {
+  dial: Dial;
+  value: number;
+  hint: Hint | null;
+  tested: number | null;
+  onStep: (change: number) => void;
+}) {
+  const words = DIAL_WORDS[dial];
+  const said = hint ? HINT_WORDS[hint] : null;
+  const from = tested ?? value;
+  const to = said ? Math.min(100, Math.max(0, from + said.reach)) : from;
+  return (
+    <div class="dial">
+      <div class="dial__head">
+        <span class="dial__name">{words.name}</span>
+        {said && <span class={`dial__said${hint === 'good' ? ' dial__said--good' : ''}`}>Driver: {said.words.toLowerCase()}</span>}
+        <span class="figure dial__value">{value}</span>
+      </div>
+      <div class="dial__control">
+        <button type="button" class="button button--secondary dial__step" aria-label={`${words.name}: towards ${words.low.toLowerCase()}`} onClick={() => onStep(-5)}>
+          −
+        </button>
+        <div
+          class="dial__track"
+          role="img"
+          aria-label={`${words.name} at ${value} of 100${said ? `. The driver says: ${said.words.toLowerCase()}` : ''}`}
+        >
+          <span class="dial__bar">
+            <span class="dial__fill" style={{ width: `${value}%` }} />
+          </span>
+          {said && tested !== null && <span class="dial__tested" style={{ left: `${from}%` }} />}
+          {said && hint !== 'good' && (
+            <span
+              class={`dial__arrow dial__arrow--${to > from ? 'right' : 'left'}`}
+              style={{ left: `${Math.min(from, to)}%`, width: `${Math.abs(to - from)}%` }}
+            />
+          )}
+          {said && hint === 'good' && <span class="dial__spot" style={{ left: `${from}%` }} />}
+          <span class="dial__thumb" style={{ left: `${value}%` }} />
+        </div>
+        <button type="button" class="button button--secondary dial__step" aria-label={`${words.name}: towards ${words.high.toLowerCase()}`} onClick={() => onStep(5)}>
+          +
+        </button>
+      </div>
+      <div class="dial__ends">
+        <span class="dial__end">
+          <span class="dial__end-name">{words.low}</span>
+          {words.lowDoes}
+        </span>
+        <span class="dial__end dial__end--high">
+          <span class="dial__end-name">{words.high}</span>
+          {words.highDoes}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerState; onContinue: () => void }) {
   const cars = useMemo(() => playerCars(career), [career.seasonYear, career.round]);
@@ -131,6 +221,8 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
   const car = cars[selected]!;
   const dials = practice.dials[car.id]!;
   const hints = practice.hints[car.id];
+  // Older saves did not record the setting of the last run: the arrow then starts where the dial is.
+  const tested = practice.tested?.[car.id] ?? null;
   const runs = practice.runs[car.id] ?? 0;
   const round = roundOf(career);
 
@@ -151,7 +243,8 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
         <div class="title-row">
           <h1 class="title">{round.name}</h1>
           <p class="subtitle">
-            Practice. Set each car up, send it out, and listen to the driver. {PRACTICE_RUNS} runs a car.
+            Practice. Adjust each car's setup, send the driver out, and he tells you which way to move each setting.{' '}
+            {PRACTICE_RUNS} runs per car.
           </p>
         </div>
 
@@ -171,48 +264,20 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
 
         <section class="card card--gap" aria-label={`Setup of ${car.driverName}'s car`}>
           {DIALS.map((dial) => (
-            <div class="dial" key={dial}>
-              <div class="dial__head">
-                <span class="dial__name">{DIAL_WORDS[dial].name}</span>
-                {hints && (
-                  <span class={`pill dial__hint${hints[dial] === 'good' ? ' pill--positive' : ''}`}>{HINT_WORDS[hints[dial]]}</span>
-                )}
-              </div>
-              <div class="dial__control">
-                <button
-                  type="button"
-                  class="button button--secondary dial__step"
-                  aria-label={`${DIAL_WORDS[dial].name} lower`}
-                  onClick={() => setPractice(setDial(practice, car.id, dial, dials[dial] - 5))}
-                >
-                  −
-                </button>
-                <div class="dial__track" aria-hidden="true">
-                  <span class="dial__fill" style={{ width: `${dials[dial]}%` }} />
-                </div>
-                <span class="figure dial__value" aria-label={`${DIAL_WORDS[dial].name} ${dials[dial]}`}>
-                  {dials[dial]}
-                </span>
-                <button
-                  type="button"
-                  class="button button--secondary dial__step"
-                  aria-label={`${DIAL_WORDS[dial].name} higher`}
-                  onClick={() => setPractice(setDial(practice, car.id, dial, dials[dial] + 5))}
-                >
-                  +
-                </button>
-              </div>
-              <div class="dial__ends">
-                <span>{DIAL_WORDS[dial].low}</span>
-                <span>{DIAL_WORDS[dial].high}</span>
-              </div>
-            </div>
+            <DialRow
+              key={dial}
+              dial={dial}
+              value={dials[dial]}
+              hint={hints ? hints[dial] : null}
+              tested={tested ? tested[dial] : null}
+              onStep={(change) => setPractice(setDial(practice, car.id, dial, dials[dial] + change))}
+            />
           ))}
         </section>
         <p class="smallprint">
           {hints
-            ? `What ${car.driverName.split(' ').at(-1)} said after the last run. A consistent driver's feedback is more exact.`
-            : 'The car starts on the engineers\' baseline. A run brings the driver\'s verdict on each setting.'}
+            ? `The arrows show what ${car.driverName.split(' ').at(-1)} said after the last run. Each starts at the setting he drove (the small mark) and points the way to move it; a long arrow means a big change. A consistent driver's feedback is more exact.`
+            : "The car starts on the team's own first guess at a setup. Do a run, and the driver tells you which way to move each setting."}
         </p>
       </main>
       <div class="actionbar">
@@ -276,25 +341,29 @@ function Qualifying({
         <div class="title-row">
           <h1 class="title">{round.name}</h1>
           <p class="subtitle">
-            {name}.{' '}
-            {done
-              ? 'The grid is set.'
-              : `${prefix}${session.part} of 3. Track: ${trackWords(session.wetness).toLowerCase()}.`}
+            {done ? (
+              `${name} is over. The top ten below start in this order; the rest start in the order they were knocked out.`
+            ) : (
+              <>
+                {name} has three parts. After each of the first two, the slowest {knockoutCuts(entrants.length)[0]} cars
+                drop out; the last ten fight for the front of the grid. Part {session.part} of 3 ({prefix}
+                {session.part}). <TrackReading wetness={session.wetness} />
+              </>
+            )}
           </p>
         </div>
 
         {!done && (
           <section class="card stack" aria-labelledby="quali-approach">
             <h2 class="card__title" id="quali-approach">
-              How hard to go in {prefix}
-              {session.part}
+              How hard to push in part {session.part}
             </h2>
             {cars
               .filter((entrant) => session.through.includes(entrant.id))
               .map((entrant) => (
                 <div class="control control--wide" key={entrant.id}>
-                  <span class="control__name">{entrant.code}</span>
-                  <div class="segmented segmented--large" role="group" aria-label={`Approach, ${entrant.code}`}>
+                  <span class="control__name">{driverById(entrant.driver).lastName}</span>
+                  <div class="segmented segmented--large" role="group" aria-label={`How hard to push, ${entrant.driverName}`}>
                     {APPROACHES.map((option) => {
                       const on = (approach[entrant.id] ?? 'normal') === option.id;
                       return (
@@ -315,15 +384,18 @@ function Qualifying({
             {cars.every((entrant) => !session.through.includes(entrant.id)) && (
               <p class="muted">Both cars are out. The session runs on without them.</p>
             )}
-            <p class="muted">Push finds a little time and risks a ruined lap. Safe rarely goes wrong.</p>
+            <p class="muted">
+              Safe: a little slower, but rarely goes wrong. Normal: the usual lap. Push: a little faster, but a ruined
+              lap is far likelier.
+            </p>
           </section>
         )}
 
         {last && (
           <section class={`card card--list${done ? '' : ' card--gap'}`} aria-label={`${prefix}${last.part} times`}>
             <h2 class="card__title card__title--list">
-              {prefix}
-              {last.part}
+              Part {last.part} times ({prefix}
+              {last.part})
             </h2>
             <ol>
               {last.laps.map((lap, index) => {
@@ -339,12 +411,12 @@ function Qualifying({
                         <span class="round__name">{entrant.driverName}</span>
                         <span class="round__where">
                           {entrant.teamName}
-                          {out ? ` · out in ${prefix}${last.part}` : ''}
+                          {out ? ` · out after part ${last.part}` : ''}
                           {lap.error ? ' · mistake on the lap' : ''}
                         </span>
                       </span>
                       <span class="team__figures">
-                        <span class="figure">{index === 0 ? formatLap(lap.time) : `+${gap.toFixed(3)}`}</span>
+                        <span class="figure">{index === 0 ? formatLap(lap.time) : `+${gap.toFixed(3)}s`}</span>
                       </span>
                     </div>
                   </li>
@@ -362,8 +434,8 @@ function Qualifying({
             </button>
           ) : (
             <button type="button" class="button button--primary" data-quick onClick={runNext}>
-              Run {prefix}
-              {session.part}
+              Run part {session.part} ({prefix}
+              {session.part})
             </button>
           )}
         </div>
@@ -443,9 +515,14 @@ function RaceSession({
           <p class="subtitle">
             {step === 'result'
               ? `${name} result.`
-              : `${name}, ${race.setup.laps} laps. Track: ${trackWords(race.wetness).toLowerCase()}.${
-                  gridSource(career.seasonYear, career.round, kind) === 'sprint' ? ' The grid is the sprint result.' : ''
-                }`}
+              : (
+                <>
+                  {name}, {race.setup.laps} laps. <TrackReading wetness={race.wetness} />
+                  {gridSource(career.seasonYear, career.round, kind) === 'sprint'
+                    ? ' The starting order is the sprint\'s finishing order.'
+                    : ''}
+                </>
+              )}
           </p>
         </div>
         {step === 'grid' && <Grid state={race} onChange={() => setBeat((beat) => beat + 1)} />}
@@ -464,7 +541,7 @@ function RaceSession({
                   record();
                 }}
               >
-                Simulate
+                Skip to the result
               </button>
               <button
                 type="button"
