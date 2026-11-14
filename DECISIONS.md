@@ -302,8 +302,8 @@ Measured over three runs of every round of eight seasons (2010, 2012, 2014, 2017
 
 ## Part A: driver push levels and stress
 
-The brief file I have does not contain this section (it is the same file as the first upload), so
-this follows the description given in chat.
+Built from the description given in chat; the brief now has the same item under "Hybrid power
+units" (version of 14 November).
 
 ### What it does
 
@@ -416,9 +416,10 @@ the clean measure is the one with no traffic, above. A test keeps that shape.
 
 ## Readability pass (before Stage 6)
 
-Asked for in chat: bars instead of percentages, explained setup options, arrows for the driver's
-feedback, and plain English throughout. The brief file I have does not include these items; this
-follows the chat. Nothing in the race engine or the balance changed: the code changes in the game
+Asked for in chat, and now part of the brief's polish stage (version of 14 November): bars instead
+of percentages, explained setup options, a hint of which way to move each setup slider, and plain
+English throughout. Done ahead of Stage 8 at the player's request. The brief's other new polish
+item, a one-time tutorial, is left for Stage 8. Nothing in the race engine or the balance changed: the code changes in the game
 logic are wording, one export, and a record of the setup each practice run was made with.
 
 ### Bars
