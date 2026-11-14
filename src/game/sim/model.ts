@@ -6,7 +6,7 @@
  * everything that slows it down). These are balance values; the tests in tests/sim-balance.test.ts
  * keep the races they produce inside believable ranges.
  */
-import type { CarSpec, EnergyMode, EngineMode, SessionRules, SessionSetup } from './types';
+import type { CarSpec, EnergyMode, EngineMode, PushLevel, SessionRules, SessionSetup } from './types';
 
 // ── Car and driver ──────────────────────────────────────────────────────────────────────────
 
@@ -87,6 +87,45 @@ export function idealKind(wetness: number): TyreKind {
   for (const kind of KINDS) if (gripLoss(kind, wetness) < gripLoss(best, wetness)) best = kind;
   return best;
 }
+
+// ── The driver: push levels and stress ──────────────────────────────────────────────────────
+
+export const PUSH_LEVELS: readonly PushLevel[] = ['conserve', 'normal', 'push', 'all-out'];
+
+/**
+ * What each push level does: lap time, tyre wear against normal, and stress gained per lap (a
+ * negative figure is stress shed). All-out is worth about seven tenths a lap and fills the stress
+ * gauge in about three laps: a burst, not a way to run a race.
+ */
+export const PUSH: Readonly<Record<PushLevel, { pace: number; tyres: number; stress: number }>> = {
+  conserve: { pace: 0.0035, tyres: 0.82, stress: -22 },
+  normal: { pace: 0, tyres: 1, stress: -10 },
+  push: { pace: -0.0028, tyres: 1.18, stress: 4 },
+  'all-out': { pace: -0.0075, tyres: 1.4, stress: 32 },
+};
+
+/** Stress gained per lap holding off a car within striking distance, at normal. */
+export const DEFENDING_STRESS = 10;
+/** How much each push level adds to that. */
+export const DEFENDING_SHARE: Readonly<Record<PushLevel, number>> = { conserve: 0.5, normal: 1, push: 1.2, 'all-out': 1.5 };
+/** Stress shed per lap while the field is slowed. */
+export const CAUTION_CALM = 25;
+/** Below this, stress does no harm. */
+export const STRESS_FREE = 25;
+/** Above this, a stressed driver also loses pace: he is ragged. */
+export const STRESS_RAGGED = 70;
+
+/** How quickly a driver builds stress: a consistent one keeps his head. */
+export const stressBuild = (consistency: number): number => 1 + (85 - consistency) * 0.015;
+
+/** How far into the harmful range a driver's stress is, 0 to 1. */
+export const stressShare = (stress: number): number => Math.max(0, (stress - STRESS_FREE) / (100 - STRESS_FREE));
+
+/** How many times likelier a mistake is at this stress: up to six times at the top of the gauge. */
+export const stressMistakes = (stress: number): number => 1 + 5 * stressShare(stress) ** 2;
+
+/** Pace lost to stress, as a share of a lap. */
+export const stressPace = (stress: number): number => Math.max(0, stress - STRESS_RAGGED) * 0.00012;
 
 // ── Engine and energy ───────────────────────────────────────────────────────────────────────
 

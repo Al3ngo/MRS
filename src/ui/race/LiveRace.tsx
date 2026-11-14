@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { circuit as circuitById } from '../../game/data';
 import {
+  PUSH_LEVELS,
+  STRESS_FREE,
+  STRESS_RAGGED,
   command,
   energyEffect,
   energyModes,
@@ -17,7 +20,7 @@ import { ConfirmSheet, Sheet } from '../Sheet';
 import { RaceClock, SPEEDS, type Speed } from './clock';
 import { drawScene, trackPath, type CarMark, type Scene } from './draw';
 import { fitTrack, trackMap, type Fit } from './track';
-import { ENGINE_WORDS, energyWords, feedLine, trackWords, type FeedLine } from './words';
+import { ENGINE_WORDS, PUSH_WORDS, energyWords, feedLine, trackWords, type FeedLine } from './words';
 
 /**
  * The race as it runs: the circuit from above, the running order, the player's two cars and the
@@ -25,6 +28,10 @@ import { ENGINE_WORDS, energyWords, feedLine, trackWords, type FeedLine } from '
  */
 
 const ENGINE_MODES: readonly EngineMode[] = ['save', 'standard', 'push'];
+
+/** How a stress figure reads: calm, rising, or on the limit. */
+const stressTone = (stress: number): string =>
+  stress >= STRESS_RAGGED ? ' stress--high' : stress >= STRESS_FREE ? ' stress--rising' : '';
 
 interface Props {
   state: RaceState;
@@ -207,6 +214,28 @@ export function LiveRace({ state, onFinish, onLeave }: Props) {
                 onSelect={() => setSelected(index)}
               />
             ))}
+          </div>
+          <div class="control control--large">
+            <span class={`control__name stress${stressTone(car.stress)}`} role="img" aria-label={`Stress ${Math.round(car.stress)}%`}>
+              <span>Stress</span>
+              <span class="stress__gauge">
+                <span class="stress__level" style={{ width: `${Math.round(car.stress)}%` }} />
+              </span>
+            </span>
+            <div class="segmented segmented--large" role="group" aria-label={`Push level, ${setup.grid[car.entrant]!.code}`}>
+              {PUSH_LEVELS.map((level) => (
+                <button
+                  type="button"
+                  key={level}
+                  class={`segmented__option${car.push === level ? ' segmented__option--on' : ''}`}
+                  aria-pressed={car.push === level}
+                  disabled={car.status === 'out' || car.status === 'finished'}
+                  onClick={() => give({ type: 'push', car: car.id, level })}
+                >
+                  {PUSH_WORDS[level]}
+                </button>
+              ))}
+            </div>
           </div>
           <div class="control">
             <span class="control__name">Engine</span>
@@ -404,9 +433,21 @@ function CarCard({ state, car, on, onSelect }: { state: RaceState; car: CarState
       </span>
       <span class={`carcard__line${left <= 12 && car.status === 'running' ? ' carcard__line--warn' : ''}`}>
         {racing && <span class="tyre" style={{ background: tyre.colour }} />}
-        {first}
+        {racing ? `${left > 0 ? `${left}%` : 'Worn'}` : first}
+        {racing && <span class="carcard__full">{tyre.name.toLowerCase()}</span>}
+        {racing && (
+          <span class={`carcard__short${spare < 0 ? ' carcard__line--warn' : ''}`}>
+            · Fuel {spare >= 0 ? '+' : '−'}
+            {Math.abs(spare).toFixed(1)}
+          </span>
+        )}
       </span>
       <span class={`carcard__line${spare < 0 && car.status === 'running' ? ' carcard__line--warn' : ''}`}>{second}</span>
+      {racing && (
+        <span class={`carcard__stress stress${stressTone(car.stress)}`} aria-hidden="true">
+          <span class="stress__level" style={{ width: `${Math.round(car.stress)}%` }} />
+        </span>
+      )}
     </button>
   );
 }

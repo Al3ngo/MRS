@@ -8,7 +8,17 @@ import * as M from './model';
 import { clamp, pickWeighted, wholeBetween, type Luck } from './rng';
 import { compound, compoundOfKind, dryCompounds } from './tyres';
 import { rainAt, rainDueIn } from './weather';
-import type { CarState, Compound, EnergyMode, EngineMode, Entrant, PlannedStop, RaceState, SessionSetup } from './types';
+import type {
+  CarState,
+  Compound,
+  EnergyMode,
+  EngineMode,
+  Entrant,
+  PlannedStop,
+  PushLevel,
+  RaceState,
+  SessionSetup,
+} from './types';
 
 /** A race is flagged at the end of the lap on which two hours have passed. */
 export const TIME_LIMIT = 7200;
@@ -285,6 +295,7 @@ export function driveModes(state: RaceState, car: CarState): void {
     else if (entrant.engineAge <= 0.8 && ((spare > 0.3 && (attacking || defending)) || spare > 0.8)) engine = 'push';
   }
   car.engineMode = engine;
+  car.push = pushLevel(state, car, attacking, defending);
 
   if (rules.recovery === 'none') return;
   let energy: EnergyMode = 'balanced';
@@ -304,4 +315,22 @@ export function driveModes(state: RaceState, car: CarState): void {
     else if (charge > 85) energy = 'attack';
   }
   car.energyMode = energy;
+}
+
+/**
+ * How hard a car the simulation runs is told to go. Normal nearly all the time, as a real pit wall
+ * would have it. Push only after a long while stuck behind a car; all-out only for a pass in the
+ * last laps; conserve to shed stress, or to make worn tyres reach the planned stop.
+ */
+function pushLevel(state: RaceState, car: CarState, _attacking: boolean, _defending: boolean): PushLevel {
+  if (state.flag.kind !== 'green') return 'normal';
+  if (car.stress > 55 || (car.push === 'conserve' && car.stress > 25)) return 'conserve';
+  const next = car.plan[0];
+  const lap = Math.max(1, Math.floor(car.pos) + 1);
+  if (car.wear > 0.9 && next && next.lap - lap > 3) return 'conserve';
+  const lap0 = state.setup.refLap;
+  if (car.gapAhead < 0.6 && lapsToGo(state, car) <= 2 && car.stress < 40) return 'all-out';
+  if (car.held > 3 * lap0 && car.stress < 30) return 'push';
+  if (car.push === 'push' && car.gapAhead < 1 && car.stress < 45) return 'push';
+  return 'normal';
 }

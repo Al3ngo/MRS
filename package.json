@@ -15,6 +15,8 @@
     "e2e": "vite build && vite build --outDir dist-next && node e2e/run.cjs",
     "data": "node scripts/generate-data.mjs",
     "lab": "rolldown scripts/sim-lab.ts --file node_modules/.cache/lab/sim-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/sim-lab.mjs",
+    "lab:push": "rolldown scripts/push-lab.ts --file node_modules/.cache/lab/push-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/push-lab.mjs",
+    "lab:push-solo": "rolldown scripts/push-solo.ts --file node_modules/.cache/lab/push-solo.mjs --platform node --log-level warn && node node_modules/.cache/lab/push-solo.mjs",
     "lab:tyres": "rolldown scripts/tyre-lab.ts --file node_modules/.cache/lab/tyre-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/tyre-lab.mjs"
   },
   "dependencies": {

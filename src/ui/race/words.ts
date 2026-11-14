@@ -3,7 +3,7 @@
  * The simulation deals in codes; the wording is chosen here.
  */
 import { formatLap } from '../format';
-import type { EnergyMode, EngineMode, Entrant, RaceEvent, RaceState, RadioMessage, SessionRules } from '../../game/sim';
+import type { EnergyMode, EngineMode, Entrant, PushLevel, RaceEvent, RaceState, RadioMessage, SessionRules } from '../../game/sim';
 
 const RADIO: Readonly<Record<RadioMessage, string>> = {
   'tyres-going': 'These tyres are starting to go.',
@@ -16,11 +16,19 @@ const RADIO: Readonly<Record<RadioMessage, string>> = {
   'want-slicks': 'The track is dry enough for slicks.',
   'stuck-behind': 'I am stuck behind him. I cannot get by.',
   'engine-worry': 'Something is wrong with the car. I am losing power.',
+  'on-the-limit': 'I am right on the limit here. I cannot keep this up.',
 };
 
 export const radioWords = (message: RadioMessage): string => RADIO[message];
 
 export const ENGINE_WORDS: Readonly<Record<EngineMode, string>> = { save: 'Save', standard: 'Standard', push: 'Push' };
+
+export const PUSH_WORDS: Readonly<Record<PushLevel, string>> = {
+  conserve: 'Conserve',
+  normal: 'Normal',
+  push: 'Push',
+  'all-out': 'All-out',
+};
 
 /** Energy modes by name. With KERS the three settings are the boost button's. */
 export function energyWords(rules: SessionRules, mode: EnergyMode): string {

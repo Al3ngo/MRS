@@ -174,6 +174,8 @@ function newCar(state: RaceState, entrant: Entrant, index: number): CarState {
     fuel: startFuel(setup),
     engineMode: 'standard',
     energyMode: 'balanced',
+    push: 'normal',
+    stress: 0,
     battery: setup.rules.recovery === 'kers' ? 100 : setup.rules.recovery === 'ers' ? 60 : 0,
     damage: 0,
     fault: 0,
@@ -237,6 +239,10 @@ export function command(state: RaceState, order: Command): boolean {
   switch (order.type) {
     case 'engine-mode':
       car.engineMode = order.mode;
+      return true;
+    case 'push':
+      if (!M.PUSH_LEVELS.includes(order.level)) return false;
+      car.push = order.level;
       return true;
     case 'energy-mode':
       if (!M.energyModes(setup.rules.recovery).includes(order.mode)) return false;
@@ -308,6 +314,8 @@ function freePace(state: RaceState, car: CarState): number {
     M.wearLoss(car.wear, tyre.fade) +
     M.gripLoss(tyre.kind, wet) * (wet > 0.02 ? M.wetSkill(entrant.ratings.wet) : 1) +
     M.ENGINE[car.engineMode].pace +
+    M.PUSH[car.push].pace +
+    M.stressPace(car.stress) +
     car.damage +
     car.fault +
     car.noise +
@@ -529,7 +537,12 @@ function mistake(state: RaceState, car: CarState): void {
   const { traits } = state.setup;
   const entrant = state.setup.grid[car.entrant]!;
   const roll = random(state);
-  const crash = CRASH * (traits.danger / 3) * (entrant.ratings.aggression / 70) * (1 + state.wetness);
+  const crash =
+    CRASH *
+    (traits.danger / 3) *
+    (entrant.ratings.aggression / 70) *
+    (1 + state.wetness) *
+    (1 + 1.5 * M.stressShare(car.stress));
   if (roll < crash) {
     const severity = clamp(between(state, 0.1, 0.7) * (traits.danger / 3) + (chance(state, 0.1) ? 0.3 : 0), 0, 1);
     retire(car, 'Accident');
@@ -588,6 +601,7 @@ function hazards(state: RaceState, car: CarState, travelled: number): void {
 
   let slip = MISTAKE * (1 + (88 - ratings.consistency) / 22) * (1 + 2.5 * wet * M.wetSkill(ratings.wet));
   if (car.engineMode === 'push') slip *= 1.15;
+  slip *= M.stressMistakes(car.stress);
   if (car.wear > 0.95) slip *= 1.4;
   if (M.gripLoss(tyre.kind, wet) > 0.09) slip *= 2;
   if (state.lap < state.bunchedUntilLap) slip *= 1.4;
@@ -744,7 +758,8 @@ function move(state: RaceState): Mover[] {
               ((me.aggression + them.aggression) / 140) *
               (1 + 1.5 * state.wetness) *
               (bunched ? BUNCHED : 1) *
-              (2 - Math.min(me.racecraft, them.racecraft) / 100);
+              (2 - Math.min(me.racecraft, them.racecraft) / 100) *
+              (1 + 2 * Math.max(M.stressShare(car.stress), M.stressShare(other.stress)));
             if (chance(state, risk * reach)) {
               collide(state, car, other);
             } else if (state.time >= car.noAttackBefore) {
@@ -976,6 +991,7 @@ export function step(state: RaceState): void {
     const wearRate =
       (M.tyreCare(entrant.ratings.tyres) / tyre.life) *
       mode.tyres *
+      M.PUSH[car.push].tyres *
       (1 + M.FUEL_WEAR * (car.fuel / setup.fullDistanceLaps)) *
       (1 + 0.1 * mover.closeness) *
       M.overheating(tyre.kind, state.wetness) *
@@ -1001,6 +1017,16 @@ export function step(state: RaceState): void {
       }
     }
     car.engineWear += (mode.wear * (green ? 1 : 0.4) * travelled) / setup.fullDistanceLaps;
+
+    // Stress: built by pushing and by holding off a car right behind, shed at lower levels.
+    const build = M.stressBuild(entrant.ratings.consistency);
+    let change = green ? M.PUSH[car.push].stress : -M.CAUTION_CALM;
+    if (change > 0) change *= build;
+    if (green && car.gapBehind < 0.8 && state.lap >= state.bunchedUntilLap) {
+      change += M.DEFENDING_STRESS * M.DEFENDING_SHARE[car.push] * build;
+    }
+    car.stress = clamp(car.stress + change * travelled, 0, 100);
+    if (car.stress > 80) tell(state, car, 'on-the-limit', 4);
 
     hazards(state, car, travelled);
     if (car.status !== 'running') continue;

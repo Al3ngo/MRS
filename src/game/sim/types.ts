@@ -11,6 +11,8 @@ import type { Ratings } from '../data/ratings';
 export type EngineMode = 'save' | 'standard' | 'push';
 /** What the car does with its electrical energy. Which modes exist depends on the season. */
 export type EnergyMode = 'harvest' | 'balanced' | 'attack' | 'overtake';
+/** How hard the driver is told to go: pace against tyres and stress. */
+export type PushLevel = 'conserve' | 'normal' | 'push' | 'all-out';
 
 /** A car's qualities, 0 to 100. Development (Stage 6) moves these; here they are inputs. */
 export interface CarSpec {
@@ -171,6 +173,9 @@ export interface CarState {
   fuel: number;
   engineMode: EngineMode;
   energyMode: EnergyMode;
+  push: PushLevel;
+  /** How stressed the driver is, 0 to 100. Builds when pushing or defending, eases when not. */
+  stress: number;
   /** Battery charge, 0 to 100. */
   battery: number;
   /** Pace lost to damage, as a fraction of a lap. Repaired at a stop. */
@@ -241,7 +246,8 @@ export type RadioMessage =
   | 'want-wets'
   | 'want-slicks'
   | 'stuck-behind'
-  | 'engine-worry';
+  | 'engine-worry'
+  | 'on-the-limit';
 
 export interface RaceState {
   setup: SessionSetup;
@@ -283,6 +289,7 @@ export interface RaceState {
 export type Command =
   | { type: 'engine-mode'; car: string; mode: EngineMode }
   | { type: 'energy-mode'; car: string; mode: EnergyMode }
+  | { type: 'push'; car: string; level: PushLevel }
   | { type: 'pit'; car: string; compound: string }
   | { type: 'cancel-pit'; car: string }
   /** Sets the stops to make. `start` picks the tyres to start on, and only counts on the grid. */

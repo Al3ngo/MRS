@@ -722,7 +722,7 @@ button.slot__main:disabled .slot__go {
 
 .race__map {
   flex: none;
-  height: clamp(150px, 28dvh, 290px);
+  height: clamp(128px, 26dvh, 290px);
 }
 
 .race__map canvas {
@@ -904,6 +904,21 @@ button.slot__main:disabled .slot__go {
   text-align: left;
 }
 
+.carcard {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The stress of each car, along the foot of its card. */
+.carcard__stress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  height: 3px;
+}
+
 .carcard--on {
   background: var(--raised);
   color: var(--text);
@@ -948,6 +963,15 @@ button.slot__main:disabled .slot__go {
   color: var(--warning);
 }
 
+.carcard__short {
+  display: none;
+  white-space: pre;
+}
+
+.carcard__full {
+  white-space: pre;
+}
+
 /* Battery charge: a cell that empties, and the figure beside it. */
 .battery {
   display: inline-flex;
@@ -989,6 +1013,51 @@ button.slot__main:disabled .slot__go {
   font-size: 12px;
 }
 
+.control--large {
+  grid-template-columns: 50px minmax(0, 1fr);
+}
+
+/* The push level: the control used most in a race, so the largest. */
+.segmented--large .segmented__option {
+  height: 48px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Driver stress: a gauge that fills, grey while harmless, white as it rises, amber at the limit. */
+.stress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stress__gauge {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--raised);
+  overflow: hidden;
+}
+
+.stress__level {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--faint);
+}
+
+.stress--rising .stress__level {
+  background: var(--text);
+}
+
+.stress--high .stress__level {
+  background: var(--warning);
+}
+
+.stress--high > span:first-child {
+  color: var(--warning);
+}
+
 /* A choice of a few settings, one of them on. */
 .segmented {
   display: grid;
@@ -1004,7 +1073,7 @@ button.slot__main:disabled .slot__go {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
+  height: 44px;
   border-radius: var(--radius-control);
   color: var(--muted);
   font-size: 13px;
@@ -1103,4 +1172,42 @@ button.slot__main:disabled .slot__go {
 .plan__words {
   color: var(--muted);
   font-size: 13px;
+}
+
+/* Short phones: a smaller map and a one-line feed, so the running order keeps a few rows. */
+@media (max-height: 740px) {
+  .race__map {
+    height: clamp(112px, 19dvh, 150px);
+  }
+
+  .feed {
+    height: 24px;
+  }
+
+  .feed__line--old {
+    display: none;
+  }
+
+  .carcard {
+    min-height: 62px;
+    padding: 8px 10px;
+  }
+
+  .carcard__line + .carcard__line,
+  .carcard__full {
+    display: none;
+  }
+
+  .carcard__short {
+    display: inline;
+  }
+
+  .pitwall {
+    gap: 6px;
+    padding-top: 8px;
+  }
+
+  .segmented__option {
+    height: 42px;
+  }
 }
