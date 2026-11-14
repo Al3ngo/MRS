@@ -5,6 +5,7 @@
  *            version takes over only when asked.
  *   Stage 2: the season almanac shows the real calendars, teams, drivers and rules, offline too.
  *   Stages 3 and 4: a real round is raced from the grid to a full result, with the pit wall's controls.
+ *   Stage 5: a career weekend from practice to the standings, a race kept across a reload, a 2023 sprint weekend.
  *
  *   npm run e2e            (builds twice, then runs this)
  *
@@ -122,13 +123,54 @@ const slotTexts = (page) =>
 
 const slotCard = (page, slot) => page.locator('.slot').nth(slot - 1);
 
+/** Starts a career in an empty slot with a team, and lands on the team's home screen. */
+async function startNewCareer(page, slot, team = 'Williams') {
+  await slotCard(page, slot).getByRole('button', { name: 'New career' }).click();
+  await page.getByRole('heading', { name: 'Choose your team' }).waitFor();
+  await page.getByRole('button', { name: new RegExp(`^${team}`) }).click();
+  await page.getByRole('button', { name: `Start with ${team}` }).click();
+  await page.locator('.hub').waitFor();
+}
+
+const sessionsDone = (page) =>
+  page.evaluate(() => Number(document.querySelector('main[data-sessions]')?.getAttribute('data-sessions') ?? -1));
+
+/** From a session back to the team's home screen. */
+async function toHub(page) {
+  const team = page.getByRole('button', { name: 'Team', exact: true });
+  if (await team.isVisible()) await team.click();
+  await page.locator('.hub').waitFor();
+}
+
+/**
+ * Plays sessions the quickest way: each screen's quick action (finish practice, run each part of
+ * qualifying, simulate the race, go to the next round) until the career counts one more session.
+ * Ends on the team's home screen, once every save has landed.
+ */
 async function completeSessions(page, count) {
-  for (let i = 0; i < count; i++) await page.locator('.actionbar .button').click();
+  for (let i = 0; i < count; i++) {
+    const before = await sessionsDone(page);
+    for (let step = 0; ; step++) {
+      if (step > 12) throw new Error(`session ${i + 1} of ${count} would not complete`);
+      await page.locator('[data-quick]').click();
+      const moved = await page
+        .waitForFunction(
+          (n) => Number(document.querySelector('main[data-sessions]')?.getAttribute('data-sessions') ?? -1) > n,
+          before,
+          { timeout: 800 },
+        )
+        .then(() => true, () => false);
+      if (moved) break;
+    }
+  }
+  await toHub(page);
   // The top bar says "Saved <time>" once the queue of saves has drained.
   await page.locator('.topbar__meta', { hasText: /^Saved / }).waitFor();
 }
 
 async function backToCareers(page) {
+  const team = page.getByRole('button', { name: 'Team', exact: true });
+  if (await team.isVisible()) await team.click();
   await page.getByRole('button', { name: 'Careers' }).click();
   await page.locator('.slots').waitFor();
 }
@@ -219,24 +261,23 @@ async function main() {
     });
 
     await check('a new career starts in 2010 and autosaves after each session', async () => {
-      await slotCard(page, 1).getByRole('button', { name: 'New career' }).click();
-      await page.locator('.bench').waitFor();
+      await startNewCareer(page, 1);
       expect(/#\/career\/1$/.test(page.url()), `expected the career address, got ${page.url()}`);
       await completeSessions(page, 6); // practice, qualifying, race, management, then round 2 practice, qualifying
-      expectEqual(await page.locator('.subtitle').innerText(), 'Round 2 of 19 · Slot 1', 'career position');
+      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 2 of 19', 'career position');
       await shot(page, '02-career');
       await backToCareers(page);
       const [first] = await slotTexts(page);
-      expect(/2010 \| Round 2 of 19 \| Race next/.test(first), `slot 1 should show round 2, race next: "${first}"`);
+      expect(/2010 \| [^|]+ \| Round 2 of 19 · Race next/.test(first), `slot 1 should show round 2, race next: "${first}"`);
     });
 
     await check('the save survives a reload', async () => {
       await page.reload();
       await page.locator('.slots').waitFor();
       const [first] = await slotTexts(page);
-      expect(/Round 2 of 19 \| Race next/.test(first), `after reload: "${first}"`);
+      expect(/Round 2 of 19 · Race next/.test(first), `after reload: "${first}"`);
       await slotCard(page, 1).getByRole('button', { name: 'Continue' }).click();
-      await page.locator('.bench').waitFor();
+      await page.locator('.hub').waitFor();
       expectEqual(await page.locator('.row--next .row__label').innerText(), 'Race', 'next session after reload');
       await backToCareers(page);
     });
@@ -250,11 +291,11 @@ async function main() {
       expect(await page.evaluate(() => document.fonts.check('600 32px "Barlow Condensed"')), 'figure typeface missing offline');
       expect(await page.evaluate(() => document.fonts.check('14px "Inter"')), 'text typeface missing offline');
       await slotCard(page, 1).getByRole('button', { name: 'Continue' }).click();
-      await page.locator('.bench').waitFor();
+      await page.locator('.hub').waitFor();
       await completeSessions(page, 3); // race, management, round 3 practice
       await page.reload();
-      await page.locator('.bench').waitFor();
-      expectEqual(await page.locator('.subtitle').innerText(), 'Round 3 of 19 · Slot 1', 'position after an offline reload');
+      await page.locator('.hub').waitFor();
+      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 3 of 19', 'position after an offline reload');
       expectEqual(await page.locator('.row--next .row__label').innerText(), 'Qualifying', 'next session after an offline reload');
       // (The browser's own re-check of sw.js ignores the test's offline switch; the cold start further down
       // repeats all this with the server actually gone.)
@@ -285,7 +326,8 @@ async function main() {
       await download.saveAs(backupFile);
       const file = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
       expectEqual(file.format, 'modern-racing-manager-save', 'file format tag');
-      expectEqual(file.schemaVersion, 1, 'file save version');
+      expectEqual(file.schemaVersion, 2, 'file save version');
+      expectEqual(file.career.team, 'williams', 'team in the file');
       expectEqual(
         { seasonYear: file.career.seasonYear, round: file.career.round, phase: file.career.phase, sessions: file.career.sessionsCompleted },
         { seasonYear: 2010, round: 3, phase: 'qualifying', sessions: 9 },
@@ -318,10 +360,11 @@ async function main() {
       await page.getByText('Career restored to slot 2.').waitFor();
       const texts = await slotTexts(page);
       expect(/No career yet/.test(texts[0]), `slot 1 stays empty: "${texts[0]}"`);
-      expect(/2010 \| Round 3 of 19 \| Qualifying next/.test(texts[1]), `slot 2 holds the restored career: "${texts[1]}"`);
+      expect(/2010 \| [^|]+ \| Round 3 of 19 · Qualifying next/.test(texts[1]), `slot 2 holds the restored career: "${texts[1]}"`);
       await slotCard(page, 2).getByRole('button', { name: 'Continue' }).click();
-      await page.locator('.bench').waitFor();
-      expectEqual(await page.locator('.facts .row__value').first().innerText(), '9', 'sessions completed in the restored career');
+      await page.locator('.hub').waitFor();
+      expectEqual(await page.locator('.row--next .row__label').innerText(), 'Qualifying', 'next session in the restored career');
+      expectEqual(await page.locator('.title').innerText(), 'Williams', 'team of the restored career');
       await backToCareers(page);
     });
 
@@ -351,7 +394,7 @@ async function main() {
       await page.getByText(/could not be verified/).waitFor();
       await page.getByRole('button', { name: 'Restore backup' }).last().click();
       await page.getByText('Career restored to slot 3.').waitFor();
-      expect(/2014 \| Round 5 of 19/.test((await slotTexts(page))[2]), 'slot 3 should hold the edited career');
+      expect(/2014 \| [^|]+ \| Round 5 of 19/.test((await slotTexts(page))[2]), 'slot 3 should hold the edited career');
 
       // Not a save at all.
       const wrongFile = path.join(OUT, 'holiday-notes.json');
@@ -366,14 +409,13 @@ async function main() {
     });
 
     await check('three careers side by side keep to their own slots', async () => {
-      await slotCard(page, 1).getByRole('button', { name: 'New career' }).click();
-      await page.locator('.bench').waitFor();
+      await startNewCareer(page, 1);
       await completeSessions(page, 1);
       await backToCareers(page);
       const texts = await slotTexts(page);
-      expect(/2010 \| Round 1 of 19 \| Qualifying next/.test(texts[0]), `slot 1: "${texts[0]}"`);
-      expect(/2010 \| Round 3 of 19 \| Qualifying next/.test(texts[1]), `slot 2: "${texts[1]}"`);
-      expect(/2014 \| Round 5 of 19 \| Qualifying next/.test(texts[2]), `slot 3: "${texts[2]}"`);
+      expect(/2010 \| [^|]+ \| Round 1 of 19 · Qualifying next/.test(texts[0]), `slot 1: "${texts[0]}"`);
+      expect(/2010 \| [^|]+ \| Round 3 of 19 · Qualifying next/.test(texts[1]), `slot 2: "${texts[1]}"`);
+      expect(/2014 \| [^|]+ \| Round 5 of 19 · Qualifying next/.test(texts[2]), `slot 3: "${texts[2]}"`);
       // The career played last carries the one main action.
       expectEqual(await page.locator('.button--primary').count(), 1, 'primary buttons');
       expect(await slotCard(page, 1).locator('.button--primary').count(), 'slot 1 was played last, so it leads');
@@ -385,22 +427,22 @@ async function main() {
       // must never leave the career screen blank.
       for (let round = 0; round < 3; round++) {
         await slotCard(page, 3).getByRole('button', { name: 'Continue' }).click();
-        await page.locator('.bench').waitFor();
+        await page.locator('.hub').waitFor();
         await page.goBack();
         await page.locator('.slots').waitFor();
         await page.goForward();
-        await page.locator('.bench').waitFor({ timeout: 5000 });
-        expectEqual(await page.locator('.title').innerText(), 'Season 2014', 'career shown after going forward');
+        await page.locator('.hub').waitFor({ timeout: 5000 });
+        expectEqual(await page.locator('.subtitle').innerText(), 'Season 2014 · Round 5 of 19', 'career shown after going forward');
         await page.goBack();
         await page.locator('.slots').waitFor();
       }
       await slotCard(page, 3).getByRole('button', { name: 'Continue' }).click();
-      await page.locator('.bench').waitFor();
+      await page.locator('.hub').waitFor();
       // Opening the address of a career directly (as a reload does) loads that career.
       await page.goto(site.url + '#/career/2');
       await page.reload();
-      await page.locator('.bench').waitFor();
-      expectEqual(await page.locator('.subtitle').innerText(), 'Round 3 of 19 · Slot 2', 'career opened by address');
+      await page.locator('.hub').waitFor();
+      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 3 of 19', 'career opened by address');
       await backToCareers(page);
       // An address for a slot with nothing in it falls back to the list.
       await slotCard(page, 1).getByRole('button', { name: 'More for slot 1' }).click();
@@ -447,8 +489,7 @@ async function main() {
       const { installabilityErrors } = await session.send('Page.getInstallabilityErrors');
       expectEqual(installabilityErrors.map((error) => error.errorId), [], 'installability errors');
       // Leave a career behind for the cold start below.
-      await slotCard(page, 1).getByRole('button', { name: 'New career' }).click();
-      await page.locator('.bench').waitFor();
+      await startNewCareer(page, 1);
       await completeSessions(page, 5);
       await context.close();
     });
@@ -463,10 +504,10 @@ async function main() {
       watch(page, log);
       await openGame(page, address);
       const [first] = await slotTexts(page);
-      expect(/2010 \| Round 2 of 19 \| Qualifying next/.test(first), `career after a cold offline start: "${first}"`);
+      expect(/2010 \| [^|]+ \| Round 2 of 19 · Qualifying next/.test(first), `career after a cold offline start: "${first}"`);
       await offlineReady(page);
       await slotCard(page, 1).getByRole('button', { name: 'Continue' }).click();
-      await page.locator('.bench').waitFor();
+      await page.locator('.hub').waitFor();
       await completeSessions(page, 2);
       await shot(page, '09-cold-offline-start');
       // Asking for an update with no connection is answered plainly, not with an error.
@@ -515,8 +556,7 @@ async function main() {
       await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
       const before = await workerVersion(page);
 
-      await slotCard(page, 1).getByRole('button', { name: 'New career' }).click();
-      await page.locator('.bench').waitFor();
+      await startNewCareer(page, 1);
       await completeSessions(page, 4);
       await backToCareers(page);
 
@@ -546,7 +586,7 @@ async function main() {
       expectEqual(Object.keys(caches).length, 1, 'caches left after the update (the old one is removed)');
       expect(Object.keys(caches)[0].endsWith(after.version), 'the remaining cache belongs to the new version');
       const [first] = await slotTexts(page);
-      expect(/2010 \| Round 2 of 19 \| Practice next/.test(first), `the career is untouched by the update: "${first}"`);
+      expect(/2010 \| [^|]+ \| Round 2 of 19 · Practice next/.test(first), `the career is untouched by the update: "${first}"`);
       expect((await page.getByText('A new version of the game is ready.').count()) === 0, 'the update notice should be gone');
       expectEqual(log, [], 'browser errors during the update');
     });
@@ -584,12 +624,11 @@ async function main() {
         [name, lost],
       );
 
-      await slotCard(page, 1).getByRole('button', { name: 'New career' }).click();
-      await page.locator('.bench').waitFor();
+      await startNewCareer(page, 1);
       await completeSessions(page, 2);
       await context.setOffline(true);
       await page.reload();
-      await page.locator('.bench').waitFor();
+      await page.locator('.hub').waitFor();
       expectEqual(await page.locator('.row--next .row__label').innerText(), 'Race', 'next session, offline, in a sub-folder');
       await page.goto(site.url);
       await page.locator('.slots').waitFor();
@@ -723,8 +762,13 @@ async function main() {
       expect(colours > 6, `colours on the map: ${colours}`);
       expect((await page.locator('.feed__line').count()) > 0, 'the feed has lines');
 
-      await page.getByRole('button', { name: 'Push' }).click();
-      expectEqual(await page.getByRole('button', { name: 'Push' }).getAttribute('aria-pressed'), 'true', 'engine mode set to push');
+      const engine = page.getByRole('group', { name: /^Engine mode/ });
+      await engine.getByRole('button', { name: 'Push' }).click();
+      expectEqual(await engine.getByRole('button', { name: 'Push' }).getAttribute('aria-pressed'), 'true', 'engine mode set to push');
+      const driver = page.getByRole('group', { name: /^Push level/ });
+      await driver.getByRole('button', { name: 'All-out' }).click();
+      expectEqual(await driver.getByRole('button', { name: 'All-out' }).getAttribute('aria-pressed'), 'true', 'driver set to all-out');
+      expectEqual(await page.locator('.control .stress').count(), 1, 'stress gauge beside the push level');
       await page.getByRole('button', { name: 'Pause' }).click();
       const lap = await page.locator('.race__lap').innerText();
       await page.waitForTimeout(700);
@@ -777,6 +821,141 @@ async function main() {
       await page.getByRole('button', { name: 'Almanac' }).click();
       await page.getByRole('heading', { name: 'Season 2019' }).waitFor();
       expectEqual(log, [], 'browser errors in the race');
+    });
+
+    // ── 8. Stage 5: a career season ─────────────────────────────────────────────────────────
+    const meta = () => page.locator('.topbar__meta').innerText();
+
+    await check('career: a weekend from practice to the standings, with a race kept across a reload', async () => {
+      // Still offline from the checks before: a whole weekend needs no network.
+      await page.goto(site.url);
+      await page.locator('.slots').waitFor();
+      await startNewCareer(page, 1, 'McLaren');
+      expectEqual(await page.locator('.title').innerText(), 'McLaren', 'team on the home screen');
+      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 1 of 19', 'where the career starts');
+      expectEqual(await page.locator('.row--next .row__label').innerText(), 'Practice', 'first session');
+      await shot(page, '20-career-home');
+
+      await page.getByRole('button', { name: 'Go to practice' }).click();
+      await page.getByRole('button', { name: 'Do a run (4 left)' }).click();
+      expectEqual(await page.locator('.dial__hint').count(), 3, 'feedback on each of the three settings');
+      const wing = page.getByLabel(/^Wing \d+$/);
+      const before = Number((await wing.innerText()).trim());
+      await page.getByRole('button', { name: before >= 100 ? 'Wing lower' : 'Wing higher' }).click();
+      expect(Number((await wing.innerText()).trim()) !== before, 'the wing setting moves');
+      await page.getByRole('button', { name: 'Do a run (3 left)' }).waitFor();
+      await shot(page, '21-career-practice');
+      await page.getByRole('button', { name: 'Finish practice' }).click();
+
+      expectEqual(await meta(), 'Qualifying', 'after practice');
+      for (const [part, cars] of [['Q1', 24], ['Q2', 17], ['Q3', 10]]) {
+        await page.getByRole('button', { name: `Run ${part}` }).click();
+        await page.getByRole('heading', { name: part, exact: true }).waitFor();
+        expectEqual(await page.locator('.result').count(), cars, `cars timed in ${part}`);
+      }
+      await shot(page, '22-career-qualifying');
+      await page.getByRole('button', { name: 'Continue' }).click();
+
+      expectEqual(await meta(), 'Race', 'after qualifying');
+      await page.getByRole('button', { name: 'Start the race' }).click();
+      await page.getByRole('button', { name: 'Speed 4x' }).click();
+      await page.waitForFunction(() => /Lap ([4-9]|\d\d)/.test(document.querySelector('.race__lap')?.textContent ?? ''), null, { timeout: 30000 });
+      await page.getByRole('button', { name: 'Leave' }).click();
+      const lapLeft = Number((await page.locator('.race__lap').innerText()).match(/Lap (\d+)/)[1]);
+      await page.getByRole('button', { name: 'Leave for now' }).click();
+      await page.locator('.hub').waitFor();
+      expectEqual(await page.locator('.row--next .row__value').innerText(), 'Under way', 'the race is kept');
+
+      await page.reload();
+      await page.getByRole('button', { name: 'Carry on with the race' }).click();
+      await page.locator('.race').waitFor();
+      const lapBack = Number((await page.locator('.race__lap').innerText()).match(/Lap (\d+)/)[1]);
+      expect(lapBack >= lapLeft - 2 && lapBack <= lapLeft, `carried on at lap ${lapBack}, left at lap ${lapLeft}`);
+      expectEqual(await page.getByRole('button', { name: 'Pause' }).getAttribute('aria-pressed'), 'true', 'a race carried on starts paused');
+      await page.getByRole('button', { name: 'Skip to the end' }).click();
+      await page.locator('dialog').getByRole('button', { name: 'Skip to the end' }).click();
+      await page.getByRole('button', { name: 'Continue' }).waitFor();
+      expectEqual(await page.locator('.result--mine').count(), 2, 'the two McLarens in the result');
+      await page.getByRole('button', { name: 'Continue' }).click();
+
+      await page.locator('.hub').waitFor();
+      await page.getByRole('button', { name: 'Go to the Australian Grand Prix' }).waitFor();
+      await shot(page, '23-career-between');
+      await page.getByRole('tab', { name: 'Standings' }).click();
+      const points = await page.locator('.standing .standing__points').allInnerTexts();
+      expectEqual(points[0], '25', 'points for the win, 2010 rules');
+      expectEqual(await page.locator('.standing--mine').count(), 2, 'both McLaren drivers marked');
+      await page.getByRole('button', { name: 'Constructors' }).click();
+      expect(Number((await page.locator('.standing .standing__points').first().innerText())) >= 25, 'constructors lead');
+      await page.getByRole('tab', { name: 'Calendar' }).click();
+      expect(/won · You: /.test(await page.locator('.round').first().innerText()), 'round 1 shows its winner and our result');
+      await shot(page, '24-career-calendar');
+      await backToCareers(page);
+      const [first] = await slotTexts(page);
+      expect(/2010 \| McLaren \| Round 1 of 19 · Between races/.test(first), `slot after a weekend: "${first}"`);
+    });
+
+    await check('career: a 2023 sprint weekend runs in that year\'s order, with sprint points', async () => {
+      const career = {
+        id: 'e2e-sprint',
+        createdAt: '2026-11-14T10:00:00.000Z',
+        team: 'red-bull',
+        seasonYear: 2023,
+        round: 4,
+        phase: 'practice',
+        sessionsCompleted: 0,
+        finished: false,
+        weekend: { setups: {}, practice: null, qualifying: null, sprintQualifying: null, sprint: null, live: null },
+        results: [],
+        history: [],
+      };
+      const file = {
+        format: 'modern-racing-manager-save',
+        schemaVersion: 2,
+        appVersion: 'e2e',
+        savedAt: '2026-11-14T10:00:00.000Z',
+        exportedAt: '2026-11-14T10:00:00.000Z',
+        checksum: `crc32:${zlib.crc32(JSON.stringify(career)).toString(16).padStart(8, '0')}`,
+        career,
+      };
+      const sprintFile = path.join(OUT, 'sprint-weekend.json');
+      fs.writeFileSync(sprintFile, JSON.stringify(file));
+      const [chooser] = await Promise.all([
+        page.waitForEvent('filechooser'),
+        slotCard(page, 2).getByRole('button', { name: 'Restore backup' }).click(),
+      ]);
+      await chooser.setFiles(sprintFile);
+      await page.getByText('Career restored to slot 2.').waitFor();
+      await slotCard(page, 2).getByRole('button', { name: 'Continue' }).click();
+      await page.locator('.hub').waitFor();
+      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2023 · Round 4 of 22', 'the restored round');
+      expectEqual(
+        await page.locator('.sessions .row__label').allInnerTexts(),
+        ['Practice', 'Qualifying', 'Sprint shootout', 'Sprint', 'Race'],
+        'the 2023 sprint weekend',
+      );
+      const order = [];
+      for (let step = 0; step < 30 && !(await page.locator('.hub').isVisible().then((hub) => hub && order.length > 0)); step++) {
+        if (!(await page.locator('.hub').isVisible())) {
+          const title = await meta();
+          if (order.at(-1) !== title) order.push(title);
+          if (title === 'Sprint result') {
+            const winner = (await page.locator('.result').first().innerText()).replace(/\s*\n\s*/g, ' | ');
+            expect(/8 pts$/.test(winner), `sprint winner's points: "${winner}"`);
+          }
+        }
+        await page.locator('[data-quick]').click();
+        await page.waitForTimeout(150);
+      }
+      expectEqual(
+        order,
+        ['Practice', 'Qualifying', 'Sprint shootout', 'Sprint', 'Sprint result', 'Race', 'Race result'],
+        'sessions as played',
+      );
+      await page.getByRole('tab', { name: 'Standings' }).click();
+      const leader = Number(await page.locator('.standing .standing__points').first().innerText());
+      expect(leader >= 25 && leader <= 34, `leader's points after a sprint weekend: ${leader}`);
+      expectEqual(log, [], 'browser errors in the career');
     });
 
     await context.close();

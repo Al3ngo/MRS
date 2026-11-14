@@ -13,7 +13,8 @@ import { formatGap, formatLap, formatRaceTime } from '../format';
 
 export interface Pole {
   driver: string;
-  time: number;
+  /** Null when the grid was set by a sprint, not a lap. */
+  time: number | null;
   wet: boolean;
 }
 
@@ -55,7 +56,12 @@ function summary({ state, rows, pole }: Outcome): [string, string][] {
 
   const winner = rows[0]!;
   const facts: [string, string][] = [
-    ['Pole', `${driverById(pole.driver).lastName}, ${formatLap(pole.time)}${pole.wet ? ' on a wet track' : ''}`],
+    [
+      'Pole',
+      pole.time === null
+        ? `${driverById(pole.driver).lastName}, from the sprint`
+        : `${driverById(pole.driver).lastName}, ${formatLap(pole.time)}${pole.wet ? ' on a wet track' : ''}`,
+    ],
     ['Race time', winner.time !== null ? formatRaceTime(winner.time) : `${winner.laps} laps`],
     ['Weather', weather],
     ['Safety car', cautions.join(', ') || 'None'],

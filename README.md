@@ -3,13 +3,16 @@
 A single-player motorsport team management game for the phone, covering the 2010 to 2026 seasons.
 It installs to the home screen and plays with no network at all. A personal project.
 
-**Status: Stage 4 of 8 is built.** The app installs, runs offline and keeps three save slots
-(Stage 1); it carries the real data of all 17 seasons (Stage 2); it has its race engine (Stage 3);
-and a race can now be watched and run from the pit wall (Stage 4): the circuit from above, the
-running order, engine and battery modes, pit stops, the driver on the radio, and 1x, 2x, 4x or
-skip. To race, open the season almanac, pick a round, then **Race this round** and choose a team.
-There is no season yet: each race stands alone, and the career screen is still a test bench. The
-build plan is in the brief; choices made along the way are in [DECISIONS.md](DECISIONS.md).
+**Status: Stage 5 of 8 is built.** The app installs, runs offline and keeps three save slots
+(Stage 1); it carries the real data of all 17 seasons (Stage 2); it has its race engine (Stage 3)
+and a race view run from the pit wall (Stage 4), now with driver push levels and stress; and a
+career is a real season loop (Stage 5): choose a team, then practice, qualifying, the sprint
+sessions on sprint weekends and the race, round after round on the real calendar, with the
+drivers' and constructors' championships scored by each year's rules, from 2010 to the end of
+2026. Between races there is nothing to manage yet: money, development, staff and contracts are
+Stage 6, and until then every team runs the drivers and car it really had. A single race can still
+be run from the season almanac. The build plan is in the brief; choices made along the way are in
+[DECISIONS.md](DECISIONS.md).
 
 ## Run it
 
@@ -36,7 +39,7 @@ npm run preview
 
 ## Put it on a phone
 
-`npm run build` writes the whole game to `dist/`: 15 files, about 535 kB. Upload that folder to any
+`npm run build` writes the whole game to `dist/`: 15 files, about 570 kB. Upload that folder to any
 static web host that serves **https** (GitHub Pages, Cloudflare Pages, Netlify, your own server). It
 works from the root of a site or from any sub-folder, with no configuration.
 
@@ -77,9 +80,14 @@ saved half way carries on unchanged, each era's tyres and aids, the two-compound
 cars, red flags) and then run all 352 real rounds once to check that the races look like their
 era. That last part takes most of a minute.
 
+The career tests play a whole career, every session of 2010 to 2026, and check it stays sound
+at every step and that the points add up; that one takes about a minute on its own.
+
 `npm run e2e` builds the game twice and drives it in a real browser at phone size: first visit,
 offline reloads, a cold start with the server gone, backup and restore, an update arriving, hosting
-from a sub-folder, the almanac, and a race from the grid to its result. It needs Playwright with Chromium to be
+from a sub-folder, the almanac, a race from the grid to its result, and a career weekend from
+practice to the standings (with a race left and carried on after a reload, and a 2023 sprint
+weekend). It needs Playwright with Chromium to be
 available to Node; it is deliberately not a dependency of the project.
 
 ## The balance lab
@@ -103,6 +111,20 @@ prints one race in full: season, round, seed.
 ```bash
 npm run lab:tyres
 ```
+
+```bash
+npm run lab:push -- 2019 ferrari 3
+```
+
+runs one team's cars through a season under different push-level policies (always normal, always
+all-out, short bursts and so on).
+
+```bash
+npm run lab:push-solo -- 2019 5 250
+```
+
+measures the bare trade of all-out with no traffic: time gained and cars lost for bursts of 1 to 20
+laps.
 
 shows how many stops the pit wall plans in each season on a dry day. The balance values are the
 constants at the top of `src/game/sim/model.ts`, `race.ts` and `tyres.ts`.
@@ -133,10 +155,12 @@ build/                  the small build step that writes dist/sw.js
 src/game/               the game itself: plain data and pure functions, no browser APIs
 src/game/data/          the seasons: generated facts, and the game's own ratings and rules
 src/game/sim/           the race engine: practice, qualifying, the race, the pit wall
+src/game/season/        the season: weekend formats, the grid of a round, sessions, championships
 src/platform/           the browser: save store, backup files, service worker, storage
 src/app/                app state, screen addresses, the actions screens call
 src/ui/                 screens and components
 src/ui/race/            the race view: circuit map, drawing, race clock, wording
+src/ui/career/          pieces of the career screens: standings, names
 src/styles/             design tokens and styles
 src/dev/                staged save states for screenshots (left out of normal builds)
 scripts/                data generator, icon maker, the balance lab

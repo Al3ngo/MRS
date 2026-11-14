@@ -70,6 +70,9 @@ describe('wording', () => {
     racesRun: 6,
     sessionsCompleted: 178,
     finished: false,
+    team: 'mclaren',
+    teamName: 'McLaren',
+    colour: '#9aa3ad',
   };
 
   it('describes where a career stands', () => {

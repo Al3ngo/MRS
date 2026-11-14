@@ -10,6 +10,7 @@ import { createStore } from './store';
 export type Route =
   | { screen: 'careers' }
   | { screen: 'career'; slot: SlotId }
+  | { screen: 'weekend'; slot: SlotId }
   | { screen: 'almanac'; season: number }
   | { screen: 'race'; season: number; round: number }
   | { screen: 'system' };
@@ -19,7 +20,7 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === 'system') return { screen: 'system' };
   if (parts[0] === 'career') {
     const slot = Number(parts[1]);
-    if (isSlotId(slot)) return { screen: 'career', slot };
+    if (isSlotId(slot)) return parts[2] === 'weekend' ? { screen: 'weekend', slot } : { screen: 'career', slot };
   }
   if (parts[0] === 'almanac') {
     const season = Number(parts[1]);
@@ -39,6 +40,8 @@ export function routeHash(route: Route): string {
       return '#/';
     case 'career':
       return `#/career/${route.slot}`;
+    case 'weekend':
+      return `#/career/${route.slot}/weekend`;
     case 'almanac':
       return `#/almanac/${route.season}`;
     case 'race':

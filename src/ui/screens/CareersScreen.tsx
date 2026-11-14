@@ -23,7 +23,7 @@ import type { DecodedSave } from '../../platform/savefile';
 import type { SlotId, SlotView } from '../../platform/saves';
 import { summarise } from '../../game/career';
 import { EraStrip } from '../EraStrip';
-import { describePosition, formatBytes, formatWhen, PHASE_NAMES, roundLabel } from '../format';
+import { describePosition, formatBytes, formatWhen, nextLabel, roundLabel } from '../format';
 import { IconForward, IconMore } from '../icons';
 import { Mark } from '../Mark';
 import { ConfirmSheet, Sheet } from '../Sheet';
@@ -419,9 +419,12 @@ function SlotCard({ view, lead, busy, onContinue, onStart, onRestoreFile, onRest
         <span class="slot__where">
           <span class="figure slot__season">{summary.seasonYear}</span>
           <span class="slot__lines">
-            <span class="slot__line">{summary.finished ? 'Career complete' : roundLabel(summary)}</span>
+            <span class="slot__line">
+              {summary.colour && <span class="slot__team" style={{ background: summary.colour }} />}
+              {summary.teamName ?? 'No team yet'}
+            </span>
             <span class="slot__next">
-              {summary.finished ? 'All 17 seasons run' : `${PHASE_NAMES[summary.phase]} next`}
+              {summary.finished ? 'Career complete' : `${roundLabel(summary)} · ${nextLabel(summary)}`}
             </span>
           </span>
         </span>,

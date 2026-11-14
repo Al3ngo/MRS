@@ -1,0 +1,489 @@
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { goBack } from '../../app/router';
+import { app, careerIn, enterCareer, leaveCareer, updateCareer } from '../../app/session';
+import { useStore } from '../../app/store';
+import {
+  finishPractice,
+  finishRace,
+  saveLive,
+  savePractice,
+  saveQualifying,
+  type CareerState,
+  type PracticeState,
+} from '../../game/career';
+import { calendar } from '../../game/data';
+import {
+  PRACTICE_RUNS,
+  finishesOf,
+  playerCars,
+  poleFor,
+  practiceRun,
+  practiceSetups,
+  setDial,
+  simulateRest,
+  startPractice,
+  startQualifying,
+  startRace,
+} from '../../game/season/sessions';
+import { gridSource, sessionName, type SessionKind } from '../../game/season/weekend';
+import { DIALS, runPart, type Approach, type Dial, type Hint, type QualifyingState, type RaceState } from '../../game/sim';
+import type { SlotId } from '../../platform/saves';
+import { formatLap } from '../format';
+import { IconBack } from '../icons';
+import { Grid } from '../race/Grid';
+import { LiveRace } from '../race/LiveRace';
+import { RaceResult, poleOf, type Pole } from '../race/Result';
+import { trackWords } from '../race/words';
+import { teamLabel } from '../career/names';
+
+/**
+ * The sessions of a race weekend, one after another: practice, qualifying, the sprint sessions on
+ * a sprint weekend, and the race. Each session is saved as it is completed; a race under way is
+ * saved as it runs. After the race the career returns to its home screen for the management phase.
+ */
+export function WeekendScreen({ slot }: { slot: SlotId }) {
+  const { active } = useStore(app);
+  const career = active?.slot === slot ? active.career : null;
+  // The session on screen: it stays until the player moves on, even once its result is saved.
+  const [view, setView] = useState<SessionKind | null>(null);
+
+  useEffect(() => {
+    void enterCareer(slot);
+    return () => {
+      void leaveCareer();
+    };
+  }, [slot]);
+
+  // Pin the session on arrival, so that saving its result does not move the screen on.
+  useEffect(() => {
+    if (career && view === null) setView(career.phase);
+  }, [career, view]);
+  const shown = view ?? career?.phase ?? null;
+  useEffect(() => {
+    if (career && (career.team === null || shown === 'management')) {
+      goBack({ screen: 'career', slot });
+    }
+  }, [career, shown, slot]);
+
+  if (!career || !shown || shown === 'management' || career.team === null) return <div class="shell" />;
+
+  const carryOn = (): void => {
+    const now = careerIn(slot);
+    if (!now || now.phase === 'management') {
+      goBack({ screen: 'career', slot });
+      return;
+    }
+    setView(now.phase);
+    window.scrollTo(0, 0);
+  };
+  const colour = teamLabel(career.team, career.seasonYear).colour;
+  const key = `${career.seasonYear}-${career.round}-${shown}`;
+
+  return (
+    <div class="shell" style={{ '--accent': colour }}>
+      {shown === 'practice' && <Practice key={key} slot={slot} career={career} onContinue={carryOn} />}
+      {(shown === 'qualifying' || shown === 'sprint-qualifying') && (
+        <Qualifying key={key} slot={slot} career={career} kind={shown} onContinue={carryOn} />
+      )}
+      {(shown === 'race' || shown === 'sprint') && (
+        <RaceSession key={key} slot={slot} career={career} kind={shown} onContinue={carryOn} />
+      )}
+    </div>
+  );
+}
+
+function SessionBar({ slot, title }: { slot: SlotId; title: string }) {
+  return (
+    <header class="topbar">
+      <div class="topbar__inner">
+        <button type="button" class="back" onClick={() => goBack({ screen: 'career', slot })}>
+          <IconBack />
+          Team
+        </button>
+        <span class="topbar__meta">{title}</span>
+      </div>
+    </header>
+  );
+}
+
+const roundOf = (career: CareerState) => calendar(career.seasonYear)[career.round - 1]!;
+
+// ── Practice ────────────────────────────────────────────────────────────────────────────────
+
+const DIAL_WORDS: Readonly<Record<Dial, { name: string; low: string; high: string }>> = {
+  wing: { name: 'Wing', low: 'Low drag', high: 'Downforce' },
+  balance: { name: 'Balance', low: 'Stable rear', high: 'Sharp front' },
+  ride: { name: 'Suspension', low: 'Soft', high: 'Stiff' },
+};
+
+const HINT_WORDS: Readonly<Record<Hint, string>> = {
+  'much-lower': 'Much lower',
+  lower: 'Lower',
+  good: 'Right',
+  higher: 'Higher',
+  'much-higher': 'Much higher',
+};
+
+function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerState; onContinue: () => void }) {
+  const cars = useMemo(() => playerCars(career), [career.seasonYear, career.round]);
+  const [practice, setPractice] = useState<PracticeState>(() => career.weekend.practice ?? startPractice(career));
+  const [selected, setSelected] = useState(0);
+  const car = cars[selected]!;
+  const dials = practice.dials[car.id]!;
+  const hints = practice.hints[car.id];
+  const runs = practice.runs[car.id] ?? 0;
+  const round = roundOf(career);
+
+  const run = (): void => {
+    const next = practiceRun(career, practice, car.id);
+    setPractice(next);
+    void updateCareer((current) => savePractice(current, next));
+  };
+  const finish = (): void => {
+    void updateCareer((current) => finishPractice(current, practiceSetups(current, practice)));
+    onContinue();
+  };
+
+  return (
+    <>
+      <SessionBar slot={slot} title="Practice" />
+      <main class="canvas canvas--above-bar" data-sessions={career.sessionsCompleted}>
+        <div class="title-row">
+          <h1 class="title">{round.name}</h1>
+          <p class="subtitle">
+            Practice. Set each car up, send it out, and listen to the driver. {PRACTICE_RUNS} runs a car.
+          </p>
+        </div>
+
+        <div class="segmented segmented--large" role="group" aria-label="Car">
+          {cars.map((entrant, index) => (
+            <button
+              type="button"
+              key={entrant.id}
+              class={`segmented__option${index === selected ? ' segmented__option--on' : ''}`}
+              aria-pressed={index === selected}
+              onClick={() => setSelected(index)}
+            >
+              {entrant.driverName.split(' ').at(-1)}
+            </button>
+          ))}
+        </div>
+
+        <section class="card card--gap" aria-label={`Setup of ${car.driverName}'s car`}>
+          {DIALS.map((dial) => (
+            <div class="dial" key={dial}>
+              <div class="dial__head">
+                <span class="dial__name">{DIAL_WORDS[dial].name}</span>
+                {hints && (
+                  <span class={`pill dial__hint${hints[dial] === 'good' ? ' pill--positive' : ''}`}>{HINT_WORDS[hints[dial]]}</span>
+                )}
+              </div>
+              <div class="dial__control">
+                <button
+                  type="button"
+                  class="button button--secondary dial__step"
+                  aria-label={`${DIAL_WORDS[dial].name} lower`}
+                  onClick={() => setPractice(setDial(practice, car.id, dial, dials[dial] - 5))}
+                >
+                  −
+                </button>
+                <div class="dial__track" aria-hidden="true">
+                  <span class="dial__fill" style={{ width: `${dials[dial]}%` }} />
+                </div>
+                <span class="figure dial__value" aria-label={`${DIAL_WORDS[dial].name} ${dials[dial]}`}>
+                  {dials[dial]}
+                </span>
+                <button
+                  type="button"
+                  class="button button--secondary dial__step"
+                  aria-label={`${DIAL_WORDS[dial].name} higher`}
+                  onClick={() => setPractice(setDial(practice, car.id, dial, dials[dial] + 5))}
+                >
+                  +
+                </button>
+              </div>
+              <div class="dial__ends">
+                <span>{DIAL_WORDS[dial].low}</span>
+                <span>{DIAL_WORDS[dial].high}</span>
+              </div>
+            </div>
+          ))}
+        </section>
+        <p class="smallprint">
+          {hints
+            ? `What ${car.driverName.split(' ').at(-1)} said after the last run. A consistent driver's feedback is more exact.`
+            : 'The car starts on the engineers\' baseline. A run brings the driver\'s verdict on each setting.'}
+        </p>
+      </main>
+      <div class="actionbar">
+        <div class="actionbar__inner">
+          <button type="button" class="button button--secondary" disabled={runs >= PRACTICE_RUNS} onClick={run}>
+            {runs >= PRACTICE_RUNS ? 'No runs left' : `Do a run (${PRACTICE_RUNS - runs} left)`}
+          </button>
+          <button type="button" class="button button--primary" data-quick onClick={finish}>
+            Finish practice
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Qualifying ──────────────────────────────────────────────────────────────────────────────
+
+const APPROACHES: readonly { id: Approach; label: string }[] = [
+  { id: 'safe', label: 'Safe' },
+  { id: 'normal', label: 'Normal' },
+  { id: 'push', label: 'Push' },
+];
+
+function Qualifying({
+  slot,
+  career,
+  kind,
+  onContinue,
+}: {
+  slot: SlotId;
+  career: CareerState;
+  kind: 'qualifying' | 'sprint-qualifying';
+  onContinue: () => void;
+}) {
+  const name = sessionName(career.seasonYear, kind);
+  const prefix = kind === 'qualifying' ? 'Q' : 'SQ';
+  const [session] = useState<QualifyingState>(
+    () => (kind === 'qualifying' ? career.weekend.qualifying : career.weekend.sprintQualifying) ?? startQualifying(career),
+  );
+  const [, setBeat] = useState(0);
+  const cars = useMemo(() => playerCars(career), [career.seasonYear, career.round]);
+  const [approach, setApproach] = useState<Record<string, Approach>>({});
+  const round = roundOf(career);
+  const last = session.parts.at(-1) ?? null;
+  const done = session.part === 4;
+  const entrants = session.setup.entrants;
+  const byId = new Map(entrants.map((entrant) => [entrant.id, entrant]));
+
+  const runNext = (): void => {
+    runPart(session, approach);
+    setBeat((beat) => beat + 1);
+    void updateCareer((current) => saveQualifying(current, session));
+    window.scrollTo(0, 0);
+  };
+
+  return (
+    <>
+      <SessionBar slot={slot} title={name} />
+      <main class="canvas canvas--above-bar" data-sessions={career.sessionsCompleted}>
+        <div class="title-row">
+          <h1 class="title">{round.name}</h1>
+          <p class="subtitle">
+            {name}.{' '}
+            {done
+              ? 'The grid is set.'
+              : `${prefix}${session.part} of 3. Track: ${trackWords(session.wetness).toLowerCase()}.`}
+          </p>
+        </div>
+
+        {!done && (
+          <section class="card stack" aria-labelledby="quali-approach">
+            <h2 class="card__title" id="quali-approach">
+              How hard to go in {prefix}
+              {session.part}
+            </h2>
+            {cars
+              .filter((entrant) => session.through.includes(entrant.id))
+              .map((entrant) => (
+                <div class="control control--wide" key={entrant.id}>
+                  <span class="control__name">{entrant.code}</span>
+                  <div class="segmented segmented--large" role="group" aria-label={`Approach, ${entrant.code}`}>
+                    {APPROACHES.map((option) => {
+                      const on = (approach[entrant.id] ?? 'normal') === option.id;
+                      return (
+                        <button
+                          type="button"
+                          key={option.id}
+                          class={`segmented__option${on ? ' segmented__option--on' : ''}`}
+                          aria-pressed={on}
+                          onClick={() => setApproach({ ...approach, [entrant.id]: option.id })}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            {cars.every((entrant) => !session.through.includes(entrant.id)) && (
+              <p class="muted">Both cars are out. The session runs on without them.</p>
+            )}
+            <p class="muted">Push finds a little time and risks a ruined lap. Safe rarely goes wrong.</p>
+          </section>
+        )}
+
+        {last && (
+          <section class={`card card--list${done ? '' : ' card--gap'}`} aria-label={`${prefix}${last.part} times`}>
+            <h2 class="card__title card__title--list">
+              {prefix}
+              {last.part}
+            </h2>
+            <ol>
+              {last.laps.map((lap, index) => {
+                const entrant = byId.get(lap.car)!;
+                const out = last.knockedOut.includes(lap.car);
+                const gap = lap.time - last.laps[0]!.time;
+                return (
+                  <li key={lap.car}>
+                    <div class={`result${entrant.player ? ' result--mine' : ''}${out ? ' result--out' : ''}`}>
+                      <span class="figure result__place">{index + 1}</span>
+                      <span class="team__colour" style={{ background: entrant.colour }} />
+                      <span class="round__text">
+                        <span class="round__name">{entrant.driverName}</span>
+                        <span class="round__where">
+                          {entrant.teamName}
+                          {out ? ` · out in ${prefix}${last.part}` : ''}
+                          {lap.error ? ' · mistake on the lap' : ''}
+                        </span>
+                      </span>
+                      <span class="team__figures">
+                        <span class="figure">{index === 0 ? formatLap(lap.time) : `+${gap.toFixed(3)}`}</span>
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        )}
+      </main>
+      <div class="actionbar">
+        <div class="actionbar__inner">
+          {done ? (
+            <button type="button" class="button button--primary" data-quick onClick={onContinue}>
+              Continue
+            </button>
+          ) : (
+            <button type="button" class="button button--primary" data-quick onClick={runNext}>
+              Run {prefix}
+              {session.part}
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── The race and the sprint ─────────────────────────────────────────────────────────────────
+
+function poleInfo(career: CareerState, race: RaceState): Pole {
+  const source = gridSource(career.seasonYear, career.round, race.setup.kind);
+  const session = source === 'qualifying' ? career.weekend.qualifying : source === 'sprint-qualifying' ? career.weekend.sprintQualifying : null;
+  if (session && session.part === 4) return poleOf(session, race);
+  return { driver: race.setup.grid[0]!.driver, time: null, wet: false };
+}
+
+function RaceSession({
+  slot,
+  career,
+  kind,
+  onContinue,
+}: {
+  slot: SlotId;
+  career: CareerState;
+  kind: 'race' | 'sprint';
+  onContinue: () => void;
+}) {
+  const resumed = career.weekend.live !== null;
+  const race = useMemo(() => career.weekend.live ?? startRace(career), []);
+  const pole = useMemo(() => poleInfo(career, race), [race]);
+  const [step, setStep] = useState<'grid' | 'live' | 'result'>(resumed ? 'live' : 'grid');
+  const [, setBeat] = useState(0);
+  const round = roundOf(career);
+  const name = sessionName(career.seasonYear, kind);
+  const lower = name.toLowerCase();
+
+  const record = (): void => {
+    const now = careerIn(slot);
+    if (!now || (now.phase !== 'race' && now.phase !== 'sprint')) return;
+    const poleDriver = kind === 'race' ? poleFor(now) : null;
+    void updateCareer((current) => finishRace(current, finishesOf(race), poleDriver));
+    setStep('result');
+    window.scrollTo(0, 0);
+  };
+  const keep = (): void => {
+    void updateCareer((current) => saveLive(current, race));
+  };
+
+  // A race finished but not recorded (the app closed at the flag) is recorded now.
+  useEffect(() => {
+    if (resumed && race.phase === 'finished') record();
+  }, []);
+
+  if (step === 'live') {
+    return (
+      <LiveRace
+        state={race}
+        onFinish={record}
+        onLeave={() => {
+          keep();
+          goBack({ screen: 'career', slot });
+        }}
+        onProgress={keep}
+        keepOnLeave
+        startPaused={resumed}
+      />
+    );
+  }
+
+  return (
+    <>
+      <SessionBar slot={slot} title={step === 'result' ? `${name} result` : name} />
+      <main class="canvas canvas--above-bar" data-sessions={career.sessionsCompleted}>
+        <div class="title-row">
+          <h1 class="title">{round.name}</h1>
+          <p class="subtitle">
+            {step === 'result'
+              ? `${name} result.`
+              : `${name}, ${race.setup.laps} laps. Track: ${trackWords(race.wetness).toLowerCase()}.${
+                  gridSource(career.seasonYear, career.round, kind) === 'sprint' ? ' The grid is the sprint result.' : ''
+                }`}
+          </p>
+        </div>
+        {step === 'grid' && <Grid state={race} onChange={() => setBeat((beat) => beat + 1)} />}
+        {step === 'result' && <RaceResult state={race} pole={pole} title={name} />}
+      </main>
+      <div class="actionbar">
+        <div class="actionbar__inner">
+          {step === 'grid' ? (
+            <>
+              <button
+                type="button"
+                class="button button--secondary"
+                data-quick
+                onClick={() => {
+                  simulateRest(race);
+                  record();
+                }}
+              >
+                Simulate
+              </button>
+              <button
+                type="button"
+                class="button button--primary"
+                onClick={() => {
+                  keep();
+                  setStep('live');
+                }}
+              >
+                Start the {lower}
+              </button>
+            </>
+          ) : (
+            <button type="button" class="button button--primary" data-quick onClick={onContinue}>
+              Continue
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

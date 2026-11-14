@@ -2,14 +2,15 @@ import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  completeSession,
+  chooseTeam,
   findProblems,
   newCareer,
   summarise,
   type CareerState,
   type CareerSummary,
 } from '../src/game/career';
-import { SCHEMA_VERSION, SaveError, migrate, type SaveCodec } from '../src/game/save-schema';
+import { MIGRATIONS, SCHEMA_VERSION, SaveError, migrate, type SaveCodec } from '../src/game/save-schema';
+import { autoplay } from '../src/game/season/sessions';
 import { decodeSaveFile } from '../src/platform/savefile';
 import { createSaveStore, type SaveStore } from '../src/platform/saves';
 
@@ -33,10 +34,17 @@ afterEach(() => {
   while (open.length) open.pop()?.close();
 });
 
+/** A career with Ferrari, `sessions` sessions in: every session played by the pit wall. */
+const cache = new Map<string, CareerState>();
 const career = (sessions = 0, id = 'career-1'): CareerState => {
-  let state = newCareer(id, new Date('2026-11-12T17:00:00Z'));
-  for (let i = 0; i < sessions; i++) state = completeSession(state);
-  return state;
+  const key = `${id}/${sessions}`;
+  let state = cache.get(key);
+  if (!state) {
+    state = chooseTeam(newCareer(id, new Date('2026-11-12T17:00:00Z')), 'ferrari');
+    for (let i = 0; i < sessions; i++) state = autoplay(state);
+    cache.set(key, state);
+  }
+  return structuredClone(state);
 };
 
 async function codeOf(work: Promise<unknown>): Promise<unknown> {
@@ -225,15 +233,17 @@ describe('backup and restore', () => {
 });
 
 describe('a later save version', () => {
-  // A stand-in for a later stage of the game: version 2 gives every career a team.
+  // A stand-in for a later version of the game, one past this one, that adds a field to every career.
+  const LATER = SCHEMA_VERSION + 1;
   type WithTeam = CareerState & { teamId?: unknown };
   const teamProblems = (career: unknown): string[] =>
     typeof (career as WithTeam | null)?.teamId === 'string' ? [] : ['The career has no team.'];
   const v2: SaveCodec = {
-    version: 2,
+    version: LATER,
     upgrade(career, fromVersion) {
-      const upgraded = migrate(career, fromVersion, 2, {
-        1: (older) => ({ ...(older as object), teamId: 'unassigned' }),
+      const upgraded = migrate(career, fromVersion, LATER, {
+        ...MIGRATIONS,
+        [SCHEMA_VERSION]: (older) => ({ ...(older as object), teamId: 'unassigned' }),
       });
       const problems = [...findProblems(upgraded), ...teamProblems(upgraded)];
       if (problems.length > 0) throw new SaveError('invalid', 'The career in this save is damaged.', problems);
@@ -253,13 +263,13 @@ describe('a later save version', () => {
     const [view] = await store.list();
     expect(view).toMatchObject({
       kind: 'career',
-      record: { schemaVersion: 1, summary: { seasonYear: 2010, round: 2, team: 'unassigned' } },
+      record: { schemaVersion: SCHEMA_VERSION, summary: { seasonYear: 2010, round: 2, team: 'unassigned' } },
     });
     expect(await store.load(1)).toEqual(withTeam(career(5)));
 
-    // Looking is not writing: the stored copy is still the version 1 career.
+    // Looking is not writing: the stored copy is still the career as this version wrote it.
     const file = JSON.parse((await store.exportFile(1)).text);
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(SCHEMA_VERSION);
     expect('teamId' in file.career).toBe(false);
     expect(decodeSaveFile(JSON.stringify(file), v2).career).toEqual(withTeam(career(5)));
   });
@@ -271,13 +281,13 @@ describe('a later save version', () => {
 
     const { store } = freshStore(before.databaseName, v2);
     const loaded = await store.load(1);
-    const record = await store.save(1, withTeam(completeSession(loaded), 'ferrari'));
-    expect(record).toMatchObject({ schemaVersion: 2, hasSafetyCopy: true, summary: { team: 'ferrari' } });
+    const record = await store.save(1, withTeam(autoplay(loaded), 'ferrari'));
+    expect(record).toMatchObject({ schemaVersion: LATER, hasSafetyCopy: true, summary: { team: 'ferrari' } });
     expect(await store.load(1)).toEqual(withTeam(career(6), 'ferrari'));
 
-    // The safety copy is the version 1 career from before the upgrade, and it still upgrades.
+    // The safety copy is the career from before the upgrade, and it still upgrades.
     expect(await store.restoreSafetyCopy(1)).toEqual(withTeam(career(5)));
-    expect((await store.list())[0]).toMatchObject({ kind: 'career', record: { schemaVersion: 2 } });
+    expect((await store.list())[0]).toMatchObject({ kind: 'career', record: { schemaVersion: LATER } });
   });
 
   it('shows an older build a newer save as off limits, without trusting its summary', async () => {
@@ -287,7 +297,7 @@ describe('a later save version', () => {
 
     const { store } = freshStore(newer.databaseName);
     const [view] = await store.list();
-    expect(view).toMatchObject({ kind: 'newer', record: { schemaVersion: 2, summary: null } });
+    expect(view).toMatchObject({ kind: 'newer', record: { schemaVersion: LATER, summary: null } });
     expect(await codeOf(store.load(1))).toBe('too-new');
     expect((await store.exportFile(1)).name).toMatch(/^mrm-save-/);
   });

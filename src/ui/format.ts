@@ -1,12 +1,14 @@
 /** Wording and number formats shared by the screens. */
-import type { CareerSummary, WeekendPhase } from '../game/career';
+import type { CareerSummary } from '../game/career';
+import { sessionName } from '../game/season/weekend';
 
-export const PHASE_NAMES: Readonly<Record<WeekendPhase, string>> = {
-  practice: 'Practice',
-  qualifying: 'Qualifying',
-  race: 'Race',
-  management: 'Management',
-};
+/** What comes next in a career, in words: "Qualifying next", "Sprint shootout next". */
+export const nextLabel = (summary: Pick<CareerSummary, 'phase' | 'seasonYear' | 'team'>): string =>
+  summary.team === null
+    ? 'Choose a team'
+    : summary.phase === 'management'
+      ? 'Between races'
+      : `${sessionName(summary.seasonYear, summary.phase)} next`;
 
 /** "Round 3 of 19" */
 export const roundLabel = (summary: Pick<CareerSummary, 'round' | 'rounds'>): string =>

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { completeSession, newCareer } from '../src/game/career';
+import { chooseTeam, newCareer } from '../src/game/career';
+import { autoplay } from '../src/game/season/sessions';
 import { SCHEMA_VERSION, SaveError } from '../src/game/save-schema';
 import { SAVE_FORMAT, crc32, decodeSaveFile, encodeSaveFile, saveFileName } from '../src/platform/savefile';
 
-const career = () => completeSession(completeSession(newCareer('career-1', new Date('2026-11-12T18:00:00Z'))));
+const played = autoplay(autoplay(chooseTeam(newCareer('career-1', new Date('2026-11-12T18:00:00Z')), 'ferrari')));
+const career = () => structuredClone(played);
 
 const encode = (overrides: Partial<Parameters<typeof encodeSaveFile>[0]> = {}) =>
   encodeSaveFile({

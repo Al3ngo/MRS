@@ -5,13 +5,7 @@
  * `?scene=<name>`. It is not part of the game and is left out of normal builds.
  */
 import { openDB } from 'idb';
-import {
-  FIRST_SEASON,
-  WEEKEND_PHASES,
-  roundsIn,
-  type CareerState,
-  type WeekendPhase,
-} from '../game/career';
+import { newCareer, roundsIn, type CareerState, type SessionKind } from '../game/career';
 import { SCHEMA_VERSION } from '../game/save-schema';
 import { DEFAULT_DATABASE_NAME, SLOT_IDS, createSaveStore, type SlotId } from '../platform/saves';
 
@@ -19,16 +13,22 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-function careerAt(id: string, seasonYear: number, round: number, phase: WeekendPhase, finished = false): CareerState {
-  let sessions = (round - 1) * WEEKEND_PHASES.length + WEEKEND_PHASES.indexOf(phase);
-  for (let year = FIRST_SEASON; year < seasonYear; year++) sessions += roundsIn(year) * WEEKEND_PHASES.length;
+/** A career for a scene: the team and the point of the calendar it has reached, with no results kept. */
+function careerAt(
+  id: string,
+  team: string,
+  seasonYear: number,
+  round: number,
+  phase: SessionKind,
+  finished = false,
+): CareerState {
   return {
-    id,
-    createdAt: new Date(Date.now() - 40 * DAY).toISOString(),
+    ...newCareer(id, new Date(Date.now() - 40 * DAY)),
+    team,
     seasonYear,
     round,
     phase,
-    sessionsCompleted: sessions,
+    sessionsCompleted: (seasonYear - 2010) * 90 + round * 4,
     finished,
   };
 }
@@ -61,20 +61,20 @@ const SCENES: Readonly<Record<string, () => Promise<void>>> = {
   empty: async () => {},
   /** One career under way. */
   one: async () => {
-    await put(1, careerAt('scene-one', 2010, 3, 'qualifying'), 4 * MINUTE);
+    await put(1, careerAt('scene-one', 'ferrari', 2010, 3, 'qualifying'), 4 * MINUTE);
   },
   /** All three slots in use, at different points of the timeline. */
   three: async () => {
-    await put(1, careerAt('scene-a', 2012, 7, 'race'), 3 * DAY);
-    await put(2, careerAt('scene-b', 2019, 14, 'management'), 25 * MINUTE);
-    await put(3, careerAt('scene-c', 2024, 22, 'practice'), 9 * DAY);
+    await put(1, careerAt('scene-a', 'mclaren', 2012, 7, 'race'), 3 * DAY);
+    await put(2, careerAt('scene-b', 'williams', 2019, 14, 'management'), 25 * MINUTE);
+    await put(3, careerAt('scene-c', 'hrt', 2024, 22, 'practice'), 9 * DAY);
   },
   /** A finished career, a damaged save with a safety copy, and a save from a newer version. */
   trouble: async () => {
-    await put(1, careerAt('scene-done', 2026, roundsIn(2026), 'management', true), 2 * HOUR);
-    await put(2, careerAt('scene-damaged', 2015, 9, 'race'), 1 * DAY);
+    await put(1, careerAt('scene-done', 'red-bull', 2026, roundsIn(2026), 'management', true), 2 * HOUR);
+    await put(2, careerAt('scene-damaged', 'sauber', 2015, 9, 'race'), 1 * DAY);
     await tamper(2, 'damaged');
-    await put(3, careerAt('scene-newer', 2021, 4, 'practice'), 6 * DAY);
+    await put(3, careerAt('scene-newer', 'mercedes', 2021, 4, 'practice'), 6 * DAY);
     await tamper(3, 'newer');
   },
 };

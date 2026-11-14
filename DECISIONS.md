@@ -299,3 +299,117 @@ Measured over three runs of every round of eight seasons (2010, 2012, 2014, 2017
 
 - **Racing a round from the almanac** is how a race is reached until there is a season to play. It
   is close to the quick-race mode the brief lists as an extra, and will become it.
+
+## Part A: driver push levels and stress
+
+The brief file I have does not contain this section (it is the same file as the first upload), so
+this follows the description given in chat.
+
+### What it does
+
+- **Four push levels for every driver: conserve, normal, push, all-out.** Each higher level is
+  quicker, wears the tyres faster and builds stress. Per lap, against normal: conserve is about
+  three tenths slower, wears tyres 18% less and sheds 22 points of stress; push is about a quarter
+  of a second quicker, wears them 18% more and adds 4 stress; all-out is about seven tenths
+  quicker, wears them 40% more and adds 32. Normal sheds 10 a lap.
+- **Stress also builds holding off a car right behind** (within 0.8 seconds), even at normal, and
+  more at the higher levels. Behind the safety car it drains quickly.
+- **Stress does no harm below 25.** Above that, mistakes grow likelier (up to six times at the top
+  of the gauge), a mistake is likelier to end in the barriers, and contact with another car is
+  likelier. Above 70 the driver is ragged and loses pace as well.
+- **A consistent driver builds stress more slowly.**
+- **The radio says when a driver is on the limit.**
+
+### All-out is a burst
+
+Tuned with two labs (`npm run lab:push`, `npm run lab:push-solo`). With no traffic, from lap 10
+of a 66-lap race:
+
+| laps all-out | time gained | cars that do not finish (normal: 5%) |
+|---|---|---|
+| 1 | 0.1 s | 5% |
+| 2 | 0.8 s | 5% |
+| 3 | 0.2 s | 7% |
+| 6 | -0.3 s | 10% |
+| 20 | -0.7 s | 15% |
+
+Over whole seasons (2019 Ferrari and 2014 Williams, every round three times), all-out held for
+the race is the worst policy by far: 3 to 5 places lost on average, and 4 to 10 times the
+crashes. Push held for the race is nearly as bad, because any level that builds stress fills the
+gauge in the end. Short bursts came out about a third of a place better than staying at normal
+for Ferrari and about two thirds of a place worse for Williams: within the noise of 63 races, so
+the clean measure is the one with no traffic, above. A test keeps that shape.
+
+### Choices where the description was open
+
+- **Push levels apply in every season**, not only the hybrid years: they are the driver's, not the
+  engine's.
+- **The pit wall uses them sparingly for the cars it runs**: push only after being stuck behind a
+  car for a while, all-out only for a pass in the last two laps, conserve to shed stress or stretch
+  worn tyres. When rival cars pushed whenever they were close, overtakes rose by a fifth; as it
+  is, Stage 3's balance figures are about where they were (overtakes a few percent up).
+- **The controls**: a push row of four 48px buttons directly above the engine and battery rows,
+  with a stress gauge beside it (grey while harmless, white as it rises, amber at the limit), and a
+  thin stress bar along the foot of each car card so both drivers can be watched at once.
+- **Short phones** (under 740px tall) get a smaller map, a one-line feed and a one-line car card
+  (tyre life and fuel together), so the running order keeps four rows.
+
+## Stage 5: the season loop, calendar and standings
+
+### The loop
+
+- **Choose a team, keep it.** A new career opens on the 2010 grid; the team is confirmed once and
+  cannot be changed, as in Golden Lap.
+- **Each round is practice, qualifying, race, then the management phase**, as the brainstorm
+  decisions say. The management phase is the career's home screen between races: the last result,
+  the championships and the next round. It has nothing to manage until Stage 6.
+- **Sprint weekends follow their year's real format**: 2021 and 2022 qualifying sets the sprint
+  grid and the sprint result sets the Grand Prix grid; 2023 adds a separate sprint shootout for the
+  sprint grid; from 2024 the sprint sessions come first (sprint qualifying, sprint, then
+  qualifying and the race).
+- **After the last round** the season is reviewed (champions, the team's place, its drivers'
+  places) and filed in the career's history, and the next season begins. **After 2026** the career
+  is complete: a summary of titles, wins, podiums and every season, and the slot can be started
+  again.
+
+### The sessions
+
+- **Practice**: three dials (wing, balance, suspension) on each car, starting from the engineers'
+  baseline, and four runs a car. After a run the driver says, for each dial, higher, lower or
+  right, and how far; a consistent driver is more exact. The setup found counts in qualifying and
+  the race. Skipping practice keeps the baseline.
+- **Qualifying**: knockout, run a part at a time, choosing safe, normal or push for each car
+  before each part.
+- **The race and the sprint**: the grid with the plan for each car, then either the live race view
+  or "Simulate" to have the result at once. A race under way is saved every other lap, on a pause,
+  when a sheet opens and when the app goes to the background; leaving it keeps it, and it carries
+  on later from where it was, paused.
+
+### Points and the championships
+
+- **Points are the real system of each year**, as tested against every real race in Stage 2:
+  25-18-15 from 2010, double points at the 2014 finale, the fastest-lap point from 2019 to 2024,
+  sprint points (3-2-1 in 2021, 8 to 1 from 2022), and reduced points for short races.
+- **Ties are split by the countback**: most wins, then most second places, and so on, counting
+  Grands Prix only. I believe sprint results do not count in the real countback, but have not
+  confirmed it; it would only matter on exactly equal points.
+- **Constructors' points are both cars' points.**
+
+### Stand-ins and choices where the brief was open
+
+- **Every team runs the drivers and car it really had that round**, the player's included, until
+  contracts and development (Stage 6) and the driver lifecycle (Stage 7) exist. So a career's
+  pecking order follows the real one for now.
+- **The player's team stays in the sport after its real exit.** HRT (to 2012), Caterham (to 2014)
+  and Manor (to 2016) left the real grid; a player who picked one keeps racing with its last car
+  and its last drivers where they are free, with the best free drivers filling any seat a driver
+  has left. Picking a team and keeping it (the brainstorm decision) wins over its real exit date.
+  The grid then has one more team than it really had.
+- **Saves from Stages 1 to 4** (stand-in careers with no team) are upgraded: they keep their
+  identity and season, start that season from round 1, and ask for a team when opened.
+- **The race view's "Leave" keeps a career race** to carry on later; leaving a single race from the
+  almanac still gives it up.
+- **No grid penalties yet**: power-unit wear is reported by each race, but counting parts against
+  the season's allowance is for Stage 6.
+- **The design checker warns of empty space on a desktop-sized window** on short screens (one card
+  above the pinned action). The game is laid out for a phone held upright, where it passes.

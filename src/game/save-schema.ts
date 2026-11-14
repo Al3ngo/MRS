@@ -2,14 +2,33 @@
  * Save versions. A save records the SCHEMA_VERSION it was written with; loading an older one runs
  * it through the migrations below, one version at a time, before it is checked and used.
  */
-import { findProblems, summarise, type CareerState, type CareerSummary } from './career';
+import { emptyWeekend, findProblems, summarise, type CareerState, type CareerSummary } from './career';
 
 /** Bump when CareerState changes shape, and add `MIGRATIONS[oldVersion]`. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** `MIGRATIONS[n]` turns a version n career into a version n + 1 career. */
 export type Migrations = Readonly<Record<number, (older: unknown) => unknown>>;
-export const MIGRATIONS: Migrations = {};
+export const MIGRATIONS: Migrations = {
+  /**
+   * Version 1 (Stages 1 to 4) was a stand-in career: a counter of sessions with no team and no
+   * results. It keeps its identity, start date and season, starts that season from round 1, and
+   * asks for a team when it is next opened.
+   */
+  1: (older) => {
+    const career = older as Record<string, unknown>;
+    return {
+      ...career,
+      team: null,
+      round: 1,
+      phase: 'practice',
+      finished: false,
+      weekend: emptyWeekend(),
+      results: [],
+      history: [],
+    };
+  },
+};
 
 export type SaveErrorCode =
   /** The file is not JSON at all. */

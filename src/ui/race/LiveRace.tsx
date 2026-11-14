@@ -37,24 +37,48 @@ interface Props {
   state: RaceState;
   /** Called once, when the last car has finished or the race has been skipped to its end. */
   onFinish: () => void;
-  /** Called when the player gives the race up. */
+  /** Called when the player leaves the race. */
   onLeave: () => void;
+  /**
+   * Called whenever the race is worth saving: every other lap, on a pause, when a sheet opens and
+   * when the app goes to the background. A race that is kept can be carried on later.
+   */
+  onProgress?: () => void;
+  /** Leaving keeps the race to carry on later, rather than giving it up. */
+  keepOnLeave?: boolean;
+  /** Starts with the clock stopped: for a race being carried on. */
+  startPaused?: boolean;
 }
 
-export function LiveRace({ state, onFinish, onLeave }: Props) {
+export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = false, startPaused = false }: Props) {
   const { setup } = state;
   const clock = useMemo(() => new RaceClock(state), [state]);
   const map = useMemo(() => trackMap(circuitById(setup.circuit).outline), [setup.circuit]);
   const mine = useMemo(() => state.cars.filter((car) => setup.grid[car.entrant]!.player), [state]);
 
   const [, setBeat] = useState(0);
-  const [speed, setSpeed] = useState<Speed>(1);
+  const [speed, setSpeed] = useState<Speed>(startPaused ? 0 : 1);
   const [selected, setSelected] = useState(0);
   const [sheet, setSheet] = useState<'pit' | 'skip' | 'leave' | null>(null);
   const [feed, setFeed] = useState<FeedLine[]>([]);
   const canvas = useRef<HTMLCanvasElement>(null);
   const finished = useRef(onFinish);
   finished.current = onFinish;
+  const progress = useRef(onProgress);
+  progress.current = onProgress;
+
+  // A pause or an open sheet is a natural moment to save.
+  useEffect(() => {
+    if ((speed === 0 || sheet) && state.phase !== 'finished') progress.current?.();
+  }, [speed, sheet, state]);
+
+  useEffect(() => {
+    const hidden = (): void => {
+      if (document.visibilityState === 'hidden' && state.phase !== 'finished') progress.current?.();
+    };
+    document.addEventListener('visibilitychange', hidden);
+    return () => document.removeEventListener('visibilitychange', hidden);
+  }, [state]);
 
   // A sheet stops the clock: nobody should lose places while choosing tyres.
   clock.speed = sheet ? 0 : speed;
@@ -95,6 +119,7 @@ export function LiveRace({ state, onFinish, onLeave }: Props) {
     let shownAt = 0;
     let seen = state.events.length;
     let done = false;
+    let savedLap = state.lap;
     const loop = (now: number): void => {
       frame = requestAnimationFrame(loop);
       const steps = document.hidden ? 0 : clock.run(now - last);
@@ -129,6 +154,10 @@ export function LiveRace({ state, onFinish, onLeave }: Props) {
       if (steps > 0 && now - shownAt > 180) {
         shownAt = now;
         setBeat((beat) => beat + 1);
+      }
+      if (state.lap >= savedLap + 2 && state.phase !== 'finished') {
+        savedLap = state.lap;
+        progress.current?.();
       }
       if (state.phase === 'finished' && !done) {
         done = true;
@@ -340,10 +369,14 @@ export function LiveRace({ state, onFinish, onLeave }: Props) {
       {sheet === 'leave' && (
         <ConfirmSheet
           title="Leave the race?"
-          lines={['The race is given up where it stands. Nothing is kept.']}
-          confirmLabel="Leave the race"
+          lines={[
+            keepOnLeave
+              ? 'The race is kept where it stands. Carry on with it from the team screen.'
+              : 'The race is given up where it stands. Nothing is kept.',
+          ]}
+          confirmLabel={keepOnLeave ? 'Leave for now' : 'Leave the race'}
           cancelLabel="Stay"
-          tone="danger"
+          tone={keepOnLeave ? 'primary' : 'danger'}
           onConfirm={onLeave}
           onCancel={() => setSheet(null)}
         />

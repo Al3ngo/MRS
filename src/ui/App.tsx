@@ -8,6 +8,7 @@ import { CareerScreen } from './screens/CareerScreen';
 import { CareersScreen } from './screens/CareersScreen';
 import { RaceScreen } from './screens/RaceScreen';
 import { SystemScreen } from './screens/SystemScreen';
+import { WeekendScreen } from './screens/WeekendScreen';
 import { Toasts } from './Toasts';
 
 export function App() {
@@ -25,6 +26,7 @@ export function App() {
     <>
       {current.screen === 'careers' && <CareersScreen />}
       {current.screen === 'career' && <CareerScreen key={current.slot} slot={current.slot} />}
+      {current.screen === 'weekend' && <WeekendScreen key={current.slot} slot={current.slot} />}
       {current.screen === 'almanac' && <AlmanacScreen season={current.season} />}
       {current.screen === 'race' && (
         <RaceScreen
@@ -34,7 +36,7 @@ export function App() {
         />
       )}
       {current.screen === 'system' && <SystemScreen />}
-      <Toasts aboveBar={current.screen === 'career' || current.screen === 'race'} />
+      <Toasts aboveBar={current.screen === 'career' || current.screen === 'weekend' || current.screen === 'race'} />
     </>
   );
 }

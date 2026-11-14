@@ -2,7 +2,7 @@
  * What the app is doing right now: the three slots, the career being played, and every action that
  * changes them. Screens read the stores here and call these functions; nothing else touches storage.
  */
-import { completeSession, newCareer, type CareerState } from '../game/career';
+import { newCareer, type CareerState } from '../game/career';
 import { SaveError } from '../game/save-schema';
 import { MAX_SAVE_FILE_BYTES, decodeSaveFile, type DecodedSave } from '../platform/savefile';
 import { createSaveStore, type SlotId, type SlotRecord, type SlotView } from '../platform/saves';
@@ -244,13 +244,24 @@ export function autosave(): Promise<void> {
   return writes;
 }
 
-/** Stage 1 stand-in for playing a session: moves the career on one step and autosaves. */
-export function completeNextSession(): Promise<void> {
+/**
+ * Changes the career being played and autosaves it. Every session, every race and every choice
+ * between races goes through here, so each is saved the moment it happens.
+ */
+export function updateCareer(change: (career: CareerState) => CareerState): Promise<void> {
   const active = app.get().active;
-  if (!active || active.career.finished) return writes;
-  patchActive(active.slot, (current) => ({ ...current, career: completeSession(current.career) }));
+  if (!active) return writes;
+  const career = change(active.career);
+  if (career === active.career) return writes;
+  patchActive(active.slot, (current) => ({ ...current, career }));
   return autosave();
 }
+
+/** The career being played, if it is the one in `slot`. */
+export const careerIn = (slot: SlotId): CareerState | null => {
+  const active = app.get().active;
+  return active?.slot === slot ? active.career : null;
+};
 
 /** Hands over to a downloaded update, once everything is safely written. The page then reloads. */
 export async function updateNow(): Promise<void> {
