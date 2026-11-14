@@ -1,0 +1,36 @@
+{
+  "name": "modern-racing-manager",
+  "private": true,
+  "version": "0.3.0",
+  "description": "Single-player motorsport team management game, 2010-2026. Offline-first PWA. Personal use.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "icons": "node scripts/make-icons.mjs",
+    "e2e": "vite build && vite build --outDir dist-next && node e2e/run.cjs",
+    "data": "node scripts/generate-data.mjs",
+    "lab": "rolldown scripts/sim-lab.ts --file node_modules/.cache/lab/sim-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/sim-lab.mjs",
+    "lab:tyres": "rolldown scripts/tyre-lab.ts --file node_modules/.cache/lab/tyre-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/tyre-lab.mjs"
+  },
+  "dependencies": {
+    "idb": "^8.0.4",
+    "preact": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "fake-indexeddb": "^6.2.8",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0",
+    "yaml": "^2.9.1"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

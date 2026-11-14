@@ -1,0 +1,79 @@
+/*
+ * Design tokens. The look is "true-black flat":
+ *
+ *   - One black ground. A surface is raised by a step in lightness, never by a border or a shadow.
+ *   - Hue is data. Buttons, tabs and navigation are white or grey; colour is kept for racing
+ *     information (your team, tyres, flags, gains and losses).
+ *   - The main action is the inverse of the screen: a white pill with black text.
+ *
+ * Every colour and size in the app comes from here.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --ground: #000000;
+  --surface: #111111;
+  --raised: #2a2a2a;
+  --raised-hover: #343434;
+
+  /* Lines. Structural rules sit on the ground; row rules sit on a surface. */
+  --border: #1a1a1a;
+  --rule: #222222;
+  --control: #444444;
+
+  /* Text. The two greys are far enough apart to read as two. */
+  --text: #ffffff;
+  --muted: #b4b4b4;
+  --faint: #949494;
+
+  /*
+   * The one data hue. Lime until a career has a team; a career screen may set it to the team's
+   * colour. It never goes on buttons, tabs or navigation.
+   */
+  --accent: #c6f24e;
+
+  /* Status, as a hue on a dark tint of itself */
+  --positive: #c6f24e;
+  --negative: #e5484d;
+  --warning: #e5a93b;
+  --pill-positive-bg: #222a10;
+  --pill-positive-ink: #c6f24e;
+  --pill-negative-bg: #2c1a20;
+  --pill-negative-ink: #e5566f;
+  --pill-warning-bg: #2b2414;
+  --pill-warning-ink: #e5a93b;
+  --pill-neutral-bg: #222222;
+  --pill-neutral-ink: #ffffff;
+
+  /* Shape */
+  --radius-card: 20px;
+  --radius-inner: 12px;
+  --radius-control: 999px;
+
+  /* Space. One gap, used horizontally and vertically. */
+  --gap: 14px;
+  --pad: 22px;
+  --page: 16px;
+  /*
+   * The game is laid out for a phone held upright. A tablet or a desktop window shows the same
+   * column, centred; there are no separate wide layouts.
+   */
+  --canvas: 528px;
+
+  /* Every control is a comfortable thumb target. */
+  --control-height: 48px;
+  --bar-height: 56px;
+
+  /* Type */
+  --font-text: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-figure: 'Barlow Condensed', 'Inter', system-ui, sans-serif;
+  --fs-title: 22px;
+  --fs-section: 16px;
+  --fs-body: 14px;
+  --fs-small: 12px;
+  --fs-figure: 32px;
+
+  /* Motion is feedback only: a press, a sheet opening. */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

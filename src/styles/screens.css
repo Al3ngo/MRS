@@ -1,0 +1,665 @@
+/* Layout of the individual screens. */
+
+.muted {
+  color: var(--muted);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.smallprint {
+  margin-top: 28px;
+  color: var(--faint);
+  font-size: var(--fs-small);
+  line-height: 18px;
+}
+
+/* ── Careers: the three save slots ─────────────────────────────────────────────────────────── */
+
+.update-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+  padding-block: 14px;
+}
+
+.slots {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap);
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The header's controls are full thumb targets that reach into the card's padding. */
+.slot__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 44px;
+  margin: -12px -12px -8px 0;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.slot__head > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.slot__restore {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+/*
+ * Where the career stands, and the card's one action. The whole row is the button. Only the
+ * career played last shows its action as a full-width pill; the other slots keep it compact, so
+ * that three careers fit on one phone screen.
+ */
+.slot__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  min-height: 48px;
+  /* Room for the focus ring and the pressed state, without moving the content. */
+  margin: -6px -10px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.slot__where {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.slot__season {
+  font-size: var(--fs-figure);
+  line-height: 1;
+}
+
+.slot__lines {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.slot__line {
+  font-weight: 500;
+}
+
+.slot__next {
+  color: var(--muted);
+}
+
+.slot__go svg {
+  display: none;
+}
+
+button.slot__main:active:not(:disabled) .slot__go {
+  transform: scale(0.97);
+}
+
+button.slot__main:disabled .slot__go {
+  background: var(--raised);
+  color: var(--faint);
+}
+
+@media (hover: hover) {
+  button.slot__main:hover:not(:disabled) .button--primary {
+    background: #e2e2e2;
+  }
+  button.slot__main:hover:not(:disabled) .button--secondary {
+    background: var(--raised-hover);
+  }
+}
+
+/* Compact: a round arrow for a career that is not the one played last. */
+.slot:not(.slot--lead):not(.slot--empty):not(.slot--stuck) .slot__go {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.slot:not(.slot--lead):not(.slot--empty):not(.slot--stuck) .slot__go svg {
+  display: block;
+}
+
+.slot:not(.slot--lead):not(.slot--empty):not(.slot--stuck) .slot__go-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.slot--lead .slot__main,
+.slot--stuck .slot__main {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+}
+
+/*
+ * An empty slot has no progress to draw. The one exception is the first run, when the empty lead
+ * slot introduces the span of the game.
+ */
+.slot--empty:not(.slot--lead) .era {
+  display: none;
+}
+
+/* The span of the game, 2010 to 2026: one segment per season. */
+.era {
+  display: grid;
+  grid-template-columns: repeat(17, minmax(0, 1fr));
+  column-gap: 2px;
+  align-items: end;
+}
+
+.era__season {
+  position: relative;
+  grid-row: 1;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--raised);
+  overflow: hidden;
+}
+
+/* Taller: a season that opens with a rules reset. */
+.era__season--reset {
+  height: 14px;
+}
+
+/* Brighter track: the season being played. */
+.era__season--current {
+  background: var(--control);
+}
+
+.era__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+}
+
+.era__year {
+  grid-row: 2;
+  justify-self: center;
+  margin-top: 6px;
+  color: var(--faint);
+  font-family: var(--font-figure);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.era__year--first {
+  justify-self: start;
+}
+
+.era__year--last {
+  justify-self: end;
+}
+
+.backup-file {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: var(--radius-inner);
+  background: var(--raised);
+}
+
+.backup-file__name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.backup-file__size {
+  color: var(--muted);
+}
+
+/* ── Career: the Stage 1 test bench ────────────────────────────────────────────────────────── */
+
+.bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap);
+}
+
+.bench__rows,
+.facts {
+  margin-top: 6px;
+  margin-bottom: -12px;
+}
+
+.bench__done {
+  margin-top: 10px;
+}
+
+.bench__retry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+}
+
+/* ── System ────────────────────────────────────────────────────────────────────────────────── */
+
+/* Each area: its words, then its panel. */
+.setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 26px 0;
+}
+
+.setting:first-child {
+  padding-top: 4px;
+}
+
+.setting + .setting {
+  border-top: 1px solid var(--border);
+}
+
+.setting__title {
+  font-size: var(--fs-section);
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.setting__text {
+  max-width: 52ch;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.setting__panel {
+  padding-block: 8px;
+}
+
+.status {
+  padding: 14px 0;
+}
+
+.status + .status,
+.status + .facts {
+  border-top: 1px solid var(--rule);
+}
+
+.setting__panel .facts {
+  margin: 0;
+}
+
+.status--action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+}
+
+.status__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.status__text {
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+@media (max-width: 479px) {
+  .status--action {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ── Almanac: the Stage 2 bench, and the lists the game will reuse ─────────────────────────── */
+
+.bench-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  width: 100%;
+  margin-top: var(--gap);
+  text-align: left;
+  color: var(--text);
+}
+
+.bench-link svg {
+  color: var(--muted);
+}
+
+/* The season picker: the 2010 to 2026 strip as a control, with arrows either side. */
+.seasons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 -10px var(--gap);
+}
+
+.seasons .icon-button:disabled {
+  color: var(--raised);
+}
+
+.seasons__strip {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(17, minmax(0, 1fr));
+}
+
+/* Each season is a full-height target; the bar inside it is what shows. */
+.seasons__year {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 1px;
+}
+
+.seasons__year span {
+  display: block;
+  width: 100%;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--raised);
+}
+
+.seasons__year--reset span {
+  height: 16px;
+}
+
+.seasons__year--on span {
+  background: var(--text);
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: var(--gap);
+  padding: 4px;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.tab {
+  height: 40px;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.tab--on {
+  background: var(--raised);
+  color: var(--text);
+}
+
+/* A card whose content is a list running edge to edge. */
+.card--list {
+  padding: 6px 0;
+}
+
+.card--gap {
+  margin-top: var(--gap);
+}
+
+.card--list li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.list-note {
+  padding: 12px var(--pad);
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.card--list li + .list-note,
+.card--list ol + .list-note,
+.card--list ul + .list-note {
+  border-top: 1px solid var(--rule);
+}
+
+.round,
+.driver,
+.team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 8px var(--pad);
+  text-align: left;
+}
+
+.round:active,
+.driver:active {
+  background: var(--raised);
+}
+
+.round__map {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  color: var(--muted);
+}
+
+.track {
+  width: 100%;
+  height: 100%;
+}
+
+.round__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.round__name {
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.round__where {
+  color: var(--muted);
+  font-size: 13px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.round__number {
+  flex: none;
+  width: 24px;
+  color: var(--faint);
+  font-size: 18px;
+  text-align: right;
+}
+
+.driver__overall {
+  flex: none;
+  width: 32px;
+  font-size: 22px;
+  text-align: right;
+}
+
+.team__colour {
+  flex: none;
+  width: 6px;
+  height: 36px;
+  border-radius: 3px;
+}
+
+.team__figures {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 16px;
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.changes li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.changes li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.facts--tight .row {
+  min-height: 40px;
+  padding: 8px 0;
+}
+
+.facts .row__label {
+  flex: none;
+}
+
+.compounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.compound {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.compound__ring {
+  width: 14px;
+  height: 14px;
+  border: 3px solid;
+  border-radius: 50%;
+}
+
+.sheet__map {
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  color: var(--text);
+}
+
+.ratings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rating dt {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rating dd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rating__track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--raised);
+  overflow: hidden;
+}
+
+.rating__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.rating__value {
+  width: 28px;
+  font-size: 18px;
+  text-align: right;
+}
+
+/* ── Race bench (Stage 3) ──────────────────────────────────────────────────────────────────── */
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px var(--pad);
+}
+
+.result__place {
+  flex: none;
+  width: 22px;
+  font-size: 20px;
+  text-align: right;
+}
+
+.result--out .result__place,
+.result--out .round__name,
+.result--out .figure {
+  color: var(--muted);
+}
+
+.story {
+  display: flex;
+  gap: 12px;
+  padding: 12px var(--pad);
+}
+
+.story__lap {
+  flex: none;
+  width: 52px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.story__text {
+  flex: 1;
+  min-width: 0;
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-*/
+e2e/output/
+*.log
+.DS_Store
+
+# Working files of the design tooling; the dealt direction itself is kept.
+.taste-skill/*
+!.taste-skill/direction.json
+handover/

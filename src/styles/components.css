@@ -1,0 +1,546 @@
+/* Shared building blocks. Screen-specific layout lives in screens.css. */
+
+/* ── Shell ─────────────────────────────────────────────────────────────────────────────────── */
+
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--ground);
+  border-bottom: 1px solid var(--border);
+  padding-top: env(safe-area-inset-top);
+}
+
+.topbar__inner {
+  height: var(--bar-height);
+  width: 100%;
+  max-width: calc(var(--canvas) + 2 * var(--page));
+  margin-inline: auto;
+  padding-left: max(var(--page), env(safe-area-inset-left));
+  padding-right: max(var(--page), env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  /* Eases down a little on the narrowest phones so the name is never cut short. */
+  font-size: clamp(14px, 4.4vw, var(--fs-section));
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.brand__mark {
+  width: 18px;
+  height: 27px;
+  flex: none;
+}
+
+.brand__mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brand__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.topbar__meta {
+  color: var(--faint);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.canvas {
+  flex: 1;
+  width: 100%;
+  max-width: calc(var(--canvas) + 2 * var(--page));
+  margin-inline: auto;
+  padding-top: 24px;
+  padding-left: max(var(--page), env(safe-area-inset-left));
+  padding-right: max(var(--page), env(safe-area-inset-right));
+  padding-bottom: calc(32px + env(safe-area-inset-bottom));
+}
+
+/* Room for the action bar pinned to the bottom of the screen. */
+.canvas--above-bar {
+  padding-bottom: calc(var(--control-height) + 56px + env(safe-area-inset-bottom));
+}
+
+.title-row {
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: var(--fs-title);
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+/* ── Surfaces ──────────────────────────────────────────────────────────────────────────────── */
+
+.card {
+  min-width: 0;
+  padding: var(--pad);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.card__title {
+  font-size: var(--fs-section);
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.notice {
+  padding: 12px 16px;
+  border-radius: var(--radius-inner);
+  background: var(--pill-warning-bg);
+  color: var(--pill-warning-ink);
+}
+
+.notice--problem {
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+}
+
+/* ── Controls ──────────────────────────────────────────────────────────────────────────────── */
+
+.button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--control-height);
+  padding: 0 22px;
+  border-radius: var(--radius-control);
+  font-size: var(--fs-body);
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    transform 120ms var(--ease-out),
+    background-color 120ms var(--ease-out),
+    color 120ms var(--ease-out);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* The main action of a screen: the inverse of everything around it. One per screen. */
+.button--primary {
+  background: var(--text);
+  color: var(--ground);
+  font-weight: 600;
+}
+
+.button--secondary {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.button--danger {
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+  font-weight: 600;
+}
+
+/* A text action: no fill until it is pressed. */
+.button--quiet {
+  padding: 0 14px;
+  color: var(--text);
+}
+
+.button--block {
+  width: 100%;
+}
+
+.button:disabled {
+  background: var(--surface);
+  color: var(--faint);
+}
+
+.card .button:disabled {
+  background: var(--raised);
+}
+
+@media (hover: hover) {
+  .button--primary:hover:not(:disabled) {
+    background: #e2e2e2;
+  }
+  .button--secondary:hover:not(:disabled) {
+    background: var(--raised-hover);
+  }
+  .button--quiet:hover:not(:disabled) {
+    background: var(--border);
+  }
+  .card .button--quiet:hover:not(:disabled),
+  .sheet .button--quiet:hover:not(:disabled) {
+    background: var(--raised);
+  }
+}
+
+/* A round button holding one icon. Always a full thumb target, whatever the icon's size. */
+.icon-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--muted);
+  transition: background-color 120ms var(--ease-out);
+}
+
+.icon-button:active {
+  background: var(--raised);
+}
+
+@media (hover: hover) {
+  .icon-button:hover {
+    background: var(--raised);
+    color: var(--text);
+  }
+}
+
+/* "Back to X" at the left of the top bar. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-left: -8px;
+  padding: 0 14px 0 6px;
+  border-radius: var(--radius-control);
+  font-weight: 500;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.back svg {
+  color: var(--muted);
+}
+
+.back:active {
+  background: var(--surface);
+}
+
+@media (hover: hover) {
+  .back:hover {
+    background: var(--surface);
+  }
+}
+
+/* ── Status ────────────────────────────────────────────────────────────────────────────────── */
+
+.pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--pill-neutral-bg);
+  color: var(--pill-neutral-ink);
+  font-size: var(--fs-small);
+  line-height: 1;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.card .pill {
+  background: var(--raised);
+}
+
+.pill--positive,
+.card .pill--positive {
+  background: var(--pill-positive-bg);
+  color: var(--pill-positive-ink);
+}
+
+.pill--warning,
+.card .pill--warning {
+  background: var(--pill-warning-bg);
+  color: var(--pill-warning-ink);
+}
+
+.pill--negative,
+.card .pill--negative {
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+}
+
+/* ── Rows and facts ────────────────────────────────────────────────────────────────────────── */
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  min-height: 52px;
+  padding: 12px 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--rule);
+}
+
+.row__label {
+  font-weight: 500;
+}
+
+.row__value {
+  color: var(--muted);
+  text-align: right;
+}
+
+.row--done .row__label {
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.row--next .row__value {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Standalone figures: the condensed face, digits all one width. */
+.figure {
+  font-family: var(--font-figure);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* ── Sheets ────────────────────────────────────────────────────────────────────────────────── */
+
+/* A dialog that rises from the bottom edge on a phone, where the thumb is; centred on wide screens. */
+dialog.sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 88dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--surface);
+  color: var(--text);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+dialog.sheet::backdrop {
+  background: rgba(0, 0, 0, 0.66);
+}
+
+dialog.sheet[open] {
+  animation: sheet-up 200ms var(--ease-out);
+}
+
+dialog.sheet[open]::backdrop {
+  animation: fade-in 200ms var(--ease-out);
+}
+
+.sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--pad);
+  padding-bottom: calc(var(--pad) + env(safe-area-inset-bottom));
+}
+
+.sheet__title {
+  font-size: var(--fs-section);
+  line-height: 24px;
+  font-weight: 600;
+}
+
+/* The title takes focus when a sheet opens; it is not a control, so it shows no ring. */
+.sheet__title:focus-visible {
+  outline: none;
+}
+
+.sheet__text {
+  color: var(--muted);
+}
+
+.sheet__text + .sheet__text {
+  margin-top: -4px;
+}
+
+.sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* A list of choices in a sheet. Each is a full-width, full-height target. */
+.menu {
+  display: flex;
+  flex-direction: column;
+  margin: 0 calc(-1 * var(--pad));
+}
+
+.menu__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 60px;
+  padding: 10px var(--pad);
+  text-align: left;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.menu__item + .menu__item {
+  border-top: 1px solid var(--rule);
+}
+
+.menu__item:active {
+  background: var(--raised);
+}
+
+@media (hover: hover) {
+  .menu__item:hover {
+    background: var(--raised);
+  }
+}
+
+.menu__label {
+  font-weight: 500;
+}
+
+.menu__hint {
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.menu__item--danger .menu__label {
+  color: var(--pill-negative-ink);
+}
+
+@media (min-width: 600px) {
+  dialog.sheet {
+    inset: 0;
+    width: 420px;
+    height: fit-content;
+    margin: auto;
+    border-radius: var(--radius-card);
+  }
+  .sheet__body {
+    padding-bottom: var(--pad);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ── Pinned action bar and toasts ──────────────────────────────────────────────────────────── */
+
+/* The screen's main action, within reach of the thumb and clear of the home indicator. */
+.actionbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  background: var(--ground);
+  border-top: 1px solid var(--border);
+  padding: 12px max(var(--page), env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom))
+    max(var(--page), env(safe-area-inset-left));
+}
+
+.actionbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gap);
+  max-width: var(--canvas);
+  margin-inline: auto;
+}
+
+.actionbar__note {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+}
+
+.actionbar .button {
+  flex: 1;
+}
+
+.toasts {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-inline: var(--page);
+  pointer-events: none;
+}
+
+.toasts--above-bar {
+  bottom: calc(var(--control-height) + 44px + env(safe-area-inset-bottom));
+}
+
+.toast {
+  max-width: 440px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: var(--raised);
+  color: var(--text);
+  font-weight: 500;
+  pointer-events: auto;
+  animation: toast-in 180ms var(--ease-out);
+}
+
+.toast--problem {
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
