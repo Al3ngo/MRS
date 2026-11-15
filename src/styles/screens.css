@@ -1765,6 +1765,52 @@ button.slot__main:disabled .slot__go {
   color: var(--bad);
 }
 
+/* The Car tab's money: pinned under the top bar, so it is in sight at every part. */
+.money-strip {
+  position: sticky;
+  top: calc(var(--bar-height) + env(safe-area-inset-top));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  margin: 0 calc(-1 * var(--page));
+  padding: 10px var(--page);
+  background: var(--ground);
+  border-bottom: 1px solid var(--border);
+}
+
+.money-strip__item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.money-strip__item--end {
+  justify-content: flex-end;
+}
+
+.money-strip__label {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.money-strip__figure {
+  font-size: 22px;
+  line-height: 28px;
+}
+
+.money-strip__change {
+  color: var(--positive);
+  font-size: 16px;
+}
+
+.money-strip__change--out {
+  color: var(--muted);
+}
+
 /* A row whose value is a bar and a figure. */
 /* The label gives way (its hint wraps) so the bar and figure keep their place. */
 .facts .row--meter .row__label {

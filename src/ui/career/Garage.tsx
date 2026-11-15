@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { CareerState } from '../../game/career';
 import {
   canDevelop,
@@ -26,6 +26,7 @@ export function Garage({ career }: { career: CareerState }) {
   const act = (change: Parameters<typeof teamAct>[0]): void => setMessage(teamAct(change));
   return (
     <div class="stack">
+      <MoneyStrip career={career} />
       <FieldCard career={career} />
       {!open && <p class="muted">The car can be worked on between races.</p>}
       {message && (
@@ -36,6 +37,46 @@ export function Garage({ career }: { career: CareerState }) {
       <PartsCard career={career} open={open} act={act} />
       <NextYearCard career={career} open={open} act={act} />
       <UnitsCard career={career} open={open} act={act} />
+    </div>
+  );
+}
+
+/**
+ * The money there is to spend, pinned under the top bar while the car is worked on, with what the
+ * last purchase cost; from 2021, the room left under the budget cap too.
+ */
+function MoneyStrip({ career }: { career: CareerState }) {
+  const view = moneyView(career);
+  const money = view?.money ?? 0;
+  const before = useRef(money);
+  const [change, setChange] = useState<number | null>(null);
+  useEffect(() => {
+    const spent = Math.round((money - before.current) * 10) / 10;
+    before.current = money;
+    if (spent === 0) return;
+    setChange(spent);
+    const timer = setTimeout(() => setChange(null), 2400);
+    return () => clearTimeout(timer);
+  }, [money]);
+  if (!view) return null;
+  return (
+    <div class="money-strip" role="status" aria-live="polite">
+      <span class="money-strip__item">
+        <span class="money-strip__label">{money < 0 ? 'In debt' : 'Money to spend'}</span>
+        <span class={`figure money-strip__figure${money < 0 ? ' money__figure--short' : ''}`}>{cash(money)}</span>
+        {change !== null && (
+          <span class={`figure money-strip__change${change < 0 ? ' money-strip__change--out' : ''}`}>
+            {change > 0 ? '+' : '−'}
+            {cash(Math.abs(change))}
+          </span>
+        )}
+      </span>
+      {view.capRoom !== null && (
+        <span class="money-strip__item money-strip__item--end">
+          <span class="money-strip__label">Budget cap left</span>
+          <span class={`figure money-strip__figure${view.capRoom < 0 ? ' money__figure--short' : ''}`}>{cash(view.capRoom)}</span>
+        </span>
+      )}
     </div>
   );
 }

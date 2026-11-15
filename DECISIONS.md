@@ -941,3 +941,10 @@ the real Ferrari did (+0.00 places), Williams 0.63 places lower, HRT 0.06 places
   `scripts/data/osm-outlines.json`, where the data generator reads them. No open outline of the
   Valencia street circuit could be found from the build environment, so it is still a sketch,
   marked as one in the almanac (three races, 2010-12).
+
+### After Stage 8: money in sight on the Car tab (v0.8.1)
+
+Asked for in chat: the money to spend was only on the Team tab, so buying parts meant switching
+tabs to see what was left. The Car tab now opens with the money to spend (and, from 2021, the room
+left under the budget cap), pinned under the top bar while the parts are scrolled through; after a
+purchase it shows what it cost for a moment ("−3").

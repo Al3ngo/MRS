@@ -895,7 +895,11 @@ async function main() {
       await page.getByRole('tab', { name: 'Car' }).click();
       expectEqual(await page.locator('.part').count(), 3, 'aero, chassis and engine in 2010');
       expect(await page.locator('.part', { hasText: 'Built by Mercedes' }).count() === 1, 'a Mercedes customer does not build engines');
+      // The money to spend is in sight on the Car tab, and follows each purchase.
+      expectEqual(Number(await page.locator('.money-strip__figure').first().innerText()), startMoney, 'money shown on the Car tab');
       await page.locator('.part', { hasText: 'Aero' }).getByRole('button', { name: /^New version/ }).click();
+      expectEqual(Number(await page.locator('.money-strip__figure').first().innerText()), Math.round((startMoney - 8) * 10) / 10, 'the Car tab shows the money left');
+      expectEqual(await page.locator('.money-strip__change').innerText(), '−8', 'and what the part cost');
       await page.getByRole('tab', { name: 'Weekend' }).click();
       expectEqual(Number(await page.locator('.money__figure').innerText()), Math.round((startMoney - 8) * 10) / 10, 'a new aero part costs 8');
 
