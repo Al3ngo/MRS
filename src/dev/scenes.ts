@@ -5,8 +5,9 @@
  * `?scene=<name>`. It is not part of the game and is left out of normal builds.
  */
 import { openDB } from 'idb';
-import { newCareer, roundsIn, type CareerState, type SessionKind } from '../game/career';
+import { finishManagement, newCareer, roundsIn, type CareerState, type SessionKind } from '../game/career';
 import { SCHEMA_VERSION } from '../game/save-schema';
+import { autoPreseason, newOutfit } from '../game/team';
 import { DEFAULT_DATABASE_NAME, SLOT_IDS, createSaveStore, type SlotId } from '../platform/saves';
 
 const MINUTE = 60_000;
@@ -22,14 +23,17 @@ function careerAt(
   phase: SessionKind,
   finished = false,
 ): CareerState {
+  const career = newCareer(id, new Date(Date.now() - 40 * DAY));
+  const outfit = autoPreseason(newOutfit({ id, team, season: seasonYear, round }), { id, team, season: seasonYear, round });
   return {
-    ...newCareer(id, new Date(Date.now() - 40 * DAY)),
+    ...career,
     team,
     seasonYear,
     round,
     phase,
     sessionsCompleted: (seasonYear - 2010) * 90 + round * 4,
     finished,
+    outfit,
   };
 }
 
@@ -68,6 +72,11 @@ const SCENES: Readonly<Record<string, () => Promise<void>>> = {
     await put(1, careerAt('scene-a', 'mclaren', 2012, 7, 'race'), 3 * DAY);
     await put(2, careerAt('scene-b', 'williams', 2019, 14, 'management'), 25 * MINUTE);
     await put(3, careerAt('scene-c', 'hrt', 2024, 22, 'practice'), 9 * DAY);
+  },
+  /** The turn of a season: Williams going into 2013, with a seat, staff and a sponsor to sign. */
+  winter: async () => {
+    const last = careerAt('scene-winter', 'williams', 2012, roundsIn(2012), 'management');
+    await put(1, finishManagement(last), 5 * MINUTE);
   },
   /** A finished career, a damaged save with a safety copy, and a save from a newer version. */
   trouble: async () => {

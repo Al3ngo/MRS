@@ -65,6 +65,8 @@ export interface Entrant {
   player: boolean;
   /** How the team's pit wall runs the car when the simulation makes its calls. Missing means balanced. */
   style?: TeamStyle;
+  /** The player's strategist, 0 to 1, for the calls the team makes when a car is handed over. */
+  strategist?: number;
 }
 
 export interface SessionRules {

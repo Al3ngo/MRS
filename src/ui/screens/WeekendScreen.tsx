@@ -5,6 +5,7 @@ import { useStore } from '../../app/store';
 import {
   finishPractice,
   finishRace,
+  preseasonOpen,
   saveLive,
   savePractice,
   saveQualifying,
@@ -15,6 +16,7 @@ import { calendar, driver as driverById, knockoutCuts } from '../../game/data';
 import {
   PRACTICE_RUNS,
   finishesOf,
+  unitWear,
   playerCars,
   poleFor,
   practiceRun,
@@ -59,13 +61,15 @@ export function WeekendScreen({ slot }: { slot: SlotId }) {
     if (career && view === null) setView(career.phase);
   }, [career, view]);
   const shown = view ?? career?.phase ?? null;
+  // The winter's business (contracts, engine, sponsor) comes before the season's first session.
+  const waiting = career !== null && preseasonOpen(career);
   useEffect(() => {
-    if (career && (career.team === null || shown === 'management')) {
+    if (career && (career.team === null || shown === 'management' || waiting)) {
       goBack({ screen: 'career', slot });
     }
-  }, [career, shown, slot]);
+  }, [career, shown, slot, waiting]);
 
-  if (!career || !shown || shown === 'management' || career.team === null) return <div class="shell" />;
+  if (!career || !shown || shown === 'management' || career.team === null || waiting) return <div class="shell" />;
 
   const carryOn = (): void => {
     const now = careerIn(slot);
@@ -477,7 +481,7 @@ function RaceSession({
     const now = careerIn(slot);
     if (!now || (now.phase !== 'race' && now.phase !== 'sprint')) return;
     const poleDriver = kind === 'race' ? poleFor(now) : null;
-    void updateCareer((current) => finishRace(current, finishesOf(race), poleDriver));
+    void updateCareer((current) => finishRace(current, finishesOf(race), poleDriver, unitWear(current, race)));
     setStep('result');
     window.scrollTo(0, 0);
   };

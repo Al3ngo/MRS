@@ -83,7 +83,19 @@ export interface TeamSeason {
   drivers: readonly { id: string; rounds: readonly number[] }[];
 }
 
+const teamsCache = new Map<number, readonly TeamSeason[]>();
+
+/** The teams of a season. Worked out once per season: the data never changes while the game runs. */
 export function teamsIn(season: number): readonly TeamSeason[] {
+  let found = teamsCache.get(season);
+  if (!found) {
+    found = buildTeams(season);
+    teamsCache.set(season, found);
+  }
+  return found;
+}
+
+function buildTeams(season: number): readonly TeamSeason[] {
   const entries = ENTRIES[season];
   if (!entries) throw new RangeError(`No entries for season ${season}`);
   const cap = rulesFor(season).budgetCap;
@@ -121,7 +133,18 @@ export interface DriverSeason {
  * Every real driver who is in the sport by a given season: he has made his debut, or makes it that
  * year. Who is still racing later on is for the career to decide, so nobody is removed here.
  */
+const driversCache = new Map<number, readonly DriverSeason[]>();
+
 export function driversBy(season: number): readonly DriverSeason[] {
+  let found = driversCache.get(season);
+  if (!found) {
+    found = buildDrivers(season);
+    driversCache.set(season, found);
+  }
+  return found;
+}
+
+function buildDrivers(season: number): readonly DriverSeason[] {
   return DRIVERS.filter((candidate) => candidate.debut <= season)
     .map((candidate) => {
       const age = ageIn(candidate, season);

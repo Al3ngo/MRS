@@ -7,7 +7,9 @@ import {
   finishManagement,
   finishPractice,
   finishRace,
+  preseasonOpen,
   saveQualifying,
+  teamContext,
   type CareerState,
   type PracticeState,
 } from '../career';
@@ -27,6 +29,7 @@ import { raceSetup } from '../sim/session';
 import type { Entrant, RaceState } from '../sim/types';
 import { qualifyingFor } from '../sim';
 import { roundEntrants } from './grid';
+import { autoManage, autoPreseason, baselineSpread, engineerHelp, gridPenalties } from '../team';
 import type { Finish } from './standings';
 import { gridSource } from './weekend';
 
@@ -39,7 +42,7 @@ const seedOf = (career: CareerState, ...parts: (string | number)[]): number =>
 /** The cars of this round, the player's with the setups found in practice. */
 export function entrantsFor(career: CareerState): Entrant[] {
   if (!career.team) throw new Error('The career has no team yet');
-  return roundEntrants(career.id, career.seasonYear, career.round, career.team, career.weekend.setups);
+  return roundEntrants(career.id, career.seasonYear, career.round, career.team, career.weekend.setups, career.outfit);
 }
 
 export const playerCars = (career: CareerState): Entrant[] => entrantsFor(career).filter((entrant) => entrant.player);
@@ -55,13 +58,15 @@ const toStep = (value: number): number => clamp(Math.round(value / 5) * 5, 0, 10
 /** Practice as it starts: the engineers' baseline on each car, no runs made. */
 export function startPractice(career: CareerState): PracticeState {
   const practice: PracticeState = { dials: {}, runs: {}, hints: {}, tested: {} };
+  // The race engineer decides how close the baseline is.
+  const spread = career.outfit ? baselineSpread(career.outfit) : 14;
   for (const entrant of playerCars(career)) {
     const ideal = idealFor(career, entrant);
     const luck = { rng: seedOf(career, entrant.id, 'baseline') };
     practice.dials[entrant.id] = {
-      wing: toStep(ideal.wing + gaussian(luck) * 14),
-      balance: toStep(ideal.balance + gaussian(luck) * 14),
-      ride: toStep(ideal.ride + gaussian(luck) * 14),
+      wing: toStep(ideal.wing + gaussian(luck) * spread),
+      balance: toStep(ideal.balance + gaussian(luck) * spread),
+      ride: toStep(ideal.ride + gaussian(luck) * spread),
     };
     practice.runs[entrant.id] = 0;
     practice.hints[entrant.id] = null;
@@ -75,7 +80,8 @@ export function practiceRun(career: CareerState, practice: PracticeState, carId:
   const runs = practice.runs[carId] ?? 0;
   if (!entrant || runs >= PRACTICE_RUNS) return practice;
   const luck = { rng: seedOf(career, carId, 'run', runs) };
-  const hints = setupFeedback(luck, practice.dials[carId]!, idealFor(career, entrant), feedbackPrecision(entrant.ratings.consistency));
+  const help = career.outfit ? engineerHelp(career.outfit) : 0;
+  const hints = setupFeedback(luck, practice.dials[carId]!, idealFor(career, entrant), feedbackPrecision(entrant.ratings.consistency, help));
   return {
     ...practice,
     runs: { ...practice.runs, [carId]: runs + 1 },
@@ -104,7 +110,7 @@ export function startQualifying(career: CareerState): QualifyingState {
 }
 
 /** The grid of a race or sprint, pole first, from the session that sets it. */
-export function gridFor(career: CareerState, kind: 'sprint' | 'race'): Entrant[] {
+function sessionOrder(career: CareerState, kind: 'sprint' | 'race'): Entrant[] {
   const entrants = entrantsFor(career);
   const byId = new Map(entrants.map((entrant) => [entrant.id, entrant]));
   const source = gridSource(career.seasonYear, career.round, kind);
@@ -118,6 +124,23 @@ export function gridFor(career: CareerState, kind: 'sprint' | 'race'): Entrant[]
   return gridOrder(session).map((id) => byId.get(id)!).filter(Boolean);
 }
 
+/**
+ * Grid places dropped for power units beyond the season's allowance, applied to the Grand Prix
+ * grid: each penalised car goes back that many places (to the back, at most), the others close up.
+ */
+export function applyPenalties(order: readonly Entrant[], penalties: Readonly<Record<string, number>>): Entrant[] {
+  const placed = order.map((entrant, index) => ({ entrant, at: index + (penalties[entrant.driver] ?? 0), penalised: (penalties[entrant.driver] ?? 0) > 0 }));
+  placed.sort((a, b) => a.at - b.at || Number(a.penalised) - Number(b.penalised));
+  return placed.map((entry) => entry.entrant);
+}
+
+/** The grid of a race or sprint, pole first, from the session that sets it and any grid penalties. */
+export function gridFor(career: CareerState, kind: 'sprint' | 'race'): Entrant[] {
+  const order = sessionOrder(career, kind);
+  if (kind !== 'race' || !career.outfit) return order;
+  return applyPenalties(order, gridPenalties(career.outfit));
+}
+
 /** A race or sprint on its grid, ready for the lights. */
 export function startRace(career: CareerState): RaceState {
   if (career.phase !== 'race' && career.phase !== 'sprint') throw new Error('No race is next');
@@ -127,6 +150,11 @@ export function startRace(career: CareerState): RaceState {
 
 /** The pole-sitter of the Grand Prix: the driver at the front of its grid. */
 export const poleFor = (career: CareerState): string | null => gridFor(career, 'race')[0]?.driver ?? null;
+
+/** How hard each of the player's cars worked its power unit in a race, in race distances, in seat order. */
+export function unitWear(career: CareerState, race: RaceState): number[] {
+  return [1, 2].map((seat) => race.cars.find((car) => race.setup.grid[car.entrant]?.id === `${career.team}-${seat}`)?.engineWear ?? 1);
+}
 
 /** A finished race as the career keeps it. */
 export function finishesOf(race: RaceState): Finish[] {
@@ -150,10 +178,15 @@ export function simulateRest(race: RaceState): void {
 
 /**
  * Plays the next session with no choices made: practice on the engineers' baseline, qualifying at
- * normal effort, a race run by the pit wall, a management phase with nothing to manage. For tests,
- * and for a player who wants to skip ahead.
+ * normal effort, a race run by the pit wall; between seasons and between races, the team's business
+ * done the way the real team did it (see autoPreseason and autoManage). For tests, and for a
+ * player who wants to skip ahead.
  */
-export function autoplay(career: CareerState): CareerState {
+export function autoplay(given: CareerState): CareerState {
+  let career = given;
+  if (preseasonOpen(career) && career.outfit) {
+    career = { ...career, outfit: autoPreseason(career.outfit, teamContext(career)) };
+  }
   switch (career.phase) {
     case 'practice': {
       const practice = career.weekend.practice ?? startPractice(career);
@@ -169,9 +202,12 @@ export function autoplay(career: CareerState): CareerState {
     case 'race': {
       const race = career.weekend.live ?? startRace(career);
       simulateRest(race);
-      return finishRace(career, finishesOf(race), career.phase === 'race' ? poleFor(career) : null);
+      return finishRace(career, finishesOf(race), career.phase === 'race' ? poleFor(career) : null, unitWear(career, race));
     }
-    case 'management':
-      return finishManagement(career);
+    case 'management': {
+      if (career.finished) return given;
+      const managed = career.outfit ? { ...career, outfit: autoManage(career.outfit, teamContext(career)) } : career;
+      return finishManagement(managed);
+    }
   }
 }

@@ -231,7 +231,9 @@ export function pitDecision(state: RaceState, car: CarState): { compound: string
   const fitted = compound(setup, car.tyre);
   const call = tyreCall(state, fitted.kind);
   const style = styleOf(entrant);
-  const nerve = 0.022 + 0.018 * (((car.entrant * 7 + 3) % 10) / 10) + style.rainNerve;
+  // A strategist (the player's team has one) reads the weather sooner the better they are.
+  const read = entrant.strategist === undefined ? 0 : (0.5 - entrant.strategist) * 0.012;
+  const nerve = 0.022 + 0.018 * (((car.entrant * 7 + 3) % 10) / 10) + style.rainNerve + read;
   if (call.kind !== fitted.kind && call.gain > nerve) return freshTyres(state, car, true);
   if (fitted.kind !== 'dry') return car.wear > 1.1 && left >= 3 ? { compound: fitted.id } : null;
 
@@ -251,7 +253,8 @@ export function pitDecision(state: RaceState, car: CarState): { compound: string
     const share = state.flag.kind === 'safety-car' ? SAFETY_CAR_STOP : VIRTUAL_STOP;
     const stay = carryOn();
     const stop = options(setup, entrant, left, { ...ask, current: null })[0];
-    if (stop && (!stay || stop.cost + cost * share + style.cheapStopMargin < stay.cost)) {
+    const margin = style.cheapStopMargin - (entrant.strategist === undefined ? 0 : (entrant.strategist - 0.5) * 2);
+    if (stop && (!stay || stop.cost + cost * share + margin < stay.cost)) {
       adopt(stop);
       return { compound: stop.first };
     }

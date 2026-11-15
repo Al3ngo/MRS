@@ -3,9 +3,10 @@
  * it through the migrations below, one version at a time, before it is checked and used.
  */
 import { emptyWeekend, findProblems, summarise, type CareerState, type CareerSummary } from './career';
+import { newOutfit } from './team';
 
 /** Bump when CareerState changes shape, and add `MIGRATIONS[oldVersion]`. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** `MIGRATIONS[n]` turns a version n career into a version n + 1 career. */
 export type Migrations = Readonly<Record<number, (older: unknown) => unknown>>;
@@ -27,6 +28,20 @@ export const MIGRATIONS: Migrations = {
       results: [],
       history: [],
     };
+  },
+  /**
+   * Version 2 (Stage 5) had no team business. A career with a team takes it over as the season
+   * stands: the team's real drivers and the staff its money buys, with the season's backers' and
+   * prize money; it signs a sponsor before its next session. A career with no team yet gets one
+   * when the team is chosen.
+   */
+  2: (older) => {
+    const career = older as Record<string, unknown>;
+    const team = typeof career.team === 'string' ? career.team : null;
+    const id = typeof career.id === 'string' ? career.id : 'career';
+    const season = typeof career.seasonYear === 'number' ? career.seasonYear : 2010;
+    const round = typeof career.round === 'number' ? career.round : 1;
+    return { ...career, outfit: team ? newOutfit({ id, team, season, round }) : null };
   },
 };
 

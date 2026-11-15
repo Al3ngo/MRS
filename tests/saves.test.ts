@@ -80,7 +80,8 @@ describe('save slots', () => {
       hasSafetyCopy: false,
       summary: { seasonYear: 2010, round: 2, rounds: 19, phase: 'qualifying', racesRun: 1, finished: false },
     });
-    expect(record.bytes).toBe(JSON.stringify(career(5)).length);
+    // Bytes as stored: UTF-8, so a name like Lucía counts its accented letter twice.
+    expect(record.bytes).toBe(new TextEncoder().encode(JSON.stringify(career(5))).length);
 
     const list = await store.list();
     expect(list.map((view) => view.kind)).toEqual(['empty', 'career', 'empty']);

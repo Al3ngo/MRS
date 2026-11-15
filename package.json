@@ -18,7 +18,8 @@
     "lab:push": "rolldown scripts/push-lab.ts --file node_modules/.cache/lab/push-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/push-lab.mjs",
     "lab:push-solo": "rolldown scripts/push-solo.ts --file node_modules/.cache/lab/push-solo.mjs --platform node --log-level warn && node node_modules/.cache/lab/push-solo.mjs",
     "lab:styles": "rolldown scripts/style-lab.ts --file node_modules/.cache/lab/style-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/style-lab.mjs",
-    "lab:tyres": "rolldown scripts/tyre-lab.ts --file node_modules/.cache/lab/tyre-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/tyre-lab.mjs"
+    "lab:tyres": "rolldown scripts/tyre-lab.ts --file node_modules/.cache/lab/tyre-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/tyre-lab.mjs",
+    "lab:economy": "rolldown scripts/economy-lab.ts --file node_modules/.cache/lab/economy-lab.mjs --platform node --log-level warn && node node_modules/.cache/lab/economy-lab.mjs"
   },
   "dependencies": {
     "idb": "^8.0.4",

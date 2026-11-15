@@ -170,8 +170,10 @@ export interface ForecastLap {
 /**
  * The forecast for the next few laps. It is drawn from the rain the race will really have, and
  * grows less sure the further ahead it looks: a shower in five laps is likely, not certain.
+ * `sureness` (0 to 1) is the strategist's: a better one stays sure further ahead.
  */
-export function weatherForecast(state: RaceState, laps = 5): ForecastLap[] {
+export function weatherForecast(state: RaceState, laps = 5, sureness = 0.5): ForecastLap[] {
+  const fade = 0.1 - 0.06 * sureness;
   const { setup } = state;
   const clock = state.time + state.stopped;
   // On the grid the next lap is the first; once racing, the one after the leader's.
@@ -182,7 +184,7 @@ export function weatherForecast(state: RaceState, laps = 5): ForecastLap[] {
     let near = 0;
     for (const shift of [-0.6, -0.3, 0.3, 0.6]) near = Math.max(near, rainAt(state.rain, clock + clockAhead(state, ahead - 0.5 + shift)));
     let chance: number;
-    if (rain > 0) chance = Math.max(0.6, 0.95 - 0.07 * (ahead - 1));
+    if (rain > 0) chance = Math.max(0.6, 0.95 - fade * (ahead - 1));
     else if (near > 0) chance = 0.4;
     else chance = Math.min(0.25, setup.traits.rain * 0.25 + 0.02 * ahead);
     const expected = Math.max(rain, near * 0.6);

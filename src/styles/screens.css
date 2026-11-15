@@ -1736,3 +1736,191 @@ button.slot__main:disabled .slot__go {
 .team {
   min-height: 72px;
 }
+
+/* ── The team's business (Stage 6) ─────────────────────────────────────────────────────────── */
+
+.card__subtitle {
+  margin: 16px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.money {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.money__figure {
+  font-size: 34px;
+  line-height: 40px;
+}
+
+.money__figure--short {
+  color: var(--bad);
+}
+
+/* A row whose value is a bar and a figure. */
+/* The label gives way (its hint wraps) so the bar and figure keep their place. */
+.facts .row--meter .row__label {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.row__hint {
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.row__value--meter {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.row__value--meter .meter {
+  width: 56px;
+}
+
+.news {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 18px;
+  color: var(--muted);
+  list-style: disc;
+}
+
+.people,
+.parts,
+.units {
+  display: flex;
+  flex-direction: column;
+}
+
+.person,
+.part,
+.unit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+}
+
+.person + .person,
+.part + .part,
+.unit + .unit {
+  border-top: 1px solid var(--rule);
+}
+
+.person__name,
+.part__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.person__skill,
+.part__meter {
+  flex: none;
+  width: 64px;
+}
+
+.person__detail,
+.part__line {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.person__traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trait {
+  padding: 2px 8px;
+  border-radius: var(--radius-control);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.person__actions,
+.part__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.part__actions .button {
+  flex: 1 1 140px;
+}
+
+.unit__name {
+  font-weight: 500;
+}
+
+.unit__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.unit__row .meter {
+  flex: none;
+  width: 96px;
+}
+
+.unit__warning {
+  color: var(--bad);
+  font-size: 14px;
+}
+
+.offer {
+  margin: 16px 0 4px;
+  font-size: 17px;
+}
+
+.offer .figure {
+  font-size: 20px;
+}
+
+.offer__answer {
+  margin: 8px 0;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.choice__bars {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+
+.choice:disabled {
+  opacity: 0.55;
+}
+
+.choice__name .meter {
+  margin: 4px 0;
+  max-width: 160px;
+}

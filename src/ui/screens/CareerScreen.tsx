@@ -7,6 +7,7 @@ import {
   careerTotals,
   chooseTeam,
   finishManagement,
+  preseasonOpen,
   roundsIn,
   seasonRecord,
   type CareerState,
@@ -33,13 +34,16 @@ function pointsRule(season: number): string {
   return `Each race pays ${table[0]} points for a win, down to ${table.at(-1)} for ${ordinal(table.length)}.`;
 }
 import { StandingsTable } from '../career/Standings';
+import { MoneyCard, NewsCard, PeopleCard, SponsorCard } from '../career/Business';
+import { Garage } from '../career/Garage';
+import { WinterCard, WinterSheets, type WinterSheet } from '../career/Winter';
 
 /**
  * A career's home: the team, the round in progress, the calendar and the championships. Between
  * races it is the management phase; the sessions of a weekend open on their own screen.
  */
 
-const TABS = ['Weekend', 'Calendar', 'Standings'] as const;
+const TABS = ['Weekend', 'Car', 'Calendar', 'Standings'] as const;
 type Tab = (typeof TABS)[number];
 
 const dayMonth = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -186,9 +190,17 @@ function Hub({
   const label = teamLabel(team, season);
   const between = career.phase === 'management';
   const lastSeason = between && career.round === roundsIn(season);
+  const [winter, setWinter] = useState<WinterSheet>(null);
+  const winterOpen = preseasonOpen(career);
 
   let action: { label: string; run: () => void } | null = null;
-  if (!between) {
+  if (winterOpen && career.outfit) {
+    const step = career.outfit.preseason[0]!;
+    action = {
+      label: step === 'contracts' ? 'Sign drivers and staff' : step === 'engine' ? 'Choose an engine supplier' : 'Sign a title sponsor',
+      run: () => setWinter(step),
+    };
+  } else if (!between) {
     const live = career.weekend.live !== null;
     action = {
       label: live ? `Carry on with the ${career.phase === 'sprint' ? 'sprint' : 'race'}` : `Go to ${sessionName(season, career.phase).toLowerCase()}`,
@@ -216,7 +228,7 @@ function Hub({
           </p>
         </div>
 
-        <div class="tabs tabs--3" role="tablist">
+        <div class="tabs" role="tablist">
           {TABS.map((name) => (
             <button
               type="button"
@@ -231,7 +243,16 @@ function Hub({
           ))}
         </div>
 
-        {tab === 'Weekend' && !between && <ThisWeekend career={career} />}
+        {tab === 'Weekend' && !between && (
+          <div class="stack">
+            <WinterCard career={career} open={setWinter} />
+            <ThisWeekend career={career} />
+            <SponsorCard career={career} />
+            <MoneyCard career={career} />
+            <PeopleCard career={career} />
+          </div>
+        )}
+        {tab === 'Car' && <Garage career={career} />}
         {tab === 'Weekend' && between && career.finished && <CareerSummary slot={slot} career={career} team={team} />}
         {tab === 'Weekend' && between && !career.finished && (
           <BetweenRaces career={career} team={team} seasonOver={lastSeason} />
@@ -240,7 +261,9 @@ function Hub({
         {tab === 'Standings' && <Championships career={career} team={team} />}
       </main>
 
-      {action && tab === 'Weekend' && (
+      {winter && <WinterSheets career={career} sheet={winter} close={() => setWinter(null)} />}
+
+      {action && (tab === 'Weekend' || winterOpen) && (
         <div class="actionbar">
           <div class="actionbar__inner">
             <button type="button" class="button button--primary" data-quick onClick={action.run}>
@@ -326,6 +349,7 @@ function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team:
 
   return (
     <div class="stack">
+      <NewsCard career={career} />
       {last && (
         <section class="card" aria-labelledby="last-round">
           <h2 class="card__title" id="last-round">
@@ -385,10 +409,10 @@ function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team:
         </section>
       )}
 
-      <p class="smallprint">
-        Between races. Money, car development, staff and contracts arrive here in Stage 6; for now every team
-        runs the drivers and the car it really had.
-      </p>
+      {!seasonOver && <SponsorCard career={career} />}
+      <MoneyCard career={career} />
+      <PeopleCard career={career} />
+      <p class="smallprint">Between races: the Car tab is where the car is developed.</p>
     </div>
   );
 }

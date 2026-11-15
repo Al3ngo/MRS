@@ -14,6 +14,7 @@ import { TEAMS } from './data/generated/entries';
 import { RULES } from './data/regulations';
 import { FIRST_SEASON, LAST_SEASON } from './data/types';
 import { teamColour, shownTeamName } from './data/profiles';
+import { teamsIn } from './data';
 import type { CarSetup, Dial, Hint } from './sim/practice';
 import type { QualifyingState } from './sim/qualifying';
 import type { RaceState } from './sim/types';
@@ -26,6 +27,7 @@ import {
   type Standing,
 } from './season/standings';
 import { SESSION_KINDS, nextSession, weekendSessions, type SessionKind } from './season/weekend';
+import { newOutfit, settleRace, settleSprint, turnSeason, type Outfit, type TeamContext } from './team';
 
 export { FIRST_SEASON, LAST_SEASON };
 export type { SessionKind };
@@ -94,6 +96,8 @@ export interface CareerState {
   results: RoundResult[];
   /** Seasons already completed, oldest first. */
   history: SeasonRecord[];
+  /** The team's business: money, sponsor, people, development, power units. Null until a team is chosen. */
+  outfit: Outfit | null;
 }
 
 export const emptyWeekend = (): Weekend => ({
@@ -118,6 +122,7 @@ export function newCareer(id: string, createdAt: Date): CareerState {
     weekend: emptyWeekend(),
     results: [],
     history: [],
+    outfit: null,
   };
 }
 
@@ -129,7 +134,38 @@ export const STARTING_TEAMS: readonly string[] = TEAMS.filter((team) => team.sea
 export function chooseTeam(state: CareerState, team: string): CareerState {
   if (state.team !== null) return state;
   if (!STARTING_TEAMS.includes(team)) throw new RangeError(`${team} was not on the grid in ${FIRST_SEASON}`);
-  return { ...state, team };
+  return { ...state, team, outfit: newOutfit({ id: state.id, team, season: state.seasonYear, round: state.round }) };
+}
+
+/** What the team's business needs to know about where the career stands. */
+export function teamContext(state: CareerState): TeamContext {
+  if (!state.team) throw new Error('The career has no team yet');
+  return { id: state.id, team: state.team, season: state.seasonYear, round: state.round };
+}
+
+/**
+ * Applies a change to the team's business. `change` returns the new outfit, or a reason it cannot
+ * be done; the career comes back unchanged with the reason.
+ */
+export function withOutfit(
+  state: CareerState,
+  change: (outfit: Outfit, ctx: TeamContext) => Outfit | { ok: true; outfit: Outfit } | { ok: false; reason: string },
+): { career: CareerState; reason: string | null } {
+  if (!state.outfit || !state.team) return { career: state, reason: 'The career has no team yet.' };
+  const result = change(state.outfit, teamContext(state));
+  if ('ok' in result) return result.ok ? { career: { ...state, outfit: result.outfit }, reason: null } : { career: state, reason: result.reason };
+  return { career: { ...state, outfit: result }, reason: null };
+}
+
+/** Whether the winter's business (contracts, engine, sponsor) still waits before the season's first session. */
+export const preseasonOpen = (state: CareerState): boolean => (state.outfit?.preseason.length ?? 0) > 0;
+
+/** The team's place in the teams' championship so far, and the team just ahead of it (just behind, for the leader). */
+export function teamPlace(results: readonly RoundResult[], team: string): { place: number; rival: string | null } {
+  const table = teamStandings([...results]);
+  const index = table.findIndex((row) => row.id === team);
+  if (index === -1) return { place: table.length + 1, rival: table.at(-1)?.id ?? null };
+  return { place: index + 1, rival: table[index === 0 ? 1 : index - 1]?.id ?? null };
 }
 
 /** Moves on to the next session of the round. */
@@ -164,13 +200,22 @@ const isLastRound = (state: CareerState): boolean => state.round === roundsIn(st
 
 /**
  * A race or sprint is over: its result is kept, and the career moves on. `pole` is the driver who
- * started the Grand Prix from pole.
+ * started the Grand Prix from pole. `wear` is how hard each of the player's cars worked its power
+ * unit, in race distances, in seat order. After a Grand Prix the team's money is settled.
  */
-export function finishRace(state: CareerState, finishes: Finish[], pole: string | null): CareerState {
-  if (state.phase === 'sprint') return advance(state, { ...state.weekend, sprint: finishes, live: null });
+export function finishRace(state: CareerState, finishes: Finish[], pole: string | null, wear: readonly number[] = []): CareerState {
+  if (state.phase === 'sprint') {
+    const outfit = state.outfit && settleSprint(state.outfit, wear);
+    return advance({ ...state, outfit }, { ...state.weekend, sprint: finishes, live: null });
+  }
   if (state.phase !== 'race') return state;
   const result: RoundResult = { round: state.round, race: finishes, sprint: state.weekend.sprint, pole };
-  const next = advance(state, { ...state.weekend, live: null }, [...state.results, result]);
+  const results = [...state.results, result];
+  const outfit =
+    state.outfit && state.team
+      ? settleRace(state.outfit, teamContext(state), finishes, wear, teamPlace(results, state.team))
+      : state.outfit;
+  const next = advance({ ...state, outfit }, { ...state.weekend, live: null }, results);
   if (state.seasonYear === LAST_SEASON && isLastRound(state)) next.finished = true;
   return next;
 }
@@ -195,15 +240,23 @@ export function seasonRecord(state: CareerState): SeasonRecord {
  */
 export function finishManagement(state: CareerState): CareerState {
   if (state.phase !== 'management' || state.finished) return state;
-  const base = { ...state, phase: 'practice' as const, weekend: emptyWeekend(), sessionsCompleted: state.sessionsCompleted + 1 };
+  // The management phase's news has been read.
+  const outfit = state.outfit && { ...state.outfit, news: [] };
+  const base = { ...state, outfit, phase: 'practice' as const, weekend: emptyWeekend(), sessionsCompleted: state.sessionsCompleted + 1 };
   if (!isLastRound(state)) return { ...base, round: state.round + 1 };
-  return {
+  const record = seasonRecord(state);
+  const next: CareerState = {
     ...base,
     seasonYear: state.seasonYear + 1,
     round: 1,
     results: [],
-    history: [...state.history, seasonRecord(state)],
+    history: [...state.history, record],
   };
+  if (next.outfit && next.team) {
+    const place = record.teams.find((row) => row.id === next.team)?.position ?? teamsIn(state.seasonYear).length + 1;
+    next.outfit = turnSeason(next.outfit, teamContext(next), place);
+  }
+  return next;
 }
 
 /** A whole career's record for the player's team, across every season run so far. */
@@ -353,6 +406,24 @@ export function findProblems(value: unknown): string[] {
   }
   if (!Array.isArray(value.history) || !value.history.every((record) => isObject(record) && isWholeNumber(record.season))) {
     problems.push('The history of past seasons is damaged.');
+  }
+  const outfit = value.outfit;
+  if (typeof value.team === 'string' && STARTING_TEAMS.includes(value.team) && (outfit === null || outfit === undefined)) {
+    problems.push('The career has a team but no record of its money and people.');
+  } else if (outfit !== null && outfit !== undefined) {
+    if (
+      !isObject(outfit) ||
+      typeof outfit.money !== 'number' ||
+      !Number.isFinite(outfit.money) ||
+      !Array.isArray(outfit.ledger) ||
+      !Array.isArray(outfit.drivers) ||
+      !Array.isArray(outfit.staff) ||
+      !isObject(outfit.parts) ||
+      !Array.isArray(outfit.units) ||
+      !Array.isArray(outfit.preseason)
+    ) {
+      problems.push("The team's money, people or car record is damaged.");
+    }
   }
   return problems;
 }
