@@ -140,6 +140,14 @@ npm run lab:styles -- 2019 ferrari 3
 npm run lab:economy -- ferrari williams hrt
 ```
 
+```bash
+npm run lab:lifecycle -- 2 --career
+```
+
+simulates every round of every season (twice here) and prints the crashes out and expected fatal
+accidents per season and over a whole career; with `--career`, also plays a whole career and lists
+who was lost and how many made-up drivers joined.
+
 plays whole careers with the team's business run the way the real team ran it, and prints each
 season's place against the real team's, the money left, how far each part is ahead of or behind
 the real car, the engines used against the allowance and the budget cap.
@@ -178,7 +186,8 @@ src/game/data/          the seasons: generated facts, and the game's own ratings
 src/game/sim/           the race engine: practice, qualifying, the race, the pit wall
 src/game/season/        the season: weekend formats, the grid of a round, sessions, championships
 src/game/team/          the team off the track: money, sponsors, staff, contracts, engines,
-                        development, power units, the budget cap
+                        development, power units, the budget cap, the junior academy
+src/game/world/         the drivers' world: retirements, fatal accidents, made-up drivers
 src/platform/           the browser: save store, backup files, service worker, storage
 src/app/                app state, screen addresses, the actions screens call
 src/ui/                 screens and components

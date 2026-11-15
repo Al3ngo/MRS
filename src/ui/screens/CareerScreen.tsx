@@ -293,7 +293,7 @@ function Hub({
         {tab === 'Car' && <Garage career={career} />}
         {tab === 'Weekend' && between && career.finished && <CareerSummary slot={slot} career={career} team={team} />}
         {tab === 'Weekend' && between && !career.finished && (
-          <BetweenRaces career={career} team={team} seasonOver={lastSeason} />
+          <BetweenRaces career={career} team={team} seasonOver={lastSeason} openWinter={setWinter} />
         )}
         {tab === 'Calendar' && <Calendar career={career} team={team} />}
         {tab === 'Standings' && <Championships career={career} team={team} />}
@@ -376,7 +376,17 @@ function finishWords(position: number, classified: boolean, status: string): str
   return classified ? ordinal(position) : causeLabel(status);
 }
 
-function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team: string; seasonOver: boolean }) {
+function BetweenRaces({
+  career,
+  team,
+  seasonOver,
+  openWinter,
+}: {
+  career: CareerState;
+  team: string;
+  seasonOver: boolean;
+  openWinter: (sheet: WinterSheet) => void;
+}) {
   const { seasonYear: season } = career;
   const last = career.results.at(-1);
   const round = calendar(season)[career.round - 1]!;
@@ -387,6 +397,7 @@ function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team:
 
   return (
     <div class="stack">
+      <WinterCard career={career} open={openWinter} />
       <NewsCard career={career} />
       {last && (
         <section class="card" aria-labelledby="last-round">

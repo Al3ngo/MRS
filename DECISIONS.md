@@ -774,3 +774,77 @@ the track and the forecast. Built in this game's own look, not a copy of Golden 
 - **No flags**: Golden Lap shows the country's flag. Flags here would mean drawing one for every
   country on the calendar (emoji flags are not used in this design), so the country is named
   instead. It can be added in the polish stage.
+
+## Stage 7: the driver lifecycle
+
+The brief's Stage 7 (ageing, retirement, fatalities, fictional generation), with the Drivers
+section's junior academy, and from its suggested extras the memorial for drivers lost and the
+setting to switch fatal accidents off. Golden Lap's own handling was checked first: after a fatal
+crash it shows one dialogue, "A tragedy", with no other choice, then asks for a replacement before
+the next event; its drivers move through career stages to a final year and retire after it; its
+hiring pool is topped up with young drivers with room to grow.
+
+### Ageing
+
+- **Ratings follow age**, as they have since Stage 2: still learning before a driver's prime, at
+  their best through it, fading after (speed first, craft last). Made-up drivers age the same way.
+- **Career stages on screen**: still improving, at their best, past their best, final season.
+
+### Retirement
+
+- **Real drivers retire when they really did**, so the other teams' line-ups stay the real ones.
+  The exception: a driver under contract to the player sees the contract out before retiring.
+- **Made-up drivers retire at their own age**, between 33 and 38.
+- **Retired drivers leave the market and the pool of free drivers.**
+
+### Fatal accidents
+
+- **Rare, as the brief asks.** Rolled after each race and sprint for every car that crashed out
+  (an accident or a collision), never during it, and with the career's own luck: race results never
+  change because of it.
+- **What makes one likelier**: the era (two and a half times as likely before the halo arrived in
+  2018), the circuit (walls close by: Monaco, Baku, Jeddah, Spa), and the driver's aggression.
+- **How often**: tuned so a whole career expects about one, most likely before the halo, as the
+  real sport saw one (Jules Bianchi, 2014) in these seasons. Measured with
+  `npm run lab:lifecycle`: 1.01 expected over 2010 to 2026, between 6 and 11% a season before the
+  halo and 3 to 5% after.
+- **Afterwards**: a sheet titled "A tragedy" after the race, with one choice (Continue), as in
+  Golden Lap. The driver is remembered (a "Remembered" card in the standings and in the career
+  summary). A seat of the player's must be filled before the next race, from drivers without a
+  seat; after a sprint, the team runs one car in that weekend's Grand Prix. Another team puts the
+  best free driver in the seat.
+- **Off by choice**: when starting a career, fatal accidents can be switched off for the whole
+  career (the brief's suggested sandbox setting). On by default.
+- **Respectfully worded**: plain words, no detail beyond the lap and the race.
+
+### Made-up drivers
+
+- **When real drivers run out**: whenever the pool of free drivers good enough for a seat runs
+  thin (after losses, retirements, or drivers the player has taken), race-ready made-up drivers
+  join, aged 21 to 26 and near their best. Each season also brings three young prospects, 15 to 17.
+- **Rebuilt from their id**: a made-up driver's name, nationality, birthday, potential, ratings
+  and retiring age all come from their id, so a career saves only the ids. Different careers get
+  different drivers. Names come from the nationalities that produce racing drivers; anyone can
+  race, so the screens now say "the driver" where they said "he".
+- **Potential**: most turn out decent; a few are exceptional.
+
+### The other teams
+
+- **They keep the real line-ups**, except that a seat whose driver is lost, retired early, or held
+  by the player (under contract or in the academy) goes to the best free driver, real or made up.
+
+### The junior academy
+
+- **Up to three young drivers, 15 to 19**: made-up prospects, or real drivers before their real
+  debut (Verstappen in 2013, Piastri in 2019). A fee each season, more for more potential (1 to
+  3.5), outside the budget cap.
+- **They grow up as their age says**, and each full season in the academy adds a point to every
+  rating once they race for the team (three at most).
+- **Promotion**: old enough to race (17, and 18 from 2016, the rule brought in after Verstappen's
+  debut), a junior appears in the winter market as "From your academy". Holding a real junior keeps
+  him from his real team, which runs someone else when his debut year comes.
+
+### Saves
+
+Save version 4. A Stage 6 career gains its drivers' world when loaded: nobody lost, this season's
+prospects, fatal accidents on, an empty academy.

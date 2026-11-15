@@ -131,6 +131,7 @@ async function startNewCareer(page, slot, team = 'Williams', sponsor = true) {
   await slotCard(page, slot).getByRole('button', { name: 'New career' }).click();
   await page.getByRole('heading', { name: 'Choose your team' }).waitFor();
   await page.getByRole('button', { name: new RegExp(`^${team}`) }).click();
+  await page.getByRole('group', { name: 'Fatal accidents' }).waitFor();
   await page.getByRole('button', { name: `Start with ${team}` }).click();
   await page.locator('.hub').waitFor();
   if (!sponsor) return;
@@ -863,11 +864,18 @@ async function main() {
       expectEqual(await page.locator('.title').innerText(), 'McLaren', 'team on the home screen');
       expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 1 of 19', 'where the career starts');
       expectEqual(await page.locator('.row--next .row__label').innerText(), 'Practice', 'first session');
+      // Stage 7: the junior academy, with young drivers to sign.
+      await page.getByRole('heading', { name: 'Junior academy' }).waitFor();
+      await page.getByRole('button', { name: /^Sign a junior/ }).click();
+      expect((await page.locator('dialog .choice').count()) >= 3, 'young drivers to sign');
+      await page.locator('dialog .choice').first().click();
+      await page.locator('dialog').waitFor({ state: 'detached' });
+      expectEqual(await page.locator('section[aria-labelledby="academy"] .person').count(), 1, 'one junior in the academy');
       // Stage 6: before the first session, a title sponsor; the team's money and people are on show.
       await page.getByRole('heading', { name: 'Before the 2010 season' }).waitFor();
       const startMoney = Number(await page.locator('.money__figure').innerText());
       expect(startMoney > 100, `McLaren's money at the start: ${startMoney}`);
-      expectEqual(await page.locator('.person').count(), 7, 'two drivers and five staff');
+      expectEqual(await page.locator('section[aria-labelledby="people"] .person').count(), 7, 'two drivers and five staff');
       await shot(page, '20-career-home');
       await page.getByRole('button', { name: 'Sign a title sponsor' }).click();
       expectEqual(await page.locator('dialog .choice').count(), 3, 'three sponsor offers');
@@ -1009,7 +1017,7 @@ async function main() {
         'the 2023 sprint weekend',
       );
       // A save from before Stage 6 takes over its team's business, and signs a sponsor first.
-      expectEqual(await page.locator('.person').count(), 7, 'the upgraded save has drivers and staff');
+      expectEqual(await page.locator('section[aria-labelledby="people"] .person').count(), 7, 'the upgraded save has drivers and staff');
       await page.getByRole('button', { name: 'Sign a title sponsor' }).click();
       await page.locator('dialog .choice').first().click();
       await page.locator('dialog').waitFor({ state: 'detached' });

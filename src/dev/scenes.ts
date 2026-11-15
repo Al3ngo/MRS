@@ -7,7 +7,8 @@
 import { openDB } from 'idb';
 import { finishManagement, newCareer, roundsIn, type CareerState, type SessionKind } from '../game/career';
 import { SCHEMA_VERSION } from '../game/save-schema';
-import { autoPreseason, newOutfit, sponsorOffers } from '../game/team';
+import { autoPreseason, heldBy, newOutfit, sponsorOffers } from '../game/team';
+import { newcomers } from '../game/world';
 import { DEFAULT_DATABASE_NAME, SLOT_IDS, createSaveStore, type SlotId } from '../platform/saves';
 
 const MINUTE = 60_000;
@@ -25,8 +26,12 @@ function careerAt(
 ): CareerState {
   const career = newCareer(id, new Date(Date.now() - 40 * DAY));
   const outfit = autoPreseason(newOutfit({ id, team, season: seasonYear, round }), { id, team, season: seasonYear, round });
+  // The drivers' world as a career reaching that season would have it: each season's newcomers.
+  let world = career.world;
+  for (let season = 2010; season <= seasonYear; season++) world = newcomers(world, id, season, heldBy(outfit, season));
   return {
     ...career,
+    world,
     team,
     seasonYear,
     round,
@@ -80,6 +85,33 @@ const SCENES: Readonly<Record<string, () => Promise<void>>> = {
     // The staged season has no results; give Williams its real 2012 place, eighth.
     const outfit = winter.outfit && { ...winter.outfit, lastPlace: 8, sponsorOffers: sponsorOffers(8, 2013, 1) };
     await put(1, { ...winter, outfit }, 5 * MINUTE);
+  },
+  /**
+   * A fatal accident, staged: Williams before qualifying at the 2016 Monaco Grand Prix, with one of
+   * its drivers already marked as lost in that race, so the race's result opens on the tragedy. (A
+   * real loss is random and rare; this is for screenshots only.)
+   */
+  tragedy: async () => {
+    const career = careerAt('scene-tragedy', 'williams', 2016, 6, 'qualifying');
+    const driver = career.outfit!.drivers[0]!.driver;
+    const lost = { driver, team: 'williams', season: 2016, round: 6, race: 'Monaco Grand Prix', lap: 31 };
+    await put(1, { ...career, world: { ...career.world, lost: [lost] } }, 5 * MINUTE);
+  },
+  /** The day after: Williams between races with a seat to fill and a driver remembered. */
+  aftermath: async () => {
+    const career = careerAt('scene-aftermath', 'williams', 2016, 6, 'management');
+    const outfit = career.outfit!;
+    const driver = outfit.drivers[0]!.driver;
+    const lost = { driver, team: 'williams', season: 2016, round: 6, race: 'Monaco Grand Prix', lap: 31 };
+    await put(
+      1,
+      {
+        ...career,
+        world: { ...career.world, lost: [lost] },
+        outfit: { ...outfit, drivers: outfit.drivers.slice(1), preseason: ['contracts'], news: [`lost:${driver}:williams`] },
+      },
+      5 * MINUTE,
+    );
   },
   /** A finished career, a damaged save with a safety copy, and a save from a newer version. */
   trouble: async () => {

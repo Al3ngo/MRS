@@ -67,8 +67,8 @@ export function WinterCard({ career, open }: { career: CareerState; open: (sheet
         {outfit.preseason.map((step) => (
           <button type="button" class="choice" key={step} onClick={() => open(step)}>
             <span class="choice__name">
-              <span>{STEP_WORDS[step].title}</span>
-              <span class="choice__detail">{STEP_WORDS[step].line}</span>
+              <span>{midSeason && step === 'contracts' ? 'A seat to fill' : STEP_WORDS[step].title}</span>
+              <span class="choice__detail">{midSeason && step === 'contracts' ? 'Sign a driver without a seat.' : STEP_WORDS[step].line}</span>
             </span>
             <span class="choice__note">Open</span>
           </button>
