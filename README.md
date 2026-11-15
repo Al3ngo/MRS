@@ -80,7 +80,9 @@ simulated IndexedDB, the season data (including the points rules against every r
 the race engine. The engine's tests cover its rules (the same seed gives the same race, a race
 saved half way carries on unchanged, each era's tyres and aids, the two-compound rule, safety
 cars, red flags) and then run all 352 real rounds once to check that the races look like their
-era. That last part takes most of a minute.
+era. That last part takes most of a minute. Further tests pin the engine's results exactly, check
+the team race styles, the tyre and fuel graph and the forecast, and keep the game logic apart from
+the screens.
 
 The career tests play a whole career, every session of 2010 to 2026, and check it stays sound
 at every step and that the points add up; that one takes about a minute on its own.
@@ -114,6 +116,8 @@ prints one race in full: season, round, seed.
 npm run lab:tyres
 ```
 
+shows how many stops the pit wall plans in each season on a dry day.
+
 ```bash
 npm run lab:push -- 2019 ferrari 3
 ```
@@ -128,8 +132,15 @@ npm run lab:push-solo -- 2019 5 250
 measures the bare trade of all-out with no traffic: time gained and cars lost for bursts of 1 to 20
 laps.
 
-shows how many stops the pit wall plans in each season on a dry day. The balance values are the
-constants at the top of `src/game/sim/model.ts`, `race.ts` and `tyres.ts`.
+```bash
+npm run lab:styles -- 2019 ferrari 3
+```
+
+runs one team's cars through a season under each race style (cautious, balanced, aggressive) and
+prints grid and finishing places, points, crashes, stops, laps on all-out and stress.
+
+The balance values are the constants at the top of `src/game/sim/model.ts`, `race.ts` and
+`tyres.ts`; the team styles are in `src/game/sim/styles.ts`.
 
 ## The data
 
@@ -172,8 +183,14 @@ e2e/                    the end-to-end check
 
 Rules the code keeps to:
 
-- `src/game` never touches the DOM, storage or the clock. That keeps the simulation testable and,
-  later, runnable thousands of times for balancing.
+- `src/game` never touches the DOM, storage or the clock, and never imports a screen. That keeps
+  the simulation testable, runnable thousands of times for balancing, and lets any screen be
+  redesigned without touching it. What a screen shows (the tyre and fuel graph, the forecast, pit
+  advice) is worked out in `src/game/sim/readouts.ts` and handed over as plain data.
+  `tests/architecture.test.ts` checks all of this.
+- The race engine's results are pinned: `tests/engine-fingerprints.test.ts` replays 72 sessions
+  and fails on any change to a result. After a deliberate change to the engine, record the new
+  results with `npx vitest run tests/engine-fingerprints.test.ts -u`.
 - A career is plain JSON. What is in memory, what is in storage and what is in a backup file are the
   same thing.
 - Any change to the shape of a career bumps `SCHEMA_VERSION` in `src/game/save-schema.ts` and adds a

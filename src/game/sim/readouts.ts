@@ -10,7 +10,7 @@ import * as M from './model';
 import { startFuel } from './race';
 import { lapsToGo, options, type Option } from './strategy';
 import { compound, compoundOfKind, dryCompounds } from './tyres';
-import { rainAt } from './weather';
+import { rainAt, settle } from './weather';
 import type { CarState, Compound, EnergyMode, RaceState } from './types';
 
 const frac = (value: number): number => value - Math.floor(value);
@@ -48,8 +48,38 @@ export interface CarOutlook {
   fuelShortBy: number | null;
 }
 
+/**
+ * Seconds of race clock from now until `laps` laps from now: the lap under way at the pace the flag
+ * allows, the laps after it at racing speed.
+ */
+function clockAhead(state: RaceState, laps: number): number {
+  const now = state.setup.refLap * (state.flag.kind === 'green' ? 1.08 : 1.45);
+  const racing = state.setup.refLap * 1.08;
+  return Math.min(laps, 1) * now + Math.max(0, laps - 1) * racing;
+}
+
+/**
+ * The track as the forecast sees it: wet as it is now, then wetter or drier as the race's coming
+ * rain says, drying the way the engine dries it. Gives the average wetness over each stretch asked for.
+ */
+function trackAhead(state: RaceState): (fromLaps: number, toLaps: number) => number {
+  const start = state.time + state.stopped;
+  let wet = state.wetness;
+  return (fromLaps, toLaps) => {
+    const from = clockAhead(state, fromLaps);
+    const parts = 6;
+    const dt = (clockAhead(state, toLaps) - from) / parts;
+    let sum = 0;
+    for (let part = 0; part < parts; part++) {
+      wet = settle(wet, rainAt(state.rain, start + from + (part + 0.5) * dt), dt);
+      sum += wet;
+    }
+    return sum / parts;
+  };
+}
+
 /** Tyre wear over one lap at racing speed, as the engine works it out, in clear air. */
-function wearPerLap(state: RaceState, car: CarState, tyre: Compound, fuel: number): number {
+function wearPerLap(state: RaceState, car: CarState, tyre: Compound, fuel: number, wetness: number): number {
   const { setup } = state;
   const entrant = setup.grid[car.entrant]!;
   return (
@@ -57,13 +87,14 @@ function wearPerLap(state: RaceState, car: CarState, tyre: Compound, fuel: numbe
     M.ENGINE[car.engineMode].tyres *
     M.PUSH[car.push].tyres *
     (1 + M.FUEL_WEAR * (fuel / setup.fullDistanceLaps)) *
-    M.overheating(tyre.kind, state.wetness)
+    M.overheating(tyre.kind, wetness)
   );
 }
 
 /**
  * How a car's tyres and fuel will run to the flag if it carries on as it is: same modes, its plan's
- * stops made, a clear track. An estimate for the pit wall, not a promise.
+ * stops made, a clear track, and the weather the forecast shows (wet-weather tyres wear fast on a
+ * drying track). An estimate for the pit wall, not a promise.
  */
 export function carOutlook(state: RaceState, car: CarState): CarOutlook {
   const { setup } = state;
@@ -92,9 +123,11 @@ export function carOutlook(state: RaceState, car: CarState): CarOutlook {
   const comfort = [fuelComfort(fuel - need(0))];
   let wornAt: number | null = wear >= M.BLOWOUT_WEAR ? 0 : null;
   let dryAt: number | null = fuel <= 0 ? 0 : null;
+  const track = trackAhead(state);
   for (let lap = 1; lap <= steps; lap++) {
     const share = lap === steps ? lapsLeft - (steps - 1) : 1;
-    wear += wearPerLap(state, car, tyre, fuel) * share;
+    const wetness = track(lap - 1, lap - 1 + share);
+    wear += wearPerLap(state, car, tyre, fuel, wetness) * share;
     fuel -= burn * share;
     if (wornAt === null && wear >= M.BLOWOUT_WEAR && (stopIn === null || lap <= stopIn)) wornAt = lap;
     if (dryAt === null && fuel <= 0) dryAt = lap;
@@ -141,15 +174,13 @@ export interface ForecastLap {
 export function weatherForecast(state: RaceState, laps = 5): ForecastLap[] {
   const { setup } = state;
   const clock = state.time + state.stopped;
-  const lapTime = setup.refLap * (state.flag.kind === 'green' ? 1.08 : 1.45);
   // On the grid the next lap is the first; once racing, the one after the leader's.
   const leaderLap = state.phase === 'grid' ? 0 : Math.min(setup.laps, state.lap + 1);
   const out: ForecastLap[] = [];
   for (let ahead = 1; ahead <= laps && leaderLap + ahead <= setup.laps; ahead++) {
-    const middle = clock + (ahead - 0.5) * lapTime;
-    const rain = rainAt(state.rain, middle);
+    const rain = rainAt(state.rain, clock + clockAhead(state, ahead - 0.5));
     let near = 0;
-    for (const shift of [-0.6, -0.3, 0.3, 0.6]) near = Math.max(near, rainAt(state.rain, middle + shift * lapTime));
+    for (const shift of [-0.6, -0.3, 0.3, 0.6]) near = Math.max(near, rainAt(state.rain, clock + clockAhead(state, ahead - 0.5 + shift)));
     let chance: number;
     if (rain > 0) chance = Math.max(0.6, 0.95 - 0.07 * (ahead - 1));
     else if (near > 0) chance = 0.4;

@@ -141,7 +141,7 @@ function TeamChoice({ career }: { career: CareerState }) {
           ))}
         </ul>
         <p class="list-note">
-          In order of real pace that season: how far each car's best qualifying lap was from the fastest car. Race style is how each team's pit wall runs its cars: aggressive teams push hard and gamble on tyres and weather, balanced ones pick their moments, cautious ones look after the car, the driver and the tyres.
+          In order of real pace that season: how far each car's best qualifying lap was from the fastest car. Race style is how a team runs its cars in a race: aggressive teams push hard and gamble on tyres and weather, balanced ones pick their moments, cautious ones look after the car, the driver and the tyres. Your own team follows its style only for a car you hand over to the team during a race.
         </p>
       </section>
       {chosen && (

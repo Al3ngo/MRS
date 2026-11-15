@@ -478,3 +478,122 @@ logic are wording, one export, and a record of the setup each practice run was m
   feed and the results use surnames.
 - **A name fix found on the way**: Pedro de la Rosa and Lucas di Grassi showed as "Rosa" and
   "Grassi" in team lists; surnames now come from the record.
+
+## Before Stage 6: team styles, the tyre and fuel graph, the weather forecast
+
+Asked for in chat (15 November), with the brief re-read first (version of 14 November, whose
+polish stage already lists the forecast and the bars). The rule for this round: extend the race
+simulation, do not rewrite it, and do not change its results or its balance.
+
+### The engine is untouched, and a test proves it
+
+- **The same engine runs every car.** Since Stage 3 the simulation's cars have been driven by the
+  same code the player uses: the same push levels, engine and battery modes and pit calls, with
+  the same stress, tyre wear, fuel and weather. What is new is that each team now makes those
+  calls in its own style.
+- **Balanced is the old team exactly.** With every team set to balanced, 72 qualifying sessions
+  and races across all eras come out identical to a recording made before any of this work, to
+  the last decimal (`tests/engine-fingerprints.test.ts`; any change to a result fails it).
+- **Reading the race never changes it.** A test reads every readout on every car every second of
+  a race and checks that the race ends byte-for-byte as it does unread.
+
+### Every team has a race style
+
+- **Three styles: aggressive, balanced, cautious.** Each is a set of thresholds the team uses for
+  its calls (`src/game/sim/styles.ts`):
+
+  | | Aggressive | Balanced | Cautious |
+  |---|---|---|---|
+  | All-out bursts | up to 4 laps, when within 0.9 s | up to 2 laps, within 0.6 s | never |
+  | Push level | sooner, and kept with more stress | as before | later, and dropped sooner |
+  | Saves the driver at stress | 65 | 55 | 45 |
+  | Engine on Push | more often, with less fuel spare | as before | rarely, with plenty spare |
+  | Battery | spent more freely | as before | kept in reserve |
+  | Rain | gambles on changing early (first onto intermediates, first back on dry tyres) | as before | waits until the change clearly pays |
+  | Pit stops | runs worn tyres longer; dives in behind a safety car more readily | as before | changes worn tyres sooner; stops behind a safety car only when it clearly pays |
+  | Qualifying | normal, push, push | normal throughout | safe, normal, normal |
+
+- **Who has which style** is an editorial call, like the driver ratings, and can change over a
+  team's life: Red Bull, Toro Rosso and Haas (from 2016) aggressive; McLaren aggressive in
+  2010-14 and from 2023, balanced between; Ferrari and Mercedes balanced; Renault balanced, then
+  cautious in 2012-15; Williams, Force India, Sauber, the 2010 newcomers and Cadillac cautious;
+  Haas balanced from 2024. Teams not listed are balanced.
+- **Where it shows**: on each team in the almanac and on the career team choice, with one line on
+  what the styles mean.
+- **The player's own team** follows its style only for a car the player hands over to the team
+  ("Let the team make this car's calls"). In qualifying the player's cars go at normal unless told
+  otherwise.
+- **No style simply wins.** One team, both cars, 84 races of 2019 under each style: cautious
+  scored 26.9 points a race, balanced 26.3, aggressive 25.8. Aggressive cars gain places and crash
+  more (0.077 crashes per car per race, against 0.030 balanced and 0.018 cautious). Run it with
+  `npm run lab:styles -- 2019 ferrari 3`.
+- **What it does to the eras** (eight runs of every round, styles against all-balanced): dry-race
+  overtakes in 2010 24.0 → 25.8, in 2011-13 63.2 → 62.0, in 2017-18 31.3 → 32.6; stops per car
+  0.97 → 0.96, 2.36 → 2.39, 1.14 → 1.21. All inside the Stage 3 bands. One test compared 2011-13
+  against 2010 measured from a single run of 2010's 19 races, which swings by several passes
+  either way; it now measures 2010 over three runs, with the band itself unchanged.
+
+### Left open: the push level and mistakes
+
+The brief says the push level trades pace against tyre wear, mistakes and stress. Since Part A,
+mistakes rise with stress, which pushing builds, rather than with the push level directly. Making
+the push level add mistakes of its own would change results and balance, which this round rules
+out. It is noted for the balancing in Stage 8.
+
+### The tyre and fuel graph
+
+- **On each car's card, two slim strips: Tyres and Fuel, one bar per lap from now to the flag.**
+  A bar's height is what will be left at the end of that lap; its colour is green, amber or red
+  (fine, watch it, act). A white line marks each stop the car is set to make, after which the
+  tyres are new. The tyre colour dot moved from the card's head to the Tyres label.
+- **A red line under the card when something will not last**: "Tyres gone 3 laps early" (worn out
+  before the stop, or the flag with no stop to come), "Fuel 2 laps short".
+- **How it is worked out**: the engine's own tyre wear and fuel burn, at the modes the car is in
+  now, in clear air, with its plan's stops, and with the track as the forecast sees it (wet-weather
+  tyres wear fast once a track dries). It is an estimate, and a good one: in clear air it is
+  within 0.06 of the real tyre bar six laps on, and in a drying race at Spa it saw intermediates
+  finished by lap 18 where they really went at 16 or 17. Traffic and the safety car are not
+  foreseen.
+- **Tyre bars now empty where the engine starts to risk a puncture** (1.3 times a tyre's nominal
+  life), everywhere a tyre bar appears. Teams plan to run a little past nominal life: the median
+  stint ends at 1.11, nine in ten under 1.29. On the old scale nearly every normal stint ended
+  "worn out", and the graph warned on plans that were fine. This only changes the bars, not the
+  engine. With it, ordinary plans warn rarely (1.9% of last stints, nearly all "1 lap early") and
+  honestly: about 4% of finishers do end past that point.
+- **Fuel's colour says whether it reaches the flag** (green with half a lap or more to spare),
+  as the fuel bar already did.
+
+### The weather forecast
+
+- **Over the map: how wet the track is now (bar and word), then the next five laps**, each with an
+  icon (sun, cloud, light rain, heavy rain) and the chance of rain. On the grid, the same for the
+  first laps, in its own card. The header no longer carries a separate wetness bar.
+- **It is drawn from the rain the race will really have, and is less sure further ahead.** A lap
+  with rain due shows 95% for the next lap, 7 points less for each lap further out, never under
+  60%. Rain due just either side of a lap shows 40% and a cloud. Otherwise the chance is the
+  circuit's usual odds, no more than 25%, with a sun. Rain icons need 50% or more (heavy when the
+  rain due is hard), a cloud 30-49%. So a shower is never shown as certain far ahead, and never
+  arrives without at least a cloud the lap before.
+- **On small phones the forecast moves down the map's sides.** There the map is wide and short,
+  and a strip along the top shrank the circuit to almost nothing. When the circuit draws bigger
+  with the track on the left and the laps down the right, that is the layout used; on a 375 by
+  667 screen the circuit now draws about twice as large.
+
+### Game logic apart from the screens
+
+- **What the screens show is worked out in the game layer and handed over as plain data**:
+  `src/game/sim/readouts.ts` (the graph, the forecast, pit advice, race plans to choose from,
+  which battery modes are open, a finished race's numbers) and `careerTotals` in
+  `src/game/career.ts`. The screens only draw. A redesign of any screen needs no change below
+  `src/ui`.
+- **A test keeps it that way** (`tests/architecture.test.ts`): nothing in `src/game` may import a
+  screen, the app, the browser layer or Preact, touch browser objects, read the clock or use
+  unseeded randomness.
+
+### Bars, setup and plain English
+
+- Bars for tyres, wetness, battery and fuel, and the setup lines and feedback arrows, were done in
+  the readability pass; this round rechecks them at phone size. The new graph uses the same
+  colours. A browser test checks the car cards carry no percentages.
+- New terms are explained where they appear: "Tyre and fuel graph" and "Weather" in the race
+  guide, race styles on the team lists.

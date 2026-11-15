@@ -1690,6 +1690,42 @@ button.slot__main:disabled .slot__go {
   }
 }
 
+/* On a wide, short map (a small phone): the track down the left, the coming laps down the right. */
+.forecast--sides {
+  bottom: 0;
+}
+
+.forecast--sides .forecast__track {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 58px;
+  white-space: normal;
+}
+
+.forecast--sides .forecast__laps {
+  flex-direction: column;
+  gap: 0;
+}
+
+.forecast--sides .forecast__lap {
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 50px;
+  height: 20px;
+}
+
+.forecast--sides .weather-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.forecast--sides .forecast__chance {
+  width: 28px;
+  text-align: right;
+}
+
 /* The forecast in a card, before the race: in the flow of the page, not over the map. */
 .forecast--card {
   position: static;

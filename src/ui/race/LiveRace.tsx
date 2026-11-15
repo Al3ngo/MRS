@@ -64,6 +64,11 @@ interface Props {
   startPaused?: boolean;
 }
 
+/** Room the weather takes on the map: a strip along the top, or columns down the left and right. */
+const FORECAST_STRIP = 30;
+const FORECAST_LEFT = 62;
+const FORECAST_RIGHT = 54;
+
 export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = false, startPaused = false }: Props) {
   const { setup } = state;
   const clock = useMemo(() => new RaceClock(state), [state]);
@@ -76,6 +81,8 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
   const [sheet, setSheet] = useState<'pit' | 'skip' | 'leave' | 'guide' | null>(null);
   const [help, setHelp] = useState<Help>('push');
   const [feed, setFeed] = useState<FeedLine[]>([]);
+  // Where the weather sits on the map: along the top, or down the sides when the map is wide and short.
+  const [forecastAt, setForecastAt] = useState<'top' | 'sides'>('top');
   const canvas = useRef<HTMLCanvasElement>(null);
   const finished = useRef(onFinish);
   finished.current = onFinish;
@@ -116,10 +123,13 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
       element.width = Math.round(width * ratio);
       element.height = Math.round(height * ratio);
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      // The weather strip sits along the top of the map: the circuit is drawn below it.
-      const strip = 30;
-      const base = fitTrack(map, width, height - strip, 22);
-      fit = { ...base, offsetY: base.offsetY + strip };
+      // The weather sits along the top of the map with the circuit below it, unless the map is so
+      // wide and short (a small phone) that the circuit draws bigger with the weather down its sides.
+      const top = fitTrack(map, width, height - FORECAST_STRIP, 22);
+      const side = fitTrack(map, width - FORECAST_LEFT - FORECAST_RIGHT, height, 22);
+      const sides = side.scale > top.scale * 1.12;
+      fit = sides ? { ...side, offsetX: side.offsetX + FORECAST_LEFT } : { ...top, offsetY: top.offsetY + FORECAST_STRIP };
+      setForecastAt(sides ? 'sides' : 'top');
       path = trackPath(map, fit);
     };
     measure();
@@ -222,7 +232,7 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
 
       <div class="race__map">
         <canvas ref={canvas} role="img" aria-label={`${setup.name}: the circuit from above, with every car`} />
-        <Forecast state={state} />
+        <Forecast state={state} layout={forecastAt} />
       </div>
 
       <ol class="feed" aria-label="Race feed" aria-live="polite">

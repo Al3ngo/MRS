@@ -228,7 +228,7 @@ export function raceGuide(rules: SessionRules): GuideEntry[] {
     },
     {
       term: 'Weather',
-      meaning: 'Above the map: the track now, and the next laps\' weather with the chance of rain. Rain ahead means wet tyres soon.',
+      meaning: 'On the map: how wet the track is now, and the next laps\' weather with the chance of rain. Rain ahead means wet tyres soon.',
     },
   ];
   if (rules.recovery === 'kers') {

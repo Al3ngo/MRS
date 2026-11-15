@@ -83,12 +83,6 @@ export function teamStyle(team: string, season: number): RaceStyle {
   return style;
 }
 
-export const STYLE_WORDS: Readonly<Record<RaceStyle, string>> = {
-  aggressive: 'Aggressive: pushes hard and gambles on tyres and weather',
-  balanced: 'Balanced: picks its moments',
-  cautious: 'Cautious: looks after the car, the driver and the tyres',
-};
-
 // ── Money ───────────────────────────────────────────────────────────────────────────────────
 
 /**

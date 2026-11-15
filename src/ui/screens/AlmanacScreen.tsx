@@ -164,7 +164,7 @@ export function AlmanacScreen({ season }: { season: number }) {
             <p class="list-note">
               In order of real pace: the figure is how far each car's best qualifying lap was from the fastest car, on
               average. Money is the team's spending power in game money
-              {data.rules.budgetCap !== null ? `, capped at ${data.rules.budgetCap}` : ''}. Race style is how each team's pit wall runs its cars: aggressive teams push hard and gamble on tyres and weather, balanced ones pick their moments, cautious ones look after the car, the driver and the tyres.
+              {data.rules.budgetCap !== null ? `, capped at ${data.rules.budgetCap}` : ''}. Race style is how a team runs its cars in a race: aggressive teams push hard and gamble on tyres and weather, balanced ones pick their moments, cautious ones look after the car, the driver and the tyres.
             </p>
           </section>
         )}

@@ -98,6 +98,23 @@ describe('the tyre and fuel outlook', () => {
     expect(Math.abs(tyreLife(car.wear) - predicted)).toBeLessThan(0.06);
   });
 
+  it('sees wet-weather tyres wear fast once the forecast dries the track', () => {
+    const lap = 95;
+    const onInters = (weather: RainSpell[]) => {
+      const state = race(weather);
+      const car = ferrari(state);
+      car.tyre = state.setup.compounds.find((tyre) => tyre.kind === 'inter')!.id;
+      command(state, { type: 'plan', car: car.id, stops: [] });
+      return carOutlook(state, car);
+    };
+    const staysWet = onInters([{ from: -900, to: lap * 99, intensity: 0.5 }]);
+    const dries = onInters([{ from: -900, to: lap * 4, intensity: 0.5 }]);
+    const wornAt = (outlook: ReturnType<typeof carOutlook>) => outlook.tyres.findIndex((life) => life === 0);
+    expect(wornAt(dries)).toBeGreaterThan(0);
+    expect(wornAt(dries)).toBeLessThan(wornAt(staysWet) * 0.75);
+    expect(dries.tyresShortBy!).toBeGreaterThan(staysWet.tyresShortBy!);
+  });
+
   it('ends at the flag and is empty for a car that is out', () => {
     const state = race();
     const car = ferrari(state);

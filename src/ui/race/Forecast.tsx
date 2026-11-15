@@ -11,11 +11,22 @@ const KIND_WORDS: Readonly<Record<ForecastKind, string>> = {
 };
 
 /** The track now, and the weather for the next few laps: an icon and the chance of rain for each. */
-export function Forecast({ state, laps = 5, inCard = false }: { state: RaceState; laps?: number; inCard?: boolean }) {
+export function Forecast({
+  state,
+  laps = 5,
+  inCard = false,
+  layout = 'top',
+}: {
+  state: RaceState;
+  laps?: number;
+  inCard?: boolean;
+  /** Over the map: a strip along the top, or the track on the left and the laps down the right. */
+  layout?: 'top' | 'sides';
+}) {
   const forecast = weatherForecast(state, laps);
   const words = trackWords(state.wetness);
   return (
-    <div class={`forecast${inCard ? ' forecast--card' : ''}`}>
+    <div class={`forecast${inCard ? ' forecast--card' : ''}${layout === 'sides' ? ' forecast--sides' : ''}`}>
       <span class="forecast__track">
         <span class="forecast__label">Track</span>
         <Meter {...wetMeter(state.wetness)} size="small" class="forecast__wet" label={`Track: ${words.toLowerCase()}`} />
