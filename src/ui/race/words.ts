@@ -25,7 +25,7 @@ const RADIO: Readonly<Record<RadioMessage, string>> = {
   'want-inters': 'It is too wet for dry tyres. Intermediates, please.',
   'want-wets': 'Too much standing water. I need the full wet tyres.',
   'want-slicks': 'The track is dry enough for dry tyres again.',
-  'stuck-behind': 'I am stuck behind him. I cannot get by.',
+  'stuck-behind': 'I am stuck behind this car. I cannot get by.',
   'engine-worry': 'Something is wrong with the car. I am losing power.',
   'on-the-limit': 'I am right on the limit here. I cannot keep this up.',
 };

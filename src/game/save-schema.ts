@@ -3,10 +3,11 @@
  * it through the migrations below, one version at a time, before it is checked and used.
  */
 import { emptyWeekend, findProblems, summarise, type CareerState, type CareerSummary } from './career';
-import { newOutfit } from './team';
+import { heldBy, newOutfit, type Outfit } from './team';
+import { newcomers, newWorld } from './world';
 
 /** Bump when CareerState changes shape, and add `MIGRATIONS[oldVersion]`. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** `MIGRATIONS[n]` turns a version n career into a version n + 1 career. */
 export type Migrations = Readonly<Record<number, (older: unknown) => unknown>>;
@@ -42,6 +43,17 @@ export const MIGRATIONS: Migrations = {
     const season = typeof career.seasonYear === 'number' ? career.seasonYear : 2010;
     const round = typeof career.round === 'number' ? career.round : 1;
     return { ...career, outfit: team ? newOutfit({ id, team, season, round }) : null };
+  },
+  /**
+   * Version 3 (Stage 6) had no drivers' world. Nobody has been lost; this season's prospects
+   * arrive; fatal accidents are on, as the brief has them; the academy starts empty.
+   */
+  3: (older) => {
+    const career = older as Record<string, unknown>;
+    const id = typeof career.id === 'string' ? career.id : 'career';
+    const season = typeof career.seasonYear === 'number' ? career.seasonYear : 2010;
+    const outfit = career.outfit ? ({ academy: [], academyBonus: {}, ...(career.outfit as object) } as unknown as Outfit) : null;
+    return { ...career, outfit, world: newcomers(newWorld(), id, season, heldBy(outfit, season)) };
   },
 };
 

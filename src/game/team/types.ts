@@ -96,6 +96,7 @@ export type LedgerKind =
   | 'part'
   | 'next-year'
   | 'engine-deal'
+  | 'academy'
   | 'fine';
 
 /** One movement of money this season. Spending is negative. */
@@ -120,6 +121,15 @@ export interface MarketState {
   staffPool: StaffMember[];
   /** Drivers and staff who turned down a lower offer and will not hear another this winter. */
   refused: string[];
+}
+
+/** A young driver in the team's academy. */
+export interface AcademyJunior {
+  driver: string;
+  /** The season they joined. */
+  since: number;
+  /** Money a season, paid race by race. */
+  fee: number;
 }
 
 export interface Outfit {
@@ -154,4 +164,8 @@ export interface Outfit {
   lastPlace: number | null;
   /** Things that happened, for the next management phase to tell. Cleared when it is read. */
   news: string[];
+  /** The junior academy: up to three young drivers. */
+  academy: AcademyJunior[];
+  /** What a driver's years in the academy add to every rating when they race for the team. */
+  academyBonus: Record<string, number>;
 }

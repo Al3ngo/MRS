@@ -9,7 +9,8 @@ import { REAL_PACE } from './generated/pace';
 import { ROUNDS } from './generated/rounds';
 import { SOURCES } from './generated/sources';
 import { engineFamily, shownTeamName, teamColour, teamSpending, teamStyle, type RaceStyle } from './profiles';
-import { PROFILES, ageIn, overall, ratingsAtAge, type Ratings } from './ratings';
+import { PROFILES, ageIn, overall, ratingsAtAge, type DriverProfile, type Ratings } from './ratings';
+import { fictionalDriver, isFictional } from './fictional';
 import { rulesFor, type Rules } from './regulations';
 import {
   FIRST_SEASON,
@@ -24,6 +25,7 @@ export { CIRCUITS, DRIVERS, ENTRIES, REAL_PACE, ROUNDS, SOURCES, TEAMS, FIRST_SE
 export * from './profiles';
 export * from './ratings';
 export * from './regulations';
+export * from './fictional';
 export type * from './types';
 
 export const SEASONS: readonly number[] = Array.from(
@@ -40,10 +42,17 @@ export function circuit(id: string): CircuitFact {
   return found;
 }
 
+/** A driver, real or made up by a career (see fictional.ts). */
 export function driver(id: string): DriverFact {
+  if (isFictional(id)) return fictionalDriver(id).fact;
   const found = driversById.get(id);
   if (!found) throw new RangeError(`Unknown driver ${id}`);
   return found;
+}
+
+/** A driver's ratings profile, real or made up. */
+export function profileOf(id: string): DriverProfile | undefined {
+  return isFictional(id) ? fictionalDriver(id).profile : PROFILES[id];
 }
 
 /** The rounds of a season, in order, as they were really held (or are scheduled). */

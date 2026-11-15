@@ -6,8 +6,10 @@
 import {
   DRIVERS,
   LAST_SEASON,
-  PROFILES,
   REAL_PACE,
+  driver,
+  isFictional,
+  profileOf,
   SOURCES,
   ageIn,
   calendar,
@@ -53,8 +55,8 @@ export function sessionRules(season: number, kind: 'race' | 'sprint'): SessionRu
 }
 
 export function ratingsIn(driverId: string, season: number): Ratings {
-  const fact = driversById.get(driverId);
-  const profile = PROFILES[driverId];
+  const fact = isFictional(driverId) ? driver(driverId) : driversById.get(driverId);
+  const profile = profileOf(driverId);
   if (!fact || !profile) throw new RangeError(`Unknown driver ${driverId}`);
   return ratingsAtAge(profile, ageIn(fact, season));
 }

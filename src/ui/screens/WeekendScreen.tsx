@@ -14,6 +14,7 @@ import {
 } from '../../game/career';
 import { calendar, circuit as circuitById, driver as driverById, knockoutCuts } from '../../game/data';
 import { strategistSureness } from '../../game/team';
+import { fatalities } from '../../game/world';
 import {
   PRACTICE_RUNS,
   finishesOf,
@@ -34,6 +35,7 @@ import type { SlotId } from '../../platform/saves';
 import { formatLap } from '../format';
 import { IconBack } from '../icons';
 import { Briefing } from '../race/Briefing';
+import { TragedySheet } from '../career/Lifecycle';
 import { Grid } from '../race/Grid';
 import { LiveRace } from '../race/LiveRace';
 import { RaceResult, poleOf, type Pole } from '../race/Result';
@@ -249,7 +251,7 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
         <div class="title-row">
           <h1 class="title">{round.name}</h1>
           <p class="subtitle">
-            Practice. Adjust each car's setup, send the driver out, and he tells you which way to move each setting.{' '}
+            Practice. Adjust each car's setup, send the driver out, and the driver tells you which way to move each setting.{' '}
             {PRACTICE_RUNS} runs per car.
           </p>
         </div>
@@ -282,7 +284,7 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
         </section>
         <p class="smallprint">
           {hints
-            ? `The arrows show what ${car.driverName.split(' ').at(-1)} said after the last run. Each starts at the setting he drove (the small mark) and points the way to move it; a long arrow means a big change. A consistent driver's feedback is more exact.`
+            ? `The arrows show what ${car.driverName.split(' ').at(-1)} said after the last run. Each starts at the setting the car was run with (the small mark) and points the way to move it; a long arrow means a big change. A consistent driver's feedback is more exact.`
             : "The car starts on the team's own first guess at a setup. Do a run, and the driver tells you which way to move each setting."}
         </p>
       </main>
@@ -476,15 +478,25 @@ function RaceSession({
   const [step, setStep] = useState<'briefing' | 'grid' | 'live' | 'result'>(resumed ? 'live' : 'briefing');
   const sureness = career.outfit ? strategistSureness(career.outfit) : 0.5;
   const [, setBeat] = useState(0);
+  const [mourned, setMourned] = useState(false);
   const round = roundOf(career);
   const name = sessionName(career.seasonYear, kind);
   const lower = name.toLowerCase();
+  // Drivers lost in this race, once its result is recorded.
+  const lostHere =
+    step === 'result'
+      ? (careerIn(slot)?.world.lost ?? []).filter(
+          (entry) => entry.season === career.seasonYear && entry.round === career.round && race.cars.some((car) => race.setup.grid[car.entrant]?.driver === entry.driver),
+        )
+      : [];
 
   const record = (): void => {
     const now = careerIn(slot);
     if (!now || (now.phase !== 'race' && now.phase !== 'sprint')) return;
     const poleDriver = kind === 'race' ? poleFor(now) : null;
-    void updateCareer((current) => finishRace(current, finishesOf(race), poleDriver, unitWear(current, race)));
+    void updateCareer((current) =>
+      finishRace(current, finishesOf(race), poleDriver, unitWear(current, race), fatalities(current.world, current.id, race)),
+    );
     setStep('result');
     window.scrollTo(0, 0);
   };
@@ -545,6 +557,7 @@ function RaceSession({
         )}
         {step === 'grid' && <Grid state={race} onChange={() => setBeat((beat) => beat + 1)} sureness={sureness} />}
         {step === 'result' && <RaceResult state={race} pole={pole} title={name} />}
+        {lostHere.length > 0 && !mourned && <TragedySheet lost={lostHere} career={careerIn(slot) ?? career} onClose={() => setMourned(true)} />}
       </main>
       <div class="actionbar">
         <div class="actionbar__inner">

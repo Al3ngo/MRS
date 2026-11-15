@@ -16,6 +16,7 @@ import {
   traitLine,
 } from './businessWords';
 import { driverName } from './names';
+import { stageOf } from './Lifecycle';
 
 /**
  * The team's business on the career's home screen: money and the budget cap, the sponsor and its
@@ -47,6 +48,7 @@ const LEDGER_NAMES: Readonly<Record<LedgerKind, string>> = {
   part: 'Car development',
   'next-year': "Next year's car",
   'engine-deal': 'Engine supply',
+  academy: 'Junior academy',
   fine: 'Fines',
 };
 
@@ -204,7 +206,7 @@ export function PeopleCard({ career }: { career: CareerState }) {
           <li class="person" key={contract.driver}>
             <span class="person__name">{driverName(contract.driver)}</span>
             <span class="person__detail">
-              Driver · {cash(contract.salary)} a season to {contract.until}
+              Driver, {stageOf(career, contract.driver).toLowerCase()} · {cash(contract.salary)} a season to {contract.until}
               {contract.backing > 0 ? ` · backers pay you ${cash(contract.backing)}` : ''}
             </span>
           </li>

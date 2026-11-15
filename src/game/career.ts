@@ -27,7 +27,8 @@ import {
   type Standing,
 } from './season/standings';
 import { SESSION_KINDS, nextSession, weekendSessions, type SessionKind } from './season/weekend';
-import { newOutfit, settleRace, settleSprint, turnSeason, type Outfit, type TeamContext } from './team';
+import { heldBy, newOutfit, settleRace, settleSprint, turnSeason, type Outfit, type TeamContext } from './team';
+import { afterLoss, newcomers, newWorld, type LostDriver, type World } from './world';
 
 export { FIRST_SEASON, LAST_SEASON };
 export type { SessionKind };
@@ -98,6 +99,8 @@ export interface CareerState {
   history: SeasonRecord[];
   /** The team's business: money, sponsor, people, development, power units. Null until a team is chosen. */
   outfit: Outfit | null;
+  /** The drivers' world: who has been lost, the made-up drivers, whether fatal accidents can happen. */
+  world: World;
 }
 
 export const emptyWeekend = (): Weekend => ({
@@ -123,6 +126,7 @@ export function newCareer(id: string, createdAt: Date): CareerState {
     results: [],
     history: [],
     outfit: null,
+    world: newWorld(),
   };
 }
 
@@ -131,16 +135,46 @@ export const STARTING_TEAMS: readonly string[] = TEAMS.filter((team) => team.sea
   (team) => team.id,
 );
 
-export function chooseTeam(state: CareerState, team: string): CareerState {
+/**
+ * Chooses the career's team, for good. `fatalAccidents` is the brief's suggested sandbox setting:
+ * on, rare fatal accidents can happen, as they could in the real sport.
+ */
+export function chooseTeam(state: CareerState, team: string, fatalAccidents = true): CareerState {
   if (state.team !== null) return state;
   if (!STARTING_TEAMS.includes(team)) throw new RangeError(`${team} was not on the grid in ${FIRST_SEASON}`);
-  return { ...state, team, outfit: newOutfit({ id: state.id, team, season: state.seasonYear, round: state.round }) };
+  const outfit = newOutfit({ id: state.id, team, season: state.seasonYear, round: state.round });
+  const world = newcomers({ ...state.world, fatalAccidents }, state.id, state.seasonYear, heldBy(outfit, state.seasonYear));
+  return { ...state, team, outfit, world };
 }
+
+/** Between seasons: the first session of the season not yet run. */
+const inWinter = (state: CareerState): boolean => state.round === 1 && state.results.length === 0 && state.phase === 'practice';
 
 /** What the team's business needs to know about where the career stands. */
 export function teamContext(state: CareerState): TeamContext {
   if (!state.team) throw new Error('The career has no team yet');
-  return { id: state.id, team: state.team, season: state.seasonYear, round: state.round };
+  return { id: state.id, team: state.team, season: state.seasonYear, round: state.round, world: state.world, winter: inWinter(state) };
+}
+
+/**
+ * Drivers lost in a race: remembered, and gone from every grid from now on. A seat of the player's
+ * that is left empty must be filled before the next round (after a sprint, the Grand Prix that
+ * weekend runs with one car).
+ */
+function recordLosses(state: CareerState, lost: readonly LostDriver[], grandPrix: boolean): CareerState {
+  if (lost.length === 0 && !grandPrix) return state;
+  let world: World = lost.length > 0 ? { ...state.world, lost: [...state.world.lost, ...lost] } : state.world;
+  let outfit = state.outfit;
+  if (outfit) {
+    const gone = new Set(lost.map((entry) => entry.driver));
+    const drivers = outfit.drivers.filter((contract) => !gone.has(contract.driver));
+    const news = [...outfit.news, ...lost.map((entry) => `lost:${entry.driver}:${entry.team}`)];
+    outfit = { ...outfit, drivers, news };
+    const seats = drivers.filter((contract) => contract.until >= state.seasonYear).length;
+    if (grandPrix && seats < 2 && !outfit.preseason.includes('contracts')) outfit = { ...outfit, preseason: [...outfit.preseason, 'contracts'] };
+  }
+  if (lost.length > 0) world = afterLoss(world, state.id, state.seasonYear, state.round, heldBy(outfit, state.seasonYear));
+  return { ...state, world, outfit };
 }
 
 /**
@@ -203,10 +237,17 @@ const isLastRound = (state: CareerState): boolean => state.round === roundsIn(st
  * started the Grand Prix from pole. `wear` is how hard each of the player's cars worked its power
  * unit, in race distances, in seat order. After a Grand Prix the team's money is settled.
  */
-export function finishRace(state: CareerState, finishes: Finish[], pole: string | null, wear: readonly number[] = []): CareerState {
+export function finishRace(
+  state: CareerState,
+  finishes: Finish[],
+  pole: string | null,
+  wear: readonly number[] = [],
+  lost: readonly LostDriver[] = [],
+): CareerState {
   if (state.phase === 'sprint') {
     const outfit = state.outfit && settleSprint(state.outfit, wear);
-    return advance({ ...state, outfit }, { ...state.weekend, sprint: finishes, live: null });
+    const recorded = recordLosses({ ...state, outfit }, lost, false);
+    return advance(recorded, { ...state.weekend, sprint: finishes, live: null });
   }
   if (state.phase !== 'race') return state;
   const result: RoundResult = { round: state.round, race: finishes, sprint: state.weekend.sprint, pole };
@@ -215,7 +256,8 @@ export function finishRace(state: CareerState, finishes: Finish[], pole: string 
     state.outfit && state.team
       ? settleRace(state.outfit, teamContext(state), finishes, wear, teamPlace(results, state.team))
       : state.outfit;
-  const next = advance({ ...state, outfit }, { ...state.weekend, live: null }, results);
+  const recorded = recordLosses({ ...state, outfit }, lost, true);
+  const next = advance(recorded, { ...state.weekend, live: null }, results);
   if (state.seasonYear === LAST_SEASON && isLastRound(state)) next.finished = true;
   return next;
 }
@@ -252,6 +294,8 @@ export function finishManagement(state: CareerState): CareerState {
     results: [],
     history: [...state.history, record],
   };
+  // The drivers' world turns first: this year's prospects, and new drivers if the free ones run thin.
+  next.world = newcomers(next.world, next.id, next.seasonYear, heldBy(next.outfit, next.seasonYear));
   if (next.outfit && next.team) {
     const place = record.teams.find((row) => row.id === next.team)?.position ?? teamsIn(state.seasonYear).length + 1;
     next.outfit = turnSeason(next.outfit, teamContext(next), place);
@@ -406,6 +450,10 @@ export function findProblems(value: unknown): string[] {
   }
   if (!Array.isArray(value.history) || !value.history.every((record) => isObject(record) && isWholeNumber(record.season))) {
     problems.push('The history of past seasons is damaged.');
+  }
+  const world = value.world;
+  if (!isObject(world) || !Array.isArray(world.lost) || !Array.isArray(world.fictional) || typeof world.fatalAccidents !== 'boolean') {
+    problems.push("The record of the drivers' world is damaged.");
   }
   const outfit = value.outfit;
   if (typeof value.team === 'string' && STARTING_TEAMS.includes(value.team) && (outfit === null || outfit === undefined)) {

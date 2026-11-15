@@ -10,13 +10,15 @@
  * plus or minus what the team's development has done (see team/development.ts). A team the player
  * runs stays in the sport after its real exit, starting from its last real car.
  */
-import { DRIVERS, TEAMS, driversBy, teamColour, teamStyle, teamsIn } from '../data';
+import { DRIVERS, TEAMS, driver, driversBy, teamColour, teamStyle, teamsIn } from '../data';
+import { activeIn, newWorld, type World } from '../world';
 import { realCar, realEntrants, ratingsIn, USUAL_SETUP } from '../sim/session';
 import { seedFrom } from '../sim/rng';
 import type { Entrant } from '../sim/types';
 import {
   bestFreeDriver,
   engineStrength,
+  heldBy,
   pitCrewRating,
   playerCar,
   raceEngineAge,
@@ -63,6 +65,7 @@ export function roundEntrants(
   team: string,
   setups: Readonly<Record<string, number>> = {},
   outfit: Outfit | null = null,
+  world: World = newWorld(),
 ): Entrant[] {
   const seed = seedFrom(careerId, season, round, 'weekend');
   const entrants = realEntrants(season, round, team, seed);
@@ -79,7 +82,7 @@ export function roundEntrants(
   const weekend = seedFrom(team, season, round, 'survivor');
   const mine: Entrant[] = outfit.drivers.slice(0, 2).map((contract, seat) => {
     const id = `${team}-${seat + 1}`;
-    const fact = driverFacts.get(contract.driver)!;
+    const fact = driver(contract.driver);
     return {
       id,
       team,
@@ -88,7 +91,7 @@ export function roundEntrants(
       driver: contract.driver,
       driverName: fact.name,
       code: fact.code,
-      ratings: ratingsIn(contract.driver, season),
+      ratings: withBonus(ratingsIn(contract.driver, season), outfit.academyBonus?.[contract.driver] ?? 0),
       car,
       setup: setups[id] ?? real[seat]?.setup ?? USUAL_SETUP + ((weekend >>> (seat * 4)) & 15) / 200,
       engineAge: outfit.units[seat] ? raceEngineAge(outfit.units[seat]!, season) : 0.3,
@@ -98,19 +101,34 @@ export function roundEntrants(
     };
   });
 
-  // The others: a driver under contract to the player is replaced by the best free driver.
+  // The others: a driver the player holds (under contract, or in the academy), or one lost or
+  // retired, is replaced by the best free driver.
   const others = entrants.filter((entrant) => entrant.team !== team);
-  const signed = new Set(mine.map((entrant) => entrant.driver));
-  const taken = new Set([...others.map((entrant) => entrant.driver), ...signed]);
+  const held = heldBy(outfit, season);
+  const away = (id: string): boolean => held.has(id) || !activeIn(world, id, season, held);
+  const taken = new Set([...others.filter((entrant) => !away(entrant.driver)).map((entrant) => entrant.driver), ...mine.map((entrant) => entrant.driver)]);
   const filled = others.map((entrant) => {
-    if (!signed.has(entrant.driver)) return entrant;
-    const free = bestFreeDriver(season, taken);
+    if (!away(entrant.driver)) return entrant;
+    const free = bestFreeDriver(season, taken, world, held);
     if (!free) return entrant;
     taken.add(free.driver.id);
     return { ...entrant, driver: free.driver.id, driverName: free.driver.name, code: free.driver.code, ratings: free.ratings };
   });
   return [...filled, ...mine];
 }
+
+/** Ratings with the academy's years added, none past 99. */
+const withBonus = (ratings: Entrant['ratings'], bonus: number): Entrant['ratings'] =>
+  bonus <= 0
+    ? ratings
+    : {
+        pace: Math.min(99, ratings.pace + bonus),
+        racecraft: Math.min(99, ratings.racecraft + bonus),
+        consistency: Math.min(99, ratings.consistency + bonus),
+        tyres: Math.min(99, ratings.tyres + bonus),
+        wet: Math.min(99, ratings.wet + bonus),
+        aggression: ratings.aggression,
+      };
 
 /**
  * The player's team after its real exit, before Stage 6 (careers without a team business): its

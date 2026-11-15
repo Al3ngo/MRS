@@ -11,7 +11,10 @@
  * the coming season. A driver who in reality stayed where he was is under contract and not for
  * sale. Who retires is still the real record until the driver lifecycle arrives in Stage 7.
  */
-import { DRIVERS, driversBy, teamsIn, type DriverSeason } from '../data';
+import { DRIVERS, isFictional, type DriverSeason } from '../data';
+import { activeIn, careerOver, freePool, isLost, newWorld, raceReady, realTeamOf, recentlyRaced, standing, type World } from '../world';
+
+export { realTeamOf, recentlyRaced };
 import { random, seedFrom } from '../sim/rng';
 import { money } from './money';
 import type { DriverContract } from './types';
@@ -54,9 +57,8 @@ export function backingFor(driver: string, season: number): number {
   return entry && season >= entry[0] && season <= entry[1] ? entry[2] : 0;
 }
 
-/** The driver as he stands in a season, if he is in the sport by then. */
-export const driverIn = (driver: string, season: number): DriverSeason | undefined =>
-  season >= 2010 && season <= 2026 ? driversBy(season).find((entry) => entry.driver.id === driver) : undefined;
+/** A driver as they stand in a season, real or made up. */
+export const driverIn = (driver: string, season: number): DriverSeason | undefined => standing(driver, season);
 
 /** What a driver asks a season on a contract of `length` seasons. */
 /** The most any driver asks a season: the brief's "around 20-something" for the very best. */
@@ -72,28 +74,6 @@ export function driverAsk(entry: DriverSeason, length = 1): number {
   return money(Math.min(TOP_SALARY, Math.max(0.5, ask)));
 }
 
-const realTeams = new Map<number, ReadonlyMap<string, string>>();
-
-/** The team a driver really raced for in a season: the one he started most rounds for. */
-export function realTeamOf(driver: string, season: number): string | null {
-  let map = realTeams.get(season);
-  if (!map) {
-    const most = new Map<string, number>();
-    const built = new Map<string, string>();
-    for (const team of season >= 2010 && season <= 2026 ? teamsIn(season) : []) {
-      for (const entry of team.drivers) {
-        if (entry.rounds.length > (most.get(entry.id) ?? 0)) {
-          most.set(entry.id, entry.rounds.length);
-          built.set(entry.id, team.team);
-        }
-      }
-    }
-    map = built;
-    realTeams.set(season, map);
-  }
-  return map.get(driver) ?? null;
-}
-
 /** The last season of a driver's unbroken real stint at a team, from `from` on. */
 export function stintEnd(driver: string, team: string, from: number, last: number): number {
   let season = from;
@@ -101,15 +81,8 @@ export function stintEnd(driver: string, team: string, from: number, last: numbe
   return season;
 }
 
-/** Whether a driver really raced in one of the two seasons before this one. */
-export const recentlyRaced = (driver: string, season: number): boolean =>
-  realTeamOf(driver, season - 1) !== null || realTeamOf(driver, season - 2) !== null;
-
-/** Whether a driver's real career is over by a season: no race start that year or later. */
-export function retiredBy(driver: string, season: number): boolean {
-  const fact = DRIVERS.find((candidate) => candidate.id === driver);
-  return !fact || fact.raced[1] < season;
-}
+/** Whether a driver's career is over by a season (see world/careerOver). */
+export const retiredBy = (driver: string, season: number): boolean => careerOver(driver, season);
 
 /** Top drivers want a car that can win. Whether a driver will talk to a team at this standing. */
 export function willTalk(overall: number, standing: number): boolean {
@@ -119,7 +92,7 @@ export function willTalk(overall: number, standing: number): boolean {
   return true;
 }
 
-export type MarketStatus = 'yours' | 'moving' | 'rookie' | 'returning';
+export type MarketStatus = 'yours' | 'moving' | 'rookie' | 'returning' | 'academy' | 'free';
 
 export interface MarketDriver {
   driver: string;
@@ -132,15 +105,36 @@ export interface MarketDriver {
 }
 
 /**
- * Drivers the player can sign for `season`: his own whose contracts have run out, and every driver
- * not tied to another team for that season. `keep` lists drivers already under contract with the
- * player for that season.
+ * Drivers the player can sign for `season` between seasons: their own whose contracts have run
+ * out, their academy's juniors old enough to race, every real driver not tied to another team for
+ * that season, and made-up drivers without a seat. `keep` lists drivers already under contract with
+ * the player for that season. Nobody lost, nobody retired.
  */
-export function marketDrivers(season: number, team: string, keep: readonly string[], expired: readonly string[]): MarketDriver[] {
+export function marketDrivers(
+  season: number,
+  team: string,
+  keep: readonly string[],
+  expired: readonly string[],
+  world: World = newWorld(),
+  academy: readonly string[] = [],
+): MarketDriver[] {
   const out: MarketDriver[] = [];
+  const held = new Set(academy);
+  const add = (entry: DriverSeason, status: MarketStatus): void => {
+    out.push({ driver: entry.driver.id, overall: entry.overall, age: entry.age, ask: driverAsk(entry), backing: backingFor(entry.driver.id, season), status });
+  };
+  for (const id of academy) {
+    const entry = driverIn(id, season);
+    if (entry && !keep.includes(id) && raceReady(id, season) && !isLost(world, id)) add(entry, 'academy');
+  }
+  for (const id of world.fictional) {
+    if (keep.includes(id) || held.has(id) || !activeIn(world, id, season, held) || !raceReady(id, season)) continue;
+    const entry = driverIn(id, season);
+    if (entry) add(entry, expired.includes(id) ? 'yours' : 'free');
+  }
   for (const fact of DRIVERS) {
     const id = fact.id;
-    if (keep.includes(id)) continue;
+    if (keep.includes(id) || held.has(id) || isLost(world, id)) continue;
     // In the sport that season in reality: racing, or between drives after racing in one of the two
     // seasons before (a year out counts; a long absence, like Kubica's after his injury, does not).
     const next = realTeamOf(id, season);
@@ -185,16 +179,26 @@ export function contractFor(entry: DriverSeason, season: number, length: number,
 }
 
 /**
- * The best driver not otherwise racing: who a team the simulation runs puts in a seat the player
- * has taken from it. Drivers whose real careers go on that season, racing then or in one of the two
- * seasons before, 40 or under.
+ * The best driver not otherwise racing: who a team the simulation runs puts in a seat that has
+ * lost its driver (to the player, a retirement or an accident). See world/freePool.
  */
-export function bestFreeDriver(season: number, taken: ReadonlySet<string>): DriverSeason | undefined {
-  return driversBy(season).find(
-    (entry) =>
-      !taken.has(entry.driver.id) &&
-      entry.age <= 40 &&
-      entry.driver.raced[1] >= season &&
-      (realTeamOf(entry.driver.id, season) !== null || recentlyRaced(entry.driver.id, season)),
-  );
+export function bestFreeDriver(
+  season: number,
+  taken: ReadonlySet<string>,
+  world: World = newWorld(),
+  held: ReadonlySet<string> = new Set(),
+): DriverSeason | undefined {
+  return freePool(world, season, taken, held)[0];
+}
+
+/** Free drivers the player can sign during a season, to fill a seat a loss has emptied. */
+export function freeAgents(season: number, taken: ReadonlySet<string>, world: World, held: ReadonlySet<string>): MarketDriver[] {
+  return freePool(world, season, taken, held).map((entry) => ({
+    driver: entry.driver.id,
+    overall: entry.overall,
+    age: entry.age,
+    ask: driverAsk(entry),
+    backing: backingFor(entry.driver.id, season),
+    status: isFictional(entry.driver.id) ? 'free' : 'returning',
+  }));
 }

@@ -8,3 +8,4 @@ export * from './engines';
 export * from './development';
 export * from './power-units';
 export * from './outfit';
+export * from './academy';

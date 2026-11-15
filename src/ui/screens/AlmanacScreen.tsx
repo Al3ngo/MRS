@@ -371,10 +371,10 @@ function RoundSheet({ round, season, onClose }: { round: RoundFact; season: numb
 const RATING_NAMES: [keyof Ratings, string, string][] = [
   ['pace', 'Pace', 'Raw speed over one lap.'],
   ['racecraft', 'Racecraft', 'Overtaking, defending and starts.'],
-  ['consistency', 'Consistency', 'How rarely he makes a mistake.'],
-  ['tyres', 'Tyre management', 'How long he makes his tyres last.'],
+  ['consistency', 'Consistency', 'How rarely the driver makes a mistake.'],
+  ['tyres', 'Tyre management', 'How long the driver makes the tyres last.'],
   ['wet', 'Wet skill', 'Speed in the rain.'],
-  ['aggression', 'Aggression', 'How much risk he takes. Neither good nor bad.'],
+  ['aggression', 'Aggression', 'How much risk the driver takes. Neither good nor bad.'],
 ];
 
 function DriverSheet({ entry, season, onClose }: { entry: DriverSeason; season: number; onClose: () => void }) {

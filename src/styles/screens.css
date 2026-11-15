@@ -2014,3 +2014,24 @@ button.slot__main:disabled .slot__go {
 .briefing__part-chance {
   font-size: 18px;
 }
+
+/* ── The driver lifecycle (Stage 7) ────────────────────────────────────────────────────────── */
+
+.tragedy {
+  margin-bottom: 12px;
+  font-size: 17px;
+  line-height: 26px;
+}
+
+.junior__bars {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+  max-width: 260px;
+}
+
+.junior__label {
+  color: var(--muted);
+  font-size: 13px;
+}

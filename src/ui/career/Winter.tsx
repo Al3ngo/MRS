@@ -25,6 +25,7 @@ import {
 import { Meter } from '../Meter';
 import { Sheet } from '../Sheet';
 import { teamAct } from './Business';
+import { stageOf } from './Lifecycle';
 import {
   ROLE_LINES,
   ROLE_NAMES,
@@ -55,12 +56,13 @@ const STEP_WORDS = {
 export function WinterCard({ career, open }: { career: CareerState; open: (sheet: WinterSheet) => void }) {
   const outfit = career.outfit;
   if (!outfit || outfit.preseason.length === 0) return null;
+  const midSeason = career.results.length > 0 || career.phase === 'management';
   return (
     <section class="card" aria-labelledby="winter">
       <h2 class="card__title" id="winter">
-        Before the {career.seasonYear} season
+        {midSeason ? 'Before the next race' : `Before the ${career.seasonYear} season`}
       </h2>
-      <p class="muted">Settle these, then the season can start.</p>
+      <p class="muted">{midSeason ? 'A seat is empty: sign a driver without a seat to fill it.' : 'Settle these, then the season can start.'}</p>
       <div class="choices">
         {outfit.preseason.map((step) => (
           <button type="button" class="choice" key={step} onClick={() => open(step)}>
@@ -261,9 +263,11 @@ function ContractsSheet({ career, close }: { career: CareerState; close: () => v
 
 const STATUS_WORDS: Readonly<Record<MarketDriver['status'], string>> = {
   yours: 'Your driver, contract ended',
-  moving: 'Leaving his team',
+  moving: 'Moving teams',
   rookie: 'New to the sport',
   returning: 'Without a seat',
+  academy: 'From your academy',
+  free: 'Without a seat',
 };
 
 function DriverMarket({ career, pick, back }: { career: CareerState; pick: (id: string) => void; back: () => void }) {
@@ -274,8 +278,8 @@ function DriverMarket({ career, pick, back }: { career: CareerState; pick: (id: 
   return (
     <Sheet title="Drivers on the market" onClose={back}>
       <p class="muted">
-        Drivers whose contracts have run out, or who are new. The best only talk to teams that can win. The bar is how good
-        he is overall.
+        Drivers whose contracts have run out, who are without a seat, or who are new. The best only talk to teams that can
+        win. The bar is how good each driver is overall.
       </p>
       <div class="choices">
         {list.map((entry) => {
@@ -288,7 +292,7 @@ function DriverMarket({ career, pick, back }: { career: CareerState; pick: (id: 
                 </span>
                 <Meter fill={(entry.overall - 60) / 40} size="small" label={`${driverName(entry.driver)}: ${entry.overall} overall`} />
                 <span class="choice__detail">
-                  {talks ? STATUS_WORDS[entry.status] : 'Not interested: wants a team that can win'}
+                  {talks ? `${STATUS_WORDS[entry.status]} · ${stageOf(career, entry.driver).toLowerCase()}` : 'Not interested: wants a team that can win'}
                   {entry.backing > 0 ? ` · backers pay ${cash(entry.backing)} a season` : ''}
                 </span>
               </span>
@@ -359,7 +363,7 @@ function OfferSheet({ career, offer, back }: { career: CareerState; offer: NonNu
         : result === 'refused'
           ? `${name} turned it down, and will not hear a lower offer again this winter.`
           : result === 'not-interested'
-            ? `${name} is not interested: he wants a team that can win.`
+            ? `${name} is not interested: only a team that can win will do.`
             : result === 'no-seat'
               ? 'Both seats are already taken.'
               : 'That offer could not be made.',

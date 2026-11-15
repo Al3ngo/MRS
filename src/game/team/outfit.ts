@@ -12,10 +12,13 @@ import { LAST_SEASON, calendar, rulesFor, teamsIn } from '../data';
 import { between, clamp, seedFrom, type Luck } from '../sim/rng';
 import type { Finish } from '../season/standings';
 import { canBuild, freshParts, nextSeasonParts, partsIn, typicalSeason, withBuild, withUpgrade, buildCost, UPGRADE_GAIN } from './development';
+import { academyYears } from './academy';
+import { newWorld, realSeats, type World } from '../world';
 import {
   contractFor,
   driverAsk,
   driverIn,
+  freeAgents,
   marketDrivers,
   offerResponse,
   retiredBy,
@@ -49,6 +52,10 @@ export interface TeamContext {
   season: number;
   /** The round whose management phase it is (or 1, before the season). */
   round: number;
+  /** The drivers' world: who is lost, retired, made up. */
+  world?: World;
+  /** Between seasons (the winter market) rather than during one (free drivers only). */
+  winter?: boolean;
 }
 
 export type Outcome = { ok: true; outfit: Outfit } | { ok: false; reason: string };
@@ -93,6 +100,8 @@ export function newOutfit(ctx: TeamContext): Outfit {
     market: null,
     lastPlace: null,
     news: [],
+    academy: [],
+    academyBonus: {},
   };
   outfit = book(outfit, 0, 'backers', "Backers' money", backersMoney(team, season));
   outfit = book(outfit, 0, 'prize', `Prize money for ${ordinalWord(standing)} in ${season - 1}`, prizeMoney(standing));
@@ -133,7 +142,10 @@ export function turnSeason(outfit: Outfit, ctx: TeamContext, lastPlace: number):
   const parts = nextSeasonParts(outfit.parts, team, previous, outfit.nextYear, projectGain(outfit), works);
   const luck = luckOf(ctx, 'winter');
   const staff = outfit.staff.map((member) => ageStaff(member, luck));
-  const retired = outfit.drivers.filter((contract) => retiredBy(contract.driver, season)).map((contract) => contract.driver);
+  // A driver whose career is over retires when his contract runs out; one still under contract sees it out.
+  const retired = outfit.drivers
+    .filter((contract) => contract.until < season && retiredBy(contract.driver, season))
+    .map((contract) => contract.driver);
   if (retired.length > 0) news.push(`retired:${retired.join(',')}`);
   const drivers = outfit.drivers.filter((contract) => !retired.includes(contract.driver));
   const preseason: Outfit['preseason'] = [];
@@ -221,6 +233,8 @@ export function settleRace(
   if (!worksTeam(next, team)) {
     next = book(next, round, 'engine-deal', `Engines from ${next.engine}`, -engineLease(next.engine, season) / rounds, true);
   }
+  const fees = next.academy.reduce((sum, junior) => sum + junior.fee, 0);
+  if (fees > 0) next = book(next, round, 'academy', 'Junior academy', -fees / rounds);
   const units = next.units.map((unit, seat) => wearUnits(unit, raced[seat] ?? 1, season));
   const penalties = [0, 0];
   for (let seat = 0; seat < units.length; seat++) {
@@ -352,10 +366,19 @@ export function contractStatus(outfit: Outfit, season: number): { current: strin
   };
 }
 
-/** The driver market for the coming season. */
+/**
+ * The drivers the team can sign: between seasons, the winter market; during a season, after a loss,
+ * only drivers without a seat.
+ */
 export function driverMarket(outfit: Outfit, ctx: TeamContext) {
   const { current, expired } = contractStatus(outfit, ctx.season);
-  return marketDrivers(ctx.season, ctx.team, current, expired);
+  const world = ctx.world ?? newWorld();
+  const academy = outfit.academy.map((junior) => junior.driver);
+  if (ctx.winter === false) {
+    const held = new Set([...current, ...academy]);
+    return freeAgents(ctx.season, realSeats(ctx.season), world, held);
+  }
+  return marketDrivers(ctx.season, ctx.team, current, expired, world, academy);
 }
 
 /** Once every seat and role is signed for the season, the contracts step is done: lapsed deals are let go. */
@@ -396,19 +419,29 @@ export function offerDriver(
   }
   if (result !== 'signed') return { result, outfit };
   const contract = contractFor(entry, ctx.season, length, offer);
+  // A junior stepping up from the academy takes its years there along.
+  const years = academyYears(outfit, driver, ctx.season);
+  const graduated: Outfit =
+    years > 0 || outfit.academy.some((junior) => junior.driver === driver)
+      ? {
+          ...outfit,
+          academy: outfit.academy.filter((junior) => junior.driver !== driver),
+          academyBonus: { ...outfit.academyBonus, [driver]: years },
+        }
+      : outfit;
   // A driver renewing keeps his seat; a new one takes the next free seat.
-  const at = outfit.drivers.findIndex((candidate) => candidate.driver === driver);
-  const drivers = outfit.drivers.filter((candidate) => candidate.driver !== driver);
+  const at = graduated.drivers.findIndex((candidate) => candidate.driver === driver);
+  const drivers = graduated.drivers.filter((candidate) => candidate.driver !== driver);
   if (at >= 0) drivers.splice(at, 0, contract);
   else drivers.push(contract);
-  return { result, outfit: settle({ ...outfit, drivers }, ctx.season) };
+  return { result, outfit: settle({ ...graduated, drivers }, ctx.season) };
 }
 
 /** Lets a driver whose contract has run out go, freeing his seat. */
 export function releaseDriver(outfit: Outfit, ctx: TeamContext, driver: string): Outcome {
   const contract = outfit.drivers.find((candidate) => candidate.driver === driver);
-  if (!contract) return no('He is not one of your drivers.');
-  if (contract.until >= ctx.season) return no('He is under contract for this season.');
+  if (!contract) return no('Not one of your drivers.');
+  if (contract.until >= ctx.season) return no('Under contract for this season.');
   return ok({ ...outfit, drivers: outfit.drivers.filter((candidate) => candidate.driver !== driver) });
 }
 

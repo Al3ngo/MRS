@@ -155,6 +155,10 @@ export function newsWords(item: string, drivers: readonly string[]): string | nu
       const [part, gain] = rest;
       return `New ${PART_NAMES[part as PartId]?.toLowerCase() ?? part} fitted: about +${gain} pace.`;
     }
+    case 'lost': {
+      const [id] = rest;
+      return `${driverName(id!)} died after a crash. Sign a driver without a seat before the next race.`;
+    }
     case 'retired':
       return `${rest.join(':').split(',').map(driverName).join(' and ')} retired: a seat to fill.`;
     case 'cap': {

@@ -21,7 +21,7 @@ import type { SlotId } from '../../platform/saves';
 import { formatClock } from '../format';
 import { IconBack } from '../icons';
 import { ordinal } from '../race/Result';
-import { ConfirmSheet } from '../Sheet';
+import { ConfirmSheet, Sheet } from '../Sheet';
 import { TrackOutline } from '../TrackOutline';
 import { driverCode, driverLast, driverName, teamLabel } from '../career/names';
 
@@ -37,6 +37,7 @@ import { StandingsTable } from '../career/Standings';
 import { MoneyCard, NewsCard, PeopleCard, SponsorCard } from '../career/Business';
 import { Garage } from '../career/Garage';
 import { WinterCard, WinterSheets, type WinterSheet } from '../career/Winter';
+import { AcademyCard, MemorialCard } from '../career/Lifecycle';
 
 /**
  * A career's home: the team, the round in progress, the calendar and the championships. Between
@@ -111,6 +112,7 @@ export function CareerScreen({ slot }: { slot: SlotId }) {
 
 function TeamChoice({ career }: { career: CareerState }) {
   const [picked, setPicked] = useState<string | null>(null);
+  const [fatal, setFatal] = useState(true);
   const teams = [...teamsIn(career.seasonYear)].sort((a, b) => (a.real?.gap ?? 99) - (b.real?.gap ?? 99));
   const chosen = teams.find((team) => team.team === picked);
   return (
@@ -149,23 +151,51 @@ function TeamChoice({ career }: { career: CareerState }) {
         </p>
       </section>
       {chosen && (
-        <ConfirmSheet
-          title={`Run ${chosen.name}?`}
-          lines={[
-            `You start the ${career.seasonYear} season with ${chosen.drivers
+        <Sheet title={`Run ${chosen.name}?`} onClose={() => setPicked(null)}>
+          <p class="sheet__text">
+            You start the {career.seasonYear} season with{' '}
+            {chosen.drivers
               .slice(0, 2)
               .map((entry) => driverName(entry.id))
-              .join(' and ')}.`,
-            'The team is yours for the whole career. There is no changing it later.',
-          ]}
-          confirmLabel={`Start with ${chosen.name}`}
-          cancelLabel="Look again"
-          onConfirm={() => {
-            setPicked(null);
-            void updateCareer((current) => chooseTeam(current, chosen.team));
-          }}
-          onCancel={() => setPicked(null)}
-        />
+              .join(' and ')}
+            .
+          </p>
+          <p class="sheet__text">The team is yours for the whole career. There is no changing it later.</p>
+          <h3 class="card__subtitle">Fatal accidents</h3>
+          <div class="segmented" role="group" aria-label="Fatal accidents">
+            {[true, false].map((on) => (
+              <button
+                type="button"
+                key={String(on)}
+                class={`segmented__option${fatal === on ? ' segmented__option--on' : ''}`}
+                aria-pressed={fatal === on}
+                onClick={() => setFatal(on)}
+              >
+                {on ? 'On' : 'Off'}
+              </button>
+            ))}
+          </div>
+          <p class="muted">
+            {fatal
+              ? 'Rare, as in the real sport: about one in a whole career, likelier before the halo arrives in 2018. Set for the whole career.'
+              : 'Crashes never cost a driver their life. Set for the whole career.'}
+          </p>
+          <div class="sheet__actions">
+            <button
+              type="button"
+              class="button button--block button--primary"
+              onClick={() => {
+                setPicked(null);
+                void updateCareer((current) => chooseTeam(current, chosen.team, fatal));
+              }}
+            >
+              Start with {chosen.name}
+            </button>
+            <button type="button" class="button button--block button--quiet" onClick={() => setPicked(null)}>
+              Look again
+            </button>
+          </div>
+        </Sheet>
       )}
     </main>
   );
@@ -197,7 +227,14 @@ function Hub({
   if (winterOpen && career.outfit) {
     const step = career.outfit.preseason[0]!;
     action = {
-      label: step === 'contracts' ? 'Sign drivers and staff' : step === 'engine' ? 'Choose an engine supplier' : 'Sign a title sponsor',
+      label:
+        step === 'contracts'
+          ? career.results.length > 0 || career.phase === 'management'
+            ? 'Sign a driver'
+            : 'Sign drivers and staff'
+          : step === 'engine'
+            ? 'Choose an engine supplier'
+            : 'Sign a title sponsor',
       run: () => setWinter(step),
     };
   } else if (!between) {
@@ -250,6 +287,7 @@ function Hub({
             <SponsorCard career={career} />
             <MoneyCard career={career} />
             <PeopleCard career={career} />
+            <AcademyCard career={career} />
           </div>
         )}
         {tab === 'Car' && <Garage career={career} />}
@@ -413,6 +451,7 @@ function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team:
 
       {!seasonOver && <SponsorCard career={career} />}
       <PeopleCard career={career} />
+      <AcademyCard career={career} />
       <p class="smallprint">Between races: the Car tab is where the car is developed.</p>
     </div>
   );
@@ -468,6 +507,7 @@ function CareerSummary({ slot, career, team }: { slot: SlotId; career: CareerSta
   const { seasons } = totals;
   return (
     <div class="stack">
+      <MemorialCard career={career} />
       <section class="card" aria-labelledby="career-summary">
         <h2 class="card__title" id="career-summary">
           Career complete
@@ -627,6 +667,7 @@ function Championships({ career, team }: { career: CareerState; team: string }) 
           {kind === 'teams' ? " The teams' championship (officially the constructors') adds up both cars' points." : ''}
         </p>
       </section>
+      <MemorialCard career={career} />
       <PastSeasons seasons={career.history} team={team} />
     </div>
   );

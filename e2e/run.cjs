@@ -334,7 +334,7 @@ async function main() {
       await download.saveAs(backupFile);
       const file = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
       expectEqual(file.format, 'modern-racing-manager-save', 'file format tag');
-      expectEqual(file.schemaVersion, 3, 'file save version');
+      expectEqual(file.schemaVersion, 4, 'file save version');
       expectEqual(file.career.team, 'williams', 'team in the file');
       expectEqual(
         { seasonYear: file.career.seasonYear, round: file.career.round, phase: file.career.phase, sessions: file.career.sessionsCompleted },

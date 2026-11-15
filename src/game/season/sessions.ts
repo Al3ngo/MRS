@@ -30,6 +30,7 @@ import type { Entrant, RaceState } from '../sim/types';
 import { qualifyingFor } from '../sim';
 import { roundEntrants } from './grid';
 import { autoManage, autoPreseason, baselineSpread, engineerHelp, gridPenalties } from '../team';
+import { fatalities } from '../world';
 import type { Finish } from './standings';
 import { gridSource } from './weekend';
 
@@ -42,7 +43,7 @@ const seedOf = (career: CareerState, ...parts: (string | number)[]): number =>
 /** The cars of this round, the player's with the setups found in practice. */
 export function entrantsFor(career: CareerState): Entrant[] {
   if (!career.team) throw new Error('The career has no team yet');
-  return roundEntrants(career.id, career.seasonYear, career.round, career.team, career.weekend.setups, career.outfit);
+  return roundEntrants(career.id, career.seasonYear, career.round, career.team, career.weekend.setups, career.outfit, career.world);
 }
 
 export const playerCars = (career: CareerState): Entrant[] => entrantsFor(career).filter((entrant) => entrant.player);
@@ -202,7 +203,7 @@ export function autoplay(given: CareerState): CareerState {
     case 'race': {
       const race = career.weekend.live ?? startRace(career);
       simulateRest(race);
-      return finishRace(career, finishesOf(race), career.phase === 'race' ? poleFor(career) : null, unitWear(career, race));
+      return finishRace(career, finishesOf(race), career.phase === 'race' ? poleFor(career) : null, unitWear(career, race), fatalities(career.world, career.id, race));
     }
     case 'management': {
       if (career.finished) return given;
