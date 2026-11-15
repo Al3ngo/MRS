@@ -2,6 +2,7 @@ import { render } from 'preact';
 import { startRouter } from './app/router';
 import { boot, startAutosaveOnHide } from './app/session';
 import { startInstallWatch, startOffline } from './platform/pwa';
+import { armSound } from './platform/sound';
 import './styles/fonts.css';
 import './styles/tokens.css';
 import './styles/base.css';
@@ -18,6 +19,7 @@ if (import.meta.env.MODE === 'inspect') {
 startRouter();
 startInstallWatch();
 startAutosaveOnHide();
+armSound();
 void startOffline();
 void boot();
 

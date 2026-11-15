@@ -2,7 +2,7 @@
  * What the app is doing right now: the three slots, the career being played, and every action that
  * changes them. Screens read the stores here and call these functions; nothing else touches storage.
  */
-import { newCareer, type CareerState } from '../game/career';
+import { newCareer, replayTutorial, type CareerState } from '../game/career';
 import { SaveError } from '../game/save-schema';
 import { MAX_SAVE_FILE_BYTES, decodeSaveFile, type DecodedSave } from '../platform/savefile';
 import { createSaveStore, type SlotId, type SlotRecord, type SlotView } from '../platform/saves';
@@ -255,6 +255,14 @@ export function updateCareer(change: (career: CareerState) => CareerState): Prom
   if (career === active.career) return writes;
   patchActive(active.slot, (current) => ({ ...current, career }));
   return autosave();
+}
+
+/** Shows a career's tutorial again from the start, each tip the next time its screen comes up. */
+export async function replayTutorialIn(slot: SlotId): Promise<boolean> {
+  await enterCareer(slot);
+  if (app.get().active?.slot !== slot) return false;
+  await updateCareer(replayTutorial);
+  return true;
 }
 
 /** The career being played, if it is the one in `slot`. */

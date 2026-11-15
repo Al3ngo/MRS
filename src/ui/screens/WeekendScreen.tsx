@@ -41,6 +41,8 @@ import { LiveRace } from '../race/LiveRace';
 import { RaceResult, poleOf, type Pole } from '../race/Result';
 import { TrackReading } from '../race/TrackReading';
 import { teamLabel } from '../career/names';
+import { Coach } from '../tutorial/Coach';
+import { BRIEFING_TIPS, GRID_TIPS, QUALIFYING_TIPS, RESULT_TIPS, nextTip, practiceTips, raceTips } from '../tutorial/tips';
 
 /**
  * The sessions of a race weekend, one after another: practice, qualifying, the sprint sessions on
@@ -298,6 +300,7 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
           </button>
         </div>
       </div>
+      <Coach career={career} tips={practiceTips(Object.values(practice.runs).some((count) => count > 0))} />
     </>
   );
 }
@@ -448,6 +451,7 @@ function Qualifying({
           )}
         </div>
       </div>
+      {!done && <Coach career={career} tips={QUALIFYING_TIPS} />}
     </>
   );
 }
@@ -472,7 +476,8 @@ function RaceSession({
   kind: 'race' | 'sprint';
   onContinue: () => void;
 }) {
-  const resumed = career.weekend.live !== null;
+  // Whether this race was already under way when the screen opened (it is saved as soon as it starts).
+  const [resumed] = useState(() => career.weekend.live !== null);
   const race = useMemo(() => career.weekend.live ?? startRace(career), []);
   const pole = useMemo(() => poleInfo(career, race), [race]);
   const [step, setStep] = useState<'briefing' | 'grid' | 'live' | 'result'>(resumed ? 'live' : 'briefing');
@@ -510,6 +515,7 @@ function RaceSession({
   }, []);
 
   if (step === 'live') {
+    const tips = raceTips(race.setup.rules.recovery !== 'none');
     return (
       <LiveRace
         state={race}
@@ -522,7 +528,10 @@ function RaceSession({
         keepOnLeave
         startPaused={resumed}
         sureness={sureness}
-      />
+        hold={nextTip(career, tips) !== null}
+      >
+        <Coach career={career} tips={tips} />
+      </LiveRace>
     );
   }
 
@@ -604,6 +613,9 @@ function RaceSession({
           )}
         </div>
       </div>
+      {(lostHere.length === 0 || mourned) && (
+        <Coach career={career} tips={step === 'briefing' ? BRIEFING_TIPS : step === 'grid' ? GRID_TIPS : RESULT_TIPS} />
+      )}
     </>
   );
 }

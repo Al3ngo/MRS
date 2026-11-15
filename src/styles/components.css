@@ -59,6 +59,13 @@
   text-overflow: ellipsis;
 }
 
+.topbar__end {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: -10px;
+}
+
 .topbar__meta {
   color: var(--faint);
   font-size: 13px;
@@ -591,4 +598,88 @@ dialog.sheet[open]::backdrop {
 
 .reading__bar {
   width: 32px;
+}
+
+/* ── The tutorial ──────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * A tip: the screen dimmed but for the part it is about, which is ringed, and the tip itself
+ * beside it. A full-screen <dialog>, so nothing behind it can be used until the tip is read.
+ */
+dialog.coach {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  overflow: hidden;
+}
+
+dialog.coach::backdrop {
+  background: transparent;
+}
+
+dialog.coach[open] {
+  animation: fade-in 200ms var(--ease-out);
+}
+
+.coach__shade {
+  position: fixed;
+  inset: 0;
+  fill: rgba(0, 0, 0, 0.74);
+}
+
+.coach__ring {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.coach__card {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 2 * var(--page)));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px var(--pad) 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.coach__kicker {
+  color: var(--faint);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.coach__title {
+  font-size: var(--fs-section);
+  line-height: 22px;
+  font-weight: 600;
+}
+
+.coach__title:focus-visible {
+  outline: none;
+}
+
+.coach__text {
+  color: var(--muted);
+}
+
+.coach__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.coach__actions .button {
+  flex: 1;
 }

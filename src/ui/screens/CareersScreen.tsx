@@ -143,7 +143,7 @@ export function CareersScreen() {
             <span class="brand__name">Modern Racing Manager</span>
           </div>
           <button type="button" class="button button--quiet" onClick={() => navigate({ screen: 'system' })}>
-            System
+            Settings
           </button>
         </div>
       </header>

@@ -101,7 +101,27 @@ export interface CareerState {
   outfit: Outfit | null;
   /** The drivers' world: who has been lost, the made-up drivers, whether fatal accidents can happen. */
   world: World;
+  /** The guided tutorial: which of its tips this career has shown, and whether it was skipped. */
+  tutorial: Tutorial;
 }
+
+/** The one-time tutorial's place in a career. Tips are named by the screens; the game only keeps the names. */
+export interface Tutorial {
+  seen: string[];
+  /** Skipped, or finished: no more tips until it is replayed. */
+  off: boolean;
+}
+
+/** A tip has been shown and read. */
+export const seeTip = (state: CareerState, tip: string): CareerState =>
+  state.tutorial.seen.includes(tip) ? state : { ...state, tutorial: { ...state.tutorial, seen: [...state.tutorial.seen, tip] } };
+
+/** No more tips in this career (skipped, or come to its end), until it is replayed. */
+export const endTutorial = (state: CareerState): CareerState =>
+  state.tutorial.off ? state : { ...state, tutorial: { ...state.tutorial, off: true } };
+
+/** Shows every tip again, each the next time its screen comes up. */
+export const replayTutorial = (state: CareerState): CareerState => ({ ...state, tutorial: { seen: [], off: false } });
 
 export const emptyWeekend = (): Weekend => ({
   setups: {},
@@ -127,6 +147,7 @@ export function newCareer(id: string, createdAt: Date): CareerState {
     history: [],
     outfit: null,
     world: newWorld(),
+    tutorial: { seen: [], off: false },
   };
 }
 
@@ -454,6 +475,10 @@ export function findProblems(value: unknown): string[] {
   const world = value.world;
   if (!isObject(world) || !Array.isArray(world.lost) || !Array.isArray(world.fictional) || typeof world.fatalAccidents !== 'boolean') {
     problems.push("The record of the drivers' world is damaged.");
+  }
+  const tutorial = value.tutorial;
+  if (!isObject(tutorial) || !Array.isArray(tutorial.seen) || !tutorial.seen.every((tip) => typeof tip === 'string') || typeof tutorial.off !== 'boolean') {
+    problems.push("The record of the tutorial is damaged.");
   }
   const outfit = value.outfit;
   if (typeof value.team === 'string' && STARTING_TEAMS.includes(value.team) && (outfit === null || outfit === undefined)) {

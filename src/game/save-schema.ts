@@ -7,7 +7,7 @@ import { heldBy, newOutfit, type Outfit } from './team';
 import { newcomers, newWorld } from './world';
 
 /** Bump when CareerState changes shape, and add `MIGRATIONS[oldVersion]`. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** `MIGRATIONS[n]` turns a version n career into a version n + 1 career. */
 export type Migrations = Readonly<Record<number, (older: unknown) => unknown>>;
@@ -55,6 +55,11 @@ export const MIGRATIONS: Migrations = {
     const outfit = career.outfit ? ({ academy: [], academyBonus: {}, ...(career.outfit as object) } as unknown as Outfit) : null;
     return { ...career, outfit, world: newcomers(newWorld(), id, season, heldBy(outfit, season)) };
   },
+  /**
+   * Version 4 (Stage 7) had no tutorial. A career already under way has learned the game by
+   * playing it, so its tutorial counts as done; it can be replayed from the settings.
+   */
+  4: (older) => ({ ...(older as Record<string, unknown>), tutorial: { seen: [], off: true } }),
 };
 
 export type SaveErrorCode =

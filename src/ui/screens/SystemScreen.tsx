@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import { goBack } from '../../app/router';
-import { app, updateNow } from '../../app/session';
+import { app, replayTutorialIn, toast, updateNow } from '../../app/session';
 import { useStore } from '../../app/store';
 import { checkForUpdate, install, offline, promptInstall } from '../../platform/pwa';
+import { passBy, setSound, soundSettings, type EngineEra } from '../../platform/sound';
 import { readStorage, requestPersistence, type StorageReport } from '../../platform/storage';
 import { formatBytes } from '../format';
 import { IconBack } from '../icons';
@@ -11,11 +12,22 @@ const buildDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'sho
   new Date(__BUILD_TIME__),
 );
 
-/** Is this phone ready to be played underground? Offline files, home-screen install, save safety. */
+const SAMPLES: readonly { era: EngineEra; label: string }[] = [
+  { era: 'v8', label: 'V8' },
+  { era: 'hybrid', label: 'Hybrid' },
+  { era: 'hybrid-2026', label: '2026' },
+];
+
+/**
+ * The settings: sound and the tutorial, then whether this phone is ready to be played underground
+ * (offline files, home-screen install, save safety).
+ */
 export function SystemScreen() {
   const net = useStore(offline);
   const home = useStore(install);
+  const sound = useStore(soundSettings);
   const { slots } = useStore(app);
+  const careers = slots.flatMap((view) => (view.kind === 'career' && view.record.summary?.team ? [{ slot: view.slot, summary: view.record.summary }] : []));
   const [storage, setStorage] = useState<StorageReport | null>(null);
 
   useEffect(() => {
@@ -56,20 +68,127 @@ export function SystemScreen() {
         <div class="topbar__inner">
           <button type="button" class="back" onClick={() => goBack({ screen: 'careers' })}>
             <IconBack />
-            Careers
+            Back
           </button>
         </div>
       </header>
 
       <main class="canvas">
         <div class="title-row">
-          <h1 class="title">System</h1>
+          <h1 class="title">Settings</h1>
           <p class="subtitle" aria-live="polite">
             {finding}
           </p>
         </div>
 
         <div class="settings">
+          <section class="setting" aria-labelledby="system-sound">
+            <div class="setting__about">
+              <h2 class="setting__title" id="system-sound">
+                Sound
+              </h2>
+              <p class="setting__text">
+                Engines, rain, pit stops, crashes and button clicks, all made on the device. The engines sound as each era's did.
+                The phone's own silent switch and volume apply too.
+              </p>
+            </div>
+            <div class="card setting__panel">
+              <div class="status status--action">
+                <p class="status__title">Sound effects</p>
+                <div class="segmented" role="group" aria-label="Sound effects">
+                  {[false, true].map((muted) => (
+                    <button
+                      type="button"
+                      key={String(muted)}
+                      class={`segmented__option${sound.muted === muted ? ' segmented__option--on' : ''}`}
+                      aria-pressed={sound.muted === muted}
+                      onClick={() => setSound({ muted })}
+                    >
+                      {muted ? 'Off' : 'On'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div class="status">
+                <label class="status__title" for="sound-volume">
+                  Volume
+                </label>
+                <div class="volume">
+                  <input
+                    id="sound-volume"
+                    class="volume__slider"
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={Math.round(sound.volume * 100)}
+                    disabled={sound.muted}
+                    style={{ '--fill': `${Math.round(sound.volume * 100)}%` }}
+                    onInput={(event) => setSound({ volume: Number((event.target as HTMLInputElement).value) / 100 })}
+                  />
+                  <span class="figure volume__value">{Math.round(sound.volume * 100)}</span>
+                </div>
+              </div>
+              <div class="status">
+                <p class="status__title">Hear the engines</p>
+                <p class="status__text">The V8 of 2010-13, the turbo hybrid of 2014-25, and the 2026 engine.</p>
+                <div class="samples">
+                  {SAMPLES.map((sample) => (
+                    <button
+                      type="button"
+                      key={sample.era}
+                      class="button button--secondary samples__button"
+                      disabled={sound.muted}
+                      onClick={() => passBy({ era: sample.era, level: 1, direction: 1, length: 1.6, wet: 0, priority: true })}
+                    >
+                      {sample.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="setting" aria-labelledby="system-tutorial">
+            <div class="setting__about">
+              <h2 class="setting__title" id="system-tutorial">
+                Tutorial
+              </h2>
+              <p class="setting__text">
+                Short tips through the first race weekend and the team between races. Each career shows them once.
+              </p>
+            </div>
+            <div class="card setting__panel">
+              {careers.length === 0 ? (
+                <div class="status">
+                  <p class="status__text">A new career starts with the tutorial.</p>
+                </div>
+              ) : (
+                careers.map(({ slot, summary }) => (
+                  <div class="status status--action" key={slot}>
+                    <div>
+                      <p class="status__title">{summary.teamName ?? 'Career'}</p>
+                      <p class="status__text">
+                        Slot {slot} · {summary.seasonYear}, round {summary.round}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="button button--secondary"
+                      onClick={() =>
+                        void replayTutorialIn(slot).then((done) => {
+                          if (done) toast(`The tutorial will show again in ${summary.teamName ?? 'this career'}.`);
+                        })
+                      }
+                    >
+                      Replay tutorial
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
           <section class="setting" aria-labelledby="system-offline">
             <div class="setting__about">
               <h2 class="setting__title" id="system-offline">

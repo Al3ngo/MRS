@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { circuit as circuitById } from '../../game/data';
 import {
@@ -13,13 +14,16 @@ import {
   type EngineMode,
   type RaceState,
 } from '../../game/sim';
-import { IconBack, IconHelp, IconPause, IconSkip } from '../icons';
+import { useStore } from '../../app/store';
+import { setSound, soundSettings } from '../../platform/sound';
+import { IconBack, IconHelp, IconMuted, IconPause, IconSkip, IconSound } from '../icons';
 import { Meter, batteryMeter, fuelMeter, stressMeter, tyreMeter } from '../Meter';
 import { Forecast } from './Forecast';
 import { OutlookGraph } from './OutlookGraph';
 import { ConfirmSheet, Sheet } from '../Sheet';
 import { RaceClock, SPEEDS, type Speed } from './clock';
 import { drawScene, trackPath, type CarMark, type Scene } from './draw';
+import { RaceSound } from './raceSound';
 import { fitTrack, trackMap, type Fit } from './track';
 import {
   ENGINE_HELP,
@@ -64,6 +68,10 @@ interface Props {
   startPaused?: boolean;
   /** The team strategist's sureness, 0 to 1, for the weather forecast. */
   sureness?: number;
+  /** Holds the clock, as an open sheet does: while a tutorial tip is being read. */
+  hold?: boolean;
+  /** Drawn over the race: a tutorial tip. */
+  children?: ComponentChildren;
 }
 
 /** Room the weather takes on the map: a strip along the top, or columns down the left and right. */
@@ -71,13 +79,24 @@ const FORECAST_STRIP = 30;
 const FORECAST_LEFT = 62;
 const FORECAST_RIGHT = 54;
 
-export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = false, startPaused = false, sureness = 0.5 }: Props) {
+export function LiveRace({
+  state,
+  onFinish,
+  onLeave,
+  onProgress,
+  keepOnLeave = false,
+  startPaused = false,
+  sureness = 0.5,
+  hold = false,
+  children,
+}: Props) {
   const { setup } = state;
   const clock = useMemo(() => new RaceClock(state), [state]);
   const map = useMemo(() => trackMap(circuitById(setup.circuit).outline), [setup.circuit]);
   const mine = useMemo(() => state.cars.filter((car) => setup.grid[car.entrant]!.player), [state]);
 
   const [, setBeat] = useState(0);
+  const sound = useStore(soundSettings);
   const [speed, setSpeed] = useState<Speed>(startPaused ? 0 : 1);
   const [selected, setSelected] = useState(0);
   const [sheet, setSheet] = useState<'pit' | 'skip' | 'leave' | 'guide' | null>(null);
@@ -104,8 +123,8 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
     return () => document.removeEventListener('visibilitychange', hidden);
   }, [state]);
 
-  // A sheet stops the clock: nobody should lose places while choosing tyres.
-  clock.speed = sheet ? 0 : speed;
+  // A sheet stops the clock: nobody should lose places while choosing tyres. So does a tip.
+  clock.speed = sheet || hold ? 0 : speed;
 
   useEffect(() => {
     const element = canvas.current;
@@ -144,6 +163,7 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
     });
     const scene: Scene = { cars: marks, safetyCar: null, wetness: 0, caution: 'none' };
 
+    const audio = new RaceSound(state, map, clock);
     let frame = 0;
     let last = performance.now();
     let shownAt = 0;
@@ -172,11 +192,14 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
         scene.caution = state.flag.kind === 'green' ? 'none' : 'yellow';
         drawScene(context, width, height, map, fit, path, scene);
       }
+      audio.frame(clock, document.hidden ? 0 : clock.speed);
 
       if (seen < state.events.length) {
         const fresh: FeedLine[] = [];
         for (; seen < state.events.length; seen++) {
-          const line = feedLine(state, state.events[seen]!);
+          const event = state.events[seen]!;
+          audio.event(event);
+          const line = feedLine(state, event);
           if (line) fresh.push(line);
         }
         if (fresh.length > 0) setFeed((lines) => [...fresh.reverse(), ...lines].slice(0, 30));
@@ -198,6 +221,7 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      audio.stop();
     };
   }, [state, clock, map]);
 
@@ -220,6 +244,15 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
           </button>
           <button type="button" class="icon-button" aria-label="What everything means" onClick={() => setSheet('guide')}>
             <IconHelp />
+          </button>
+          <button
+            type="button"
+            class="icon-button"
+            aria-label={sound.muted ? 'Sound off: turn it on' : 'Sound on: turn it off'}
+            aria-pressed={!sound.muted}
+            onClick={() => setSound({ muted: !sound.muted })}
+          >
+            {sound.muted ? <IconMuted /> : <IconSound />}
           </button>
         </span>
         <span class="race__lap figure" aria-label={`Lap ${lap} of ${setup.laps}`}>
@@ -443,6 +476,7 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
           onCancel={() => setSheet(null)}
         />
       )}
+      {children}
     </div>
   );
 }

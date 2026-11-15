@@ -19,7 +19,7 @@ import { driverStandings, teamStandings, type RoundResult } from '../../game/sea
 import { sessionName, weekendSessions } from '../../game/season/weekend';
 import type { SlotId } from '../../platform/saves';
 import { formatClock } from '../format';
-import { IconBack } from '../icons';
+import { IconBack, IconSettings } from '../icons';
 import { ordinal } from '../race/Result';
 import { ConfirmSheet, Sheet } from '../Sheet';
 import { TrackOutline } from '../TrackOutline';
@@ -38,6 +38,8 @@ import { MoneyCard, NewsCard, PeopleCard, SponsorCard } from '../career/Business
 import { Garage } from '../career/Garage';
 import { WinterCard, WinterSheets, type WinterSheet } from '../career/Winter';
 import { AcademyCard, MemorialCard } from '../career/Lifecycle';
+import { Coach } from '../tutorial/Coach';
+import { hubTips } from '../tutorial/tips';
 
 /**
  * A career's home: the team, the round in progress, the calendar and the championships. Between
@@ -83,8 +85,13 @@ export function CareerScreen({ slot }: { slot: SlotId }) {
             <IconBack />
             Careers
           </button>
-          <span class="topbar__meta" aria-live="polite">
-            {saveLine}
+          <span class="topbar__end">
+            <span class="topbar__meta" aria-live="polite">
+              {saveLine}
+            </span>
+            <button type="button" class="icon-button" aria-label="Settings" onClick={() => navigate({ screen: 'system' })}>
+              <IconSettings />
+            </button>
           </span>
         </div>
       </header>
@@ -300,6 +307,12 @@ function Hub({
       </main>
 
       {winter && <WinterSheets career={career} sheet={winter} close={() => setWinter(null)} />}
+      {!winter && (
+        <Coach
+          career={career}
+          tips={hubTips(career, { tab, winterStep: winterOpen && career.outfit ? career.outfit.preseason[0]! : null })}
+        />
+      )}
 
       {action && (tab === 'Weekend' || winterOpen) && (
         <div class="actionbar">

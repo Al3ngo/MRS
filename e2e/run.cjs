@@ -127,13 +127,18 @@ const slotCard = (page, slot) => page.locator('.slot').nth(slot - 1);
  * Starts a career in an empty slot with a team, and lands on the team's home screen. Unless told
  * not to, it signs the balanced sponsor, the one thing a new career must settle before practice.
  */
-async function startNewCareer(page, slot, team = 'Williams', sponsor = true) {
+async function startNewCareer(page, slot, team = 'Williams', sponsor = true, tutorial = false) {
   await slotCard(page, slot).getByRole('button', { name: 'New career' }).click();
   await page.getByRole('heading', { name: 'Choose your team' }).waitFor();
   await page.getByRole('button', { name: new RegExp(`^${team}`) }).click();
   await page.getByRole('group', { name: 'Fatal accidents' }).waitFor();
   await page.getByRole('button', { name: `Start with ${team}` }).click();
   await page.locator('.hub').waitFor();
+  // A new career opens on the tutorial's first tip; most checks skip it.
+  await page.locator('dialog.coach').waitFor();
+  if (tutorial) return;
+  await page.locator('dialog.coach').getByRole('button', { name: 'Skip the tutorial' }).click();
+  await page.locator('dialog.coach').waitFor({ state: 'detached' });
   if (!sponsor) return;
   await page.getByRole('button', { name: 'Sign a title sponsor' }).click();
   await page.locator('dialog .choice', { hasText: 'Balanced' }).click();
@@ -180,7 +185,10 @@ async function completeSessions(page, count) {
 async function backToCareers(page) {
   const team = page.getByRole('button', { name: 'Team', exact: true });
   if (await team.isVisible()) await team.click();
-  await page.getByRole('button', { name: 'Careers' }).click();
+  // The settings screen says Back: it can be reached from a career as well as from the careers.
+  const back = page.getByRole('button', { name: 'Back', exact: true });
+  if (await back.isVisible()) await back.click();
+  else await page.getByRole('button', { name: 'Careers' }).click();
   await page.locator('.slots').waitFor();
 }
 
@@ -335,7 +343,7 @@ async function main() {
       await download.saveAs(backupFile);
       const file = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
       expectEqual(file.format, 'modern-racing-manager-save', 'file format tag');
-      expectEqual(file.schemaVersion, 4, 'file save version');
+      expectEqual(file.schemaVersion, 5, 'file save version');
       expectEqual(file.career.team, 'williams', 'team in the file');
       expectEqual(
         { seasonYear: file.career.seasonYear, round: file.career.round, phase: file.career.phase, sessions: file.career.sessionsCompleted },
@@ -463,9 +471,9 @@ async function main() {
       await page.locator('.slots').waitFor();
     });
 
-    await check('the System screen reports the device honestly', async () => {
-      await page.getByRole('button', { name: 'System' }).click();
-      await page.getByRole('heading', { name: 'System' }).waitFor();
+    await check('the Settings screen reports the device honestly', async () => {
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await page.getByRole('heading', { name: 'Settings' }).waitFor();
       await page.getByText('Stored', { exact: true }).waitFor();
       await page.getByText(/^Ready to play offline\./).first().waitFor();
       await page.getByText('2 of 3 slots').waitFor();
@@ -521,7 +529,7 @@ async function main() {
       await shot(page, '09-cold-offline-start');
       // Asking for an update with no connection is answered plainly, not with an error.
       await backToCareers(page);
-      await page.getByRole('button', { name: 'System' }).click();
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
       await page.getByRole('button', { name: 'Check for update' }).click();
       await page.getByText('Could not check: the device is offline.').waitFor();
       expectEqual(log, [], 'browser errors on a cold offline start');
@@ -570,7 +578,7 @@ async function main() {
       await backToCareers(page);
 
       // Nothing new on the server: the check says so.
-      await page.getByRole('button', { name: 'System' }).click();
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
       await page.getByRole('button', { name: 'Check for update' }).click();
       await page.getByText(/^Up to date\./).waitFor();
 
@@ -1043,6 +1051,47 @@ async function main() {
       const leader = Number(await page.locator('.standing .standing__points').first().innerText());
       expect(leader >= 25 && leader <= 34, `leader's points after a sprint weekend: ${leader}`);
       expectEqual(log, [], 'browser errors in the career');
+    });
+
+    await check('career: the tutorial shows each tip once, is kept in the save, and can be skipped and replayed', async () => {
+      await backToCareers(page);
+      await startNewCareer(page, 3, 'Williams', false, true);
+      const tip = () => page.locator('dialog.coach .coach__title').innerText();
+      expectEqual(await tip(), 'Your team', 'the first tip');
+      await shot(page, '25-tutorial-first-tip');
+      await page.locator('dialog.coach').getByRole('button', { name: 'Next' }).click();
+      await page.waitForFunction(() => document.querySelector('dialog.coach .coach__title')?.textContent === 'First, a sponsor');
+      // Read tips are kept with the career: after a reload, the tutorial carries on where it was.
+      await page.locator('.topbar__meta', { hasText: /^Saved / }).waitFor();
+      await page.reload();
+      await page.locator('dialog.coach').waitFor();
+      expectEqual(await tip(), 'First, a sponsor', 'the tip after a reload');
+      await page.locator('dialog.coach').getByRole('button', { name: 'Skip the tutorial' }).click();
+      await page.locator('dialog.coach').waitFor({ state: 'detached' });
+      await page.getByRole('button', { name: 'Sign a title sponsor' }).click();
+      await page.locator('dialog .choice').first().click();
+      await page.locator('dialog').waitFor({ state: 'detached' });
+      await page.getByRole('button', { name: 'Go to practice' }).click();
+      await page.getByRole('button', { name: 'Finish practice' }).waitFor();
+      expectEqual(await page.locator('dialog.coach').count(), 0, 'no tips once skipped');
+      await toHub(page);
+      // The settings: sound, and the tutorial replayed for this career.
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await page.getByRole('heading', { name: 'Settings' }).waitFor();
+      await page.getByRole('group', { name: 'Sound effects' }).waitFor();
+      await page.getByRole('slider', { name: 'Volume' }).fill('40');
+      expectEqual(await page.locator('.volume__value').innerText(), '40', 'the volume follows the slider');
+      await page.getByRole('group', { name: 'Sound effects' }).getByRole('button', { name: 'Off' }).click();
+      expectEqual(await page.evaluate(() => localStorage.getItem('mrm-sound')), '{"volume":0.4,"muted":true}', 'sound settings kept on the device');
+      await page.getByRole('group', { name: 'Sound effects' }).getByRole('button', { name: 'On' }).click();
+      await page.locator('.status', { hasText: 'Slot 3' }).getByRole('button', { name: 'Replay tutorial' }).click();
+      await page.getByText('The tutorial will show again in Williams.').waitFor();
+      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await page.locator('.hub').waitFor();
+      await page.locator('dialog.coach').waitFor();
+      expectEqual(await tip(), 'Your team', 'the first tip again after a replay');
+      await page.locator('dialog.coach').getByRole('button', { name: 'Skip the tutorial' }).click();
+      expectEqual(log, [], 'browser errors in the tutorial');
     });
 
     await context.close();
