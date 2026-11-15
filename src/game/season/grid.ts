@@ -6,7 +6,7 @@
  * as the real one was that season. The player's team is no exception, except in one way: a team
  * the player runs stays in the sport after its real exit, keeping its last car and its drivers.
  */
-import { DRIVERS, TEAMS, driversBy, teamColour, teamsIn } from '../data';
+import { DRIVERS, TEAMS, driversBy, teamColour, teamStyle, teamsIn } from '../data';
 import { realCar, realEntrants } from '../sim/session';
 import { seedFrom } from '../sim/rng';
 import type { Entrant } from '../sim/types';
@@ -75,6 +75,7 @@ function survivor(season: number, round: number, team: string, others: readonly 
       setup: 0.75 + ((weekend >>> (seat * 4)) & 15) / 100,
       engineAge: 0.3,
       player: true,
+      style: teamStyle(team, Math.min(season, last.season)),
     };
   });
 }

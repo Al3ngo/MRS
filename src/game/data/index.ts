@@ -8,7 +8,7 @@ import { ENTRIES, TEAMS } from './generated/entries';
 import { REAL_PACE } from './generated/pace';
 import { ROUNDS } from './generated/rounds';
 import { SOURCES } from './generated/sources';
-import { engineFamily, shownTeamName, teamColour, teamSpending } from './profiles';
+import { engineFamily, shownTeamName, teamColour, teamSpending, teamStyle, type RaceStyle } from './profiles';
 import { PROFILES, ageIn, overall, ratingsAtAge, type Ratings } from './ratings';
 import { rulesFor, type Rules } from './regulations';
 import {
@@ -77,6 +77,8 @@ export interface TeamSeason {
   spending: number;
   /** How quick and how reliable the real car was. Reference only. */
   real: RealPace | null;
+  /** How the team's pit wall runs its cars in a race. */
+  style: RaceStyle;
   /** Who really raced for the team that season, most races first. */
   drivers: readonly { id: string; rounds: readonly number[] }[];
 }
@@ -97,6 +99,7 @@ export function teamsIn(season: number): readonly TeamSeason[] {
       engineMaker: engineFamily(entry.engine),
       spending: cap === null ? spending : Math.min(spending, cap),
       real: REAL_PACE[season]?.[entry.team] ?? null,
+      style: teamStyle(entry.team, season),
       drivers: entry.drivers
         .map(({ id, rounds }) => ({ id, rounds: expandRounds(rounds) }))
         .sort((a, b) => b.rounds.length - a.rounds.length || a.rounds[0]! - b.rounds[0]!),

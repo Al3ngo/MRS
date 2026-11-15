@@ -8,6 +8,7 @@
 import { knockoutCuts } from '../data/regulations';
 import * as M from './model';
 import { between, chance, clamp, gaussian, type Luck } from './rng';
+import { styleOf } from './styles';
 import type { Entrant, SessionRules, SessionSetup } from './types';
 
 export type Approach = 'safe' | 'normal' | 'push';
@@ -93,7 +94,8 @@ function flyingLap(state: QualifyingState, entrant: Entrant, approach: Approach,
 }
 
 /**
- * Runs the next part. `approach` says how hard each car goes; cars not named go at 'normal'.
+ * Runs the next part. `approach` says how hard each car goes; cars not named go as their team's
+ * race style says, and the player's at 'normal'.
  * Returns the part's result, which is also added to the state.
  */
 export function runPart(state: QualifyingState, approach: Readonly<Record<string, Approach>> = {}): QualifyingPart {
@@ -104,7 +106,8 @@ export function runPart(state: QualifyingState, approach: Readonly<Record<string
 
   const laps = state.through.map((id): QualifyingLap => {
     const entrant = byId.get(id)!;
-    const how = approach[id] ?? 'normal';
+    // Cars the player has not given an order to go at normal; the simulation's cars as their team's style says.
+    const how = approach[id] ?? (entrant.player ? 'normal' : styleOf(entrant).qualifying[part - 1]!);
     const first = flyingLap(state, entrant, how, part);
     const second = flyingLap(state, entrant, how, part);
     return second.time < first.time ? second : first;

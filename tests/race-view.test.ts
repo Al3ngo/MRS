@@ -144,12 +144,12 @@ describe('a stop called by the player', () => {
     const grid = realEntrants(2019, 3, 'ferrari');
     const race = createRace({ ...raceSetup(2019, 3, 'race', grid), weather: [] }, 5);
     const car = race.cars.find((candidate) => candidate.id === 'ferrari-1')!;
-    command(race, { type: 'plan', car: car.id, start: 'medium', stops: [{ lap: 20, compound: 'hard' }, { lap: 40, compound: 'soft' }] });
+    command(race, { type: 'plan', car: car.id, start: 'medium', stops: [{ lap: 20, compound: 'hard' }, { lap: 32, compound: 'soft' }] });
     while (car.lap < 8) step(race);
     command(race, { type: 'pit', car: car.id, compound: 'hard' });
     while (car.stops === 0 && race.phase !== 'finished') step(race);
     expect(car.stops).toBe(1);
-    expect(car.plan).toEqual([{ lap: 40, compound: 'soft' }]);
+    expect(car.plan).toEqual([{ lap: 32, compound: 'soft' }]);
     // The stop that was planned and made on time leaves the rest of the plan alone.
     while (car.stops === 1 && race.phase !== 'finished' && car.status !== 'out') step(race);
     if (car.status !== 'out') expect(car.plan).toEqual([]);

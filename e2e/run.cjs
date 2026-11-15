@@ -677,7 +677,8 @@ async function main() {
       await page.getByRole('tab', { name: 'Teams' }).click();
       let teams = await rows('.team');
       expectEqual(teams.length, 12, 'teams in 2010');
-      expect(/^Red Bull \| Renault · Webber, Vettel \| Fastest/.test(teams[0]), `quickest car of 2010: "${teams[0]}"`);
+      expect(/^Red Bull \| Renault · Webber, Vettel \| Aggressive race style \| Fastest/.test(teams[0]), `quickest car of 2010: "${teams[0]}"`);
+      expect(teams.some((row) => row.startsWith('Williams') && row.includes('Cautious race style')), 'Williams run cautiously');
       await shot(page, '13-almanac-teams');
 
       await page.getByRole('tab', { name: 'Drivers' }).click();
@@ -742,6 +743,13 @@ async function main() {
       const plans = await page.locator('.plan__words').allInnerTexts();
       expectEqual(plans.length, 2, 'a plan for each car');
       expect(plans.every((plan) => /^Start on (soft|medium|hard|intermediate|wet)/.test(plan)), `plans: ${plans.join(' / ')}`);
+      // The weather for the first laps: an icon and a chance of rain for each, and how wet the track is.
+      const forecast = page.locator('.forecast--card');
+      expectEqual(await forecast.locator('.forecast__lap').count(), 5, 'laps in the grid forecast');
+      expectEqual(await forecast.locator('.forecast__lap svg').count(), 5, 'a weather icon for each lap');
+      const chances = await forecast.locator('.forecast__chance').allInnerTexts();
+      expect(chances.every((chance) => /^\d+%$/.test(chance.trim())), `chances of rain: ${chances.join(' / ')}`);
+      expectEqual(await forecast.locator('.meter').count(), 1, 'a bar for how wet the track is');
       await shot(page, '16-race-grid');
     });
 
@@ -761,6 +769,19 @@ async function main() {
       });
       expect(colours > 6, `colours on the map: ${colours}`);
       expect((await page.locator('.feed__line').count()) > 0, 'the feed has lines');
+      // The weather strip over the map, and a tyre and fuel graph for each car.
+      const strip = await page.locator('.race__map .forecast .forecast__lap').count();
+      expect(strip >= 1 && strip <= 5, `laps in the forecast over the map: ${strip}`);
+      expectEqual(await page.locator('.race__map .forecast .meter').count(), 1, 'the wetness bar over the map');
+      expectEqual(await page.locator('.carcard .outlook').count(), 2, 'a tyre and fuel graph on each card');
+      const bars = await page.locator('.carcard').first().locator('.outlook__strip').evaluateAll((strips) => strips.map((svg) => svg.querySelectorAll('rect').length));
+      expect(bars.length === 2 && bars.every((count) => count > 20), `laps drawn in the graph: ${bars.join(', ')}`);
+      expect(!/\d+%/.test(await page.locator('.carcard').first().innerText()), 'no percentages on the car cards');
+      await page.getByRole('button', { name: 'What everything means' }).click();
+      const terms = await page.locator('dialog .guide__term').allInnerTexts();
+      for (const term of ['Tyre and fuel graph', 'Weather']) expect(terms.includes(term), `"${term}" in the guide: ${terms.join(' / ')}`);
+      await page.locator('dialog').getByRole('button', { name: 'Close' }).click();
+      await page.locator('dialog .guide').waitFor({ state: 'detached' });
 
       const engine = page.getByRole('group', { name: /^Engine mode/ });
       await engine.getByRole('button', { name: 'Push' }).click();

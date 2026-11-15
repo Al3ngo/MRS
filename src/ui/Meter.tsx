@@ -1,3 +1,5 @@
+import { fuelComfort, tyreLife } from '../game/sim';
+
 /**
  * A reading shown as a bar instead of a number: tyre life, fuel, battery, track wetness, stress.
  * The bar fills to the reading, and its colour says how things stand: green is fine, amber is
@@ -43,10 +45,10 @@ export function Meter({ fill, good, label, size = 'normal', class: extra }: Mete
 
 // ── The readings ────────────────────────────────────────────────────────────────────────────
 
-/** Tyre life left: full when new, empty when worn out. */
+/** Tyre life left: full when new, empty when finished (see tyreLife in the game). */
 export const tyreMeter = (wear: number): { fill: number; good: number; words: string } => {
-  const left = clamp01(1 - wear);
-  const words = wear >= 1 ? 'worn out' : left > 0.66 ? 'fresh' : left > 0.33 ? 'part worn' : 'nearly worn out';
+  const left = tyreLife(wear);
+  const words = left <= 0 ? 'worn out' : left > 0.66 ? 'fresh' : left > 0.33 ? 'part worn' : 'nearly worn out';
   return { fill: left, good: left, words };
 };
 
@@ -56,7 +58,7 @@ export const tyreMeter = (wear: number): { fill: number; good: number; words: st
  */
 export const fuelMeter = (fuel: number, full: number, spare: number): { fill: number; good: number; words: string } => ({
   fill: full > 0 ? fuel / full : 0,
-  good: clamp01((spare + 0.5) / 1.5),
+  good: fuelComfort(spare),
   words: spare >= 0.5 ? 'enough to finish' : spare >= 0 ? 'only just enough to finish' : 'not enough to finish',
 });
 

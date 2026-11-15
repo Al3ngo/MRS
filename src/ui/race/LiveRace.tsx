@@ -3,19 +3,20 @@ import { circuit as circuitById } from '../../game/data';
 import {
   PUSH_LEVELS,
   command,
-  energyEffect,
+  energyModeOpen,
   energyModes,
-  idealKind,
+  carOutlook,
+  pitAdvice,
   rainAt,
-  startFuel,
-  tyreCare,
   type CarState,
   type Compound,
   type EngineMode,
   type RaceState,
 } from '../../game/sim';
 import { IconBack, IconHelp, IconPause, IconSkip } from '../icons';
-import { Meter, batteryMeter, fuelMeter, stressMeter, tyreMeter, wetMeter } from '../Meter';
+import { Meter, batteryMeter, fuelMeter, stressMeter, tyreMeter } from '../Meter';
+import { Forecast } from './Forecast';
+import { OutlookGraph } from './OutlookGraph';
 import { ConfirmSheet, Sheet } from '../Sheet';
 import { RaceClock, SPEEDS, type Speed } from './clock';
 import { drawScene, trackPath, type CarMark, type Scene } from './draw';
@@ -30,9 +31,9 @@ import {
   energyHelp,
   energyWords,
   feedLine,
+  outlookWords,
   placeWords,
   raceGuide,
-  trackWords,
   type FeedLine,
 } from './words';
 
@@ -115,7 +116,10 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
       element.width = Math.round(width * ratio);
       element.height = Math.round(height * ratio);
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      fit = fitTrack(map, width, height, 26);
+      // The weather strip sits along the top of the map: the circuit is drawn below it.
+      const strip = 30;
+      const base = fitTrack(map, width, height - strip, 22);
+      fit = { ...base, offsetY: base.offsetY + strip };
       path = trackPath(map, fit);
     };
     measure();
@@ -212,16 +216,13 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
         </span>
         <span class="race__status">
           <FlagPill state={state} />
-          <span class="race__weather">
-            <Meter {...wetMeter(state.wetness)} size="small" class="race__wet" label={`Track: ${trackWords(state.wetness).toLowerCase()}`} />
-            {trackWords(state.wetness)}
-            {raining ? ', raining' : ''}
-          </span>
+          {raining && <span class="race__weather">Raining</span>}
         </span>
       </header>
 
       <div class="race__map">
         <canvas ref={canvas} role="img" aria-label={`${setup.name}: the circuit from above, with every car`} />
+        <Forecast state={state} />
       </div>
 
       <ol class="feed" aria-label="Race feed" aria-live="polite">
@@ -317,11 +318,7 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
                     key={mode}
                     class={`segmented__option${car.energyMode === mode ? ' segmented__option--on' : ''}`}
                     aria-pressed={car.energyMode === mode}
-                    disabled={
-                      car.status === 'out' ||
-                      car.status === 'finished' ||
-                      (car.battery <= 0 && energyEffect(setup.rules, mode, true).charge < 0)
-                    }
+                    disabled={!energyModeOpen(state, car, mode)}
                     onClick={() => {
                       give({ type: 'energy-mode', car: car.id, mode });
                       setHelp('energy');
@@ -488,9 +485,10 @@ function CarCard({ state, car, on, onSelect }: { state: RaceState; car: CarState
   const entrant = setup.grid[car.entrant]!;
   const tyre = tyreOf(state, car);
   const racing = car.status === 'running' || car.status === 'pit';
-  const spare = car.fuel - (setup.laps - Math.max(0, car.pos));
+  const outlook = carOutlook(state, car);
+  const words = outlookWords(outlook);
   const tyres = tyreMeter(car.wear);
-  const fuel = fuelMeter(car.fuel, startFuel(setup), spare);
+  const fuel = fuelMeter(outlook.fuel[0] ?? 0, 1, outlook.fuelSpare);
   const battery = batteryMeter(car.battery);
   const stress = stressMeter(car.stress);
   return (
@@ -503,23 +501,19 @@ function CarCard({ state, car, on, onSelect }: { state: RaceState; car: CarState
       </span>
       {racing ? (
         <span class="carcard__meters">
-          <span class="carcard__meter">
-            <span class="carcard__label">
-              <span class="tyre" style={{ background: tyre.colour }} />
-              Tyres
-            </span>
-            <Meter fill={tyres.fill} good={tyres.good} size="small" label={`${tyre.name} tyres, ${tyres.words}`} />
-          </span>
-          <span class="carcard__meter">
-            <span class="carcard__label">Fuel</span>
-            <Meter fill={fuel.fill} good={fuel.good} size="small" label={`Fuel: ${fuel.words}`} />
-          </span>
+          <OutlookGraph
+            outlook={outlook}
+            tyreColour={tyre.colour}
+            tyreWords={`${tyre.name} tyres, ${tyres.words}. ${words.tyres}.`}
+            fuelWords={`Fuel: ${fuel.words}. ${words.fuel}.`}
+          />
           {setup.rules.recovery !== 'none' && (
             <span class="carcard__meter">
               <span class="carcard__label">Battery</span>
               <Meter fill={battery.fill} good={battery.good} size="small" label={`Battery ${battery.words}`} />
             </span>
           )}
+          {words.warning && <span class="carcard__warning">{words.warning}</span>}
         </span>
       ) : (
         <>
@@ -552,26 +546,15 @@ function PitSheet({
   const { setup } = state;
   const entrant = setup.grid[car.entrant]!;
   const fitted = tyreOf(state, car);
-  const want = idealKind(state.wetness);
-  const suggested =
-    car.pitCall?.compound ??
-    (want !== 'dry'
-      ? setup.compounds.find((tyre) => tyre.kind === want)!.id
-      : (car.plan[0]?.compound ??
-        (setup.compounds.find((tyre) => tyre.kind === 'dry' && tyre.id !== fitted.id) ?? fitted).id));
-  const [choice, setChoice] = useState(suggested);
-
-  const dryUsed = new Set(car.usedCompounds.filter((id) => setup.compounds.find((tyre) => tyre.id === id)!.kind === 'dry'));
-  const allDry = car.usedCompounds.every((id) => setup.compounds.find((tyre) => tyre.id === id)!.kind === 'dry');
-  const owes = setup.rules.twoCompoundRule && allDry && dryUsed.size < 2;
-  const lasts = (tyre: Compound): number => Math.round(tyre.life / tyreCare(entrant.ratings.tyres));
-  const lapsLeft = Math.max(0, setup.laps - Math.max(1, Math.floor(car.pos) + 1));
-
+  const advice = pitAdvice(state, car);
+  const [choice, setChoice] = useState(advice.suggested);
+  const owes = advice.owesSecondType;
+  const lapsLeft = advice.lapsAfterThis;
   return (
     <Sheet title={`Pit stop: ${entrant.driverName}`} onClose={onClose}>
       <p class="sheet__text">
         {lapsLeft} {lapsLeft === 1 ? 'lap' : 'laps'} to go after this one. On {fitted.name.toLowerCase()} tyres for{' '}
-        {Math.floor(car.tyreLaps)} laps.
+        {advice.tyreLaps} laps.
       </p>
       <div class="sheet__meter">
         <span class="sheet__meter-label">Tyres now</span>
@@ -595,7 +578,7 @@ function PitSheet({
             <span class="tyre tyre--large" style={{ background: tyre.colour }} />
             <span class="choice__name">{tyre.name}</span>
             <span class="choice__note">
-              {tyre.kind === 'dry' ? `lasts about ${lasts(tyre)} laps` : tyre.kind === 'inter' ? 'for a damp track' : 'for heavy rain'}
+              {tyre.kind === 'dry' ? `lasts about ${advice.lasts[tyre.id]} laps` : tyre.kind === 'inter' ? 'for a damp track' : 'for heavy rain'}
             </span>
           </button>
         ))}

@@ -13,6 +13,8 @@ export type EngineMode = 'save' | 'standard' | 'push';
 export type EnergyMode = 'harvest' | 'balanced' | 'attack' | 'overtake';
 /** How hard the driver is told to go: pace against tyres and stress. */
 export type PushLevel = 'conserve' | 'normal' | 'push' | 'all-out';
+/** How a team's pit wall runs its cars. See styles.ts. */
+export type TeamStyle = 'aggressive' | 'balanced' | 'cautious';
 
 /** A car's qualities, 0 to 100. Development (Stage 6) moves these; here they are inputs. */
 export interface CarSpec {
@@ -61,6 +63,8 @@ export interface Entrant {
   engineAge: number;
   /** Run by the player: modes change only on command. Otherwise the simulation drives the pit wall. */
   player: boolean;
+  /** How the team's pit wall runs the car when the simulation makes its calls. Missing means balanced. */
+  style?: TeamStyle;
 }
 
 export interface SessionRules {

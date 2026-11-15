@@ -1539,3 +1539,164 @@ button.slot__main:disabled .slot__go {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* ── Race view: weather strip and the tyre and fuel graph ───────────────────────────────────── */
+
+.race__map {
+  position: relative;
+}
+
+/* Along the top of the map: the track now, then the coming laps. */
+.forecast {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.forecast__track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.forecast__label {
+  color: var(--faint);
+}
+
+.forecast__wet {
+  width: 28px;
+}
+
+.forecast__laps {
+  display: flex;
+  gap: 4px;
+}
+
+.forecast__lap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 30px;
+}
+
+.weather-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.forecast__chance {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 11px;
+}
+
+/* A card's graph: tyres and fuel, lap by lap to the flag. */
+.outlook {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.outlook__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.outlook__strip {
+  display: block;
+  width: 100%;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--raised);
+}
+
+.carcard--on .outlook__strip {
+  background: var(--control);
+}
+
+.outlook__marks {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 50px;
+  right: 0;
+}
+
+.outlook__stop {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--text);
+}
+
+.carcard__meter {
+  grid-template-columns: 44px minmax(0, 1fr);
+}
+
+.carcard__warning {
+  color: var(--bad);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+}
+
+.outlook__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.outlook__label .tyre {
+  width: 8px;
+  height: 8px;
+}
+
+@media (max-height: 740px) {
+  .outlook {
+    gap: 3px;
+  }
+
+  .outlook__strip {
+    height: 11px;
+  }
+
+  .outlook__row,
+  .carcard__warning {
+    font-size: 10px;
+    line-height: 12px;
+  }
+
+  .race__map {
+    height: clamp(104px, 18dvh, 140px);
+  }
+}
+
+/* The forecast in a card, before the race: in the flow of the page, not over the map. */
+.forecast--card {
+  position: static;
+  margin-top: 10px;
+}
+
+.team--pick,
+.team {
+  min-height: 72px;
+}

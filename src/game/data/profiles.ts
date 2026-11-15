@@ -48,6 +48,47 @@ const TEAM_NAMES: Readonly<Record<string, string>> = {
 export const shownTeamName = (constructor: string, season: number, name: string): string =>
   TEAM_NAMES[`${constructor} ${season}`] ?? name;
 
+// ── Race styles ─────────────────────────────────────────────────────────────────────────────
+
+/** How a team's pit wall runs its cars in a race. The race engine reads it (see sim/styles.ts). */
+export type RaceStyle = 'aggressive' | 'balanced' | 'cautious';
+
+/**
+ * Each team's racing temperament, period by period: the game's own reading of how it went racing.
+ * Bold strategists and teams with nothing to lose are aggressive; teams that lived on steady
+ * points, tyre saving and getting both cars home are cautious.
+ */
+const STYLES: Readonly<Record<string, readonly (readonly [from: number, style: RaceStyle])[]>> = {
+  'red-bull': [[2010, 'aggressive']],
+  ferrari: [[2010, 'balanced']],
+  mercedes: [[2010, 'balanced']],
+  mclaren: [[2010, 'aggressive'], [2015, 'balanced'], [2023, 'aggressive']],
+  williams: [[2010, 'cautious']],
+  renault: [[2010, 'balanced'], [2012, 'cautious'], [2016, 'balanced']],
+  'force-india': [[2010, 'cautious']],
+  'toro-rosso': [[2010, 'aggressive']],
+  sauber: [[2010, 'cautious']],
+  'lotus-racing': [[2010, 'cautious']],
+  virgin: [[2010, 'cautious']],
+  hrt: [[2010, 'cautious']],
+  haas: [[2016, 'aggressive'], [2024, 'balanced']],
+  cadillac: [[2026, 'cautious']],
+};
+
+export function teamStyle(team: string, season: number): RaceStyle {
+  const periods = STYLES[team];
+  if (!periods) return 'balanced';
+  let style = periods[0]![1];
+  for (const [from, value] of periods) if (season >= from) style = value;
+  return style;
+}
+
+export const STYLE_WORDS: Readonly<Record<RaceStyle, string>> = {
+  aggressive: 'Aggressive: pushes hard and gambles on tyres and weather',
+  balanced: 'Balanced: picks its moments',
+  cautious: 'Cautious: looks after the car, the driver and the tyres',
+};
+
 // ── Money ───────────────────────────────────────────────────────────────────────────────────
 
 /**

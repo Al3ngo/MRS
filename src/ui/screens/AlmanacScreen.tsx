@@ -31,6 +31,8 @@ type Tab = (typeof TABS)[number];
 const dayMonth = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const raceDay = (iso: string): string => dayMonth.format(new Date(`${iso}T00:00:00Z`));
 
+const styleName = (style: string): string => style.charAt(0).toUpperCase() + style.slice(1);
+
 const RESET_WORDS = { none: 'Same rules as last year', minor: 'Some rule changes', major: 'Big rule changes' } as const;
 
 export function AlmanacScreen({ season }: { season: number }) {
@@ -162,7 +164,7 @@ export function AlmanacScreen({ season }: { season: number }) {
             <p class="list-note">
               In order of real pace: the figure is how far each car's best qualifying lap was from the fastest car, on
               average. Money is the team's spending power in game money
-              {data.rules.budgetCap !== null ? `, capped at ${data.rules.budgetCap}` : ''}.
+              {data.rules.budgetCap !== null ? `, capped at ${data.rules.budgetCap}` : ''}. Race style is how each team's pit wall runs its cars: aggressive teams push hard and gamble on tyres and weather, balanced ones pick their moments, cautious ones look after the car, the driver and the tyres.
             </p>
           </section>
         )}
@@ -218,6 +220,7 @@ function TeamRow({ team }: { team: TeamSeason }) {
           {team.engineName} · {names.join(', ')}
           {others > 0 ? ` +${others}` : ''}
         </span>
+        <span class="round__where">{styleName(team.style)} race style</span>
       </span>
       <span class="team__figures">
         <span class="figure">{team.real ? (team.real.gap === 0 ? 'Fastest' : `+${team.real.gap.toFixed(2)}%`) : '—'}</span>

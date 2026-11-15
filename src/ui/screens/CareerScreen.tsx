@@ -4,6 +4,7 @@ import { app, autosave, enterCareer, leaveCareer, startCareer, updateCareer } fr
 import { useStore } from '../../app/store';
 import {
   LAST_SEASON,
+  careerTotals,
   chooseTeam,
   finishManagement,
   roundsIn,
@@ -127,6 +128,7 @@ function TeamChoice({ career }: { career: CareerState }) {
                   <span class="round__where">
                     {team.engineName} · {team.drivers.slice(0, 2).map((entry) => driverLast(entry.id)).join(', ')}
                   </span>
+                  <span class="round__where">{team.style.charAt(0).toUpperCase() + team.style.slice(1)} race style</span>
                 </span>
                 <span class="team__figures">
                   <span class="figure">
@@ -139,7 +141,7 @@ function TeamChoice({ career }: { career: CareerState }) {
           ))}
         </ul>
         <p class="list-note">
-          In order of real pace that season: how far each car's best qualifying lap was from the fastest car.
+          In order of real pace that season: how far each car's best qualifying lap was from the fastest car. Race style is how each team's pit wall runs its cars: aggressive teams push hard and gamble on tyres and weather, balanced ones pick their moments, cautious ones look after the car, the driver and the tyres.
         </p>
       </section>
       {chosen && (
@@ -437,22 +439,8 @@ function SeasonReview({ record, team }: { record: SeasonRecord; team: string }) 
 
 function CareerSummary({ slot, career, team }: { slot: SlotId; career: CareerState; team: string }) {
   const [confirm, setConfirm] = useState(false);
-  const seasons = [...career.history, seasonRecord(career)];
-  let titles = 0;
-  let driverTitles = 0;
-  let wins = 0;
-  let podiums = 0;
-  let best = 99;
-  for (const record of seasons) {
-    const ours = record.teams.find((row) => row.id === team);
-    if (ours) {
-      best = Math.min(best, ours.position);
-      if (ours.position === 1) titles += 1;
-      wins += ours.wins;
-      podiums += ours.podiums;
-    }
-    if (record.drivers[0]?.team === team) driverTitles += 1;
-  }
+  const totals = careerTotals(career);
+  const { seasons } = totals;
   return (
     <div class="stack">
       <section class="card" aria-labelledby="career-summary">
@@ -466,23 +454,23 @@ function CareerSummary({ slot, career, team }: { slot: SlotId; career: CareerSta
         <dl class="facts facts--tight">
           <div class="row">
             <dt class="row__label">Teams' championships won</dt>
-            <dd class="row__value">{titles}</dd>
+            <dd class="row__value">{totals.teamTitles}</dd>
           </div>
           <div class="row">
             <dt class="row__label">Drivers' championships won</dt>
-            <dd class="row__value">{driverTitles}</dd>
+            <dd class="row__value">{totals.driverTitles}</dd>
           </div>
           <div class="row">
             <dt class="row__label">Wins</dt>
-            <dd class="row__value">{wins}</dd>
+            <dd class="row__value">{totals.wins}</dd>
           </div>
           <div class="row">
             <dt class="row__label">Top-three finishes</dt>
-            <dd class="row__value">{podiums}</dd>
+            <dd class="row__value">{totals.podiums}</dd>
           </div>
           <div class="row">
             <dt class="row__label">Best season</dt>
-            <dd class="row__value">{best < 99 ? `${ordinal(best)} among the teams` : '—'}</dd>
+            <dd class="row__value">{totals.bestPlace !== null ? `${ordinal(totals.bestPlace)} among the teams` : '—'}</dd>
           </div>
         </dl>
       </section>

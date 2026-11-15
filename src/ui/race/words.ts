@@ -4,7 +4,17 @@
  */
 import { driver as driverById } from '../../game/data';
 import { formatLap } from '../format';
-import type { EnergyMode, EngineMode, Entrant, PushLevel, RaceEvent, RaceState, RadioMessage, SessionRules } from '../../game/sim';
+import type {
+  CarOutlook,
+  EnergyMode,
+  EngineMode,
+  Entrant,
+  PushLevel,
+  RaceEvent,
+  RaceState,
+  RadioMessage,
+  SessionRules,
+} from '../../game/sim';
 
 const RADIO: Readonly<Record<RadioMessage, string>> = {
   'tyres-going': 'These tyres are starting to go.',
@@ -211,6 +221,15 @@ export function raceGuide(rules: SessionRules): GuideEntry[] {
       term: 'Fuel bar',
       meaning: 'Fuel left. Green means enough to finish, amber only just, red not enough: put the engine on Save.',
     },
+    {
+      term: 'Tyre and fuel graph',
+      meaning:
+        'On each car\'s card: one slim bar per lap from now (left) to the flag (right), showing how much tyre and fuel will be left. A white line is a planned stop. If it turns red before the line or the end, it will not last.',
+    },
+    {
+      term: 'Weather',
+      meaning: 'Above the map: the track now, and the next laps\' weather with the chance of rain. Rain ahead means wet tyres soon.',
+    },
   ];
   if (rules.recovery === 'kers') {
     entries.push({ term: 'Battery bar', meaning: 'KERS: energy saved when braking, spent as a short boost of extra power.' });
@@ -238,4 +257,21 @@ export function raceGuide(rules: SessionRules): GuideEntry[] {
     { term: 'Chequered flag', meaning: 'The end of the race: each car finishes as it next crosses the line.' },
   );
   return entries;
+}
+
+/** What a car's tyre and fuel graph says, in a few words: for its label and the warning under it. */
+export function outlookWords(outlook: CarOutlook): { tyres: string; fuel: string; warning: string | null } {
+  const laps = (count: number): string => `${count} ${count === 1 ? 'lap' : 'laps'}`;
+  const tyres =
+    outlook.tyresShortBy !== null
+      ? `Tyres worn out ${laps(outlook.tyresShortBy)} before ${outlook.stopIn !== null ? 'the stop' : 'the flag'}`
+      : outlook.stopIn !== null
+        ? `Tyres last to the stop in ${laps(outlook.stopIn)}`
+        : 'Tyres last to the flag';
+  const fuel = outlook.fuelShortBy !== null ? `Fuel runs out ${laps(outlook.fuelShortBy)} early` : 'Fuel lasts to the flag';
+  let warning: string | null = null;
+  if (outlook.tyresShortBy !== null && outlook.fuelShortBy !== null) warning = 'Tyres and fuel won\'t last';
+  else if (outlook.tyresShortBy !== null) warning = `Tyres gone ${laps(outlook.tyresShortBy)} early`;
+  else if (outlook.fuelShortBy !== null) warning = `Fuel ${laps(outlook.fuelShortBy)} short`;
+  return { tyres, fuel, warning };
 }

@@ -105,7 +105,16 @@ describe('the eras', () => {
   });
 
   it('have the overtaking their cars allowed: little in 2010 and 2017, a great deal from 2011 to 2013', () => {
-    const first = overtakes(dry(inSeasons(2010, 2010)));
+    // 2010 is one season of 19 races: run once, its average swings by several passes either way,
+    // so it is measured over three runs of every round.
+    const again = [1, 2].flatMap((run) =>
+      calendar(2010).map((round) => {
+        const { race } = quickRace(2010, round.round, 2010 * 100 + round.round + run * 1000);
+        runToEnd(race);
+        return { season: 2010, round: round.round, state: race, rows: classification(race) };
+      }),
+    );
+    const first = overtakes(dry([...inSeasons(2010, 2010), ...again]));
     const early = overtakes(dry(inSeasons(2011, 2013)));
     const wide = overtakes(dry(inSeasons(2017, 2018)));
     const ground = overtakes(dry(inSeasons(2022, 2023)));

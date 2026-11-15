@@ -7,6 +7,7 @@
 import * as M from './model';
 import { clamp, pickWeighted, wholeBetween, type Luck } from './rng';
 import { compound, compoundOfKind, dryCompounds } from './tyres';
+import { styleOf } from './styles';
 import { rainAt, rainDueIn } from './weather';
 import type {
   CarState,
@@ -229,7 +230,8 @@ export function pitDecision(state: RaceState, car: CarState): { compound: string
   // The weather comes first.
   const fitted = compound(setup, car.tyre);
   const call = tyreCall(state, fitted.kind);
-  const nerve = 0.022 + 0.018 * (((car.entrant * 7 + 3) % 10) / 10);
+  const style = styleOf(entrant);
+  const nerve = 0.022 + 0.018 * (((car.entrant * 7 + 3) % 10) / 10) + style.rainNerve;
   if (call.kind !== fitted.kind && call.gain > nerve) return freshTyres(state, car, true);
   if (fitted.kind !== 'dry') return car.wear > 1.1 && left >= 3 ? { compound: fitted.id } : null;
 
@@ -249,7 +251,7 @@ export function pitDecision(state: RaceState, car: CarState): { compound: string
     const share = state.flag.kind === 'safety-car' ? SAFETY_CAR_STOP : VIRTUAL_STOP;
     const stay = carryOn();
     const stop = options(setup, entrant, left, { ...ask, current: null })[0];
-    if (stop && (!stay || stop.cost + cost * share + 3 < stay.cost)) {
+    if (stop && (!stay || stop.cost + cost * share + style.cheapStopMargin < stay.cost)) {
       adopt(stop);
       return { compound: stop.first };
     }
@@ -263,13 +265,13 @@ export function pitDecision(state: RaceState, car: CarState): { compound: string
   }
 
   // Tyres finished well before the plan said they would be.
-  if (car.wear > 1.3 && left >= 2 && !(next && next.lap - lap <= 2)) return freshTyres(state, car, true);
+  if (car.wear > style.changeWornAt && left >= 2 && !(next && next.lap - lap <= 2)) return freshTyres(state, car, true);
 
   // No stop planned: check the tyres will last and the rule is met; if not, plan again.
   if (!next) {
     const rate = M.tyreCare(entrant.ratings.tyres) / fitted.life;
     const short = ask.ruleApplies && new Set(car.usedCompounds).size < 2;
-    if (short || car.wear + left * rate > 1.35) {
+    if (short || car.wear + left * rate > style.stretchTo) {
       const stay = carryOn();
       if (!stay) return freshTyres(state, car, true);
       adopt(stay);
@@ -288,11 +290,16 @@ export function driveModes(state: RaceState, car: CarState): void {
   const spare = car.fuel - toRun;
   const attacking = car.gapAhead < 1.4;
   const defending = car.gapBehind < 1.1;
+  const style = styleOf(entrant);
 
   let engine: EngineMode = 'standard';
   if (green) {
     if (spare < 0.05 || (car.engineMode === 'save' && spare < 0.2)) engine = 'save';
-    else if (entrant.engineAge <= 0.8 && ((spare > 0.3 && (attacking || defending)) || spare > 0.8)) engine = 'push';
+    else if (
+      entrant.engineAge <= style.enginePushAge &&
+      ((spare > style.enginePushSpareClose && (attacking || defending)) || spare > style.enginePushSpare)
+    )
+      engine = 'push';
   }
   car.engineMode = engine;
   car.push = pushLevel(state, car, attacking, defending);
@@ -306,12 +313,12 @@ export function driveModes(state: RaceState, car: CarState): void {
   } else if (rules.recovery === 'kers') {
     const using = car.energyMode === 'overtake' && charge > 4;
     if (state.lap === 0 && charge > 4) energy = 'overtake';
-    else if ((car.gapAhead < 0.9 || defending) && (charge >= 50 || using)) energy = 'overtake';
+    else if ((car.gapAhead < 0.9 || defending) && (charge >= style.kersCharge || using)) energy = 'overtake';
     else if (clear && charge < 60) energy = 'harvest';
   } else {
-    if (car.gapAhead < M.AID_RANGE && charge > 20) energy = 'overtake';
-    else if (defending && charge > 25) energy = 'attack';
-    else if (clear && (charge < 35 || (car.energyMode === 'harvest' && charge < 60))) energy = 'harvest';
+    if (car.gapAhead < M.AID_RANGE && charge > style.overtakeCharge) energy = 'overtake';
+    else if (defending && charge > style.defendCharge) energy = 'attack';
+    else if (clear && (charge < style.harvestBelow || (car.energyMode === 'harvest' && charge < 60))) energy = 'harvest';
     else if (charge > 85) energy = 'attack';
   }
   car.energyMode = energy;
@@ -324,13 +331,16 @@ export function driveModes(state: RaceState, car: CarState): void {
  */
 function pushLevel(state: RaceState, car: CarState, _attacking: boolean, _defending: boolean): PushLevel {
   if (state.flag.kind !== 'green') return 'normal';
-  if (car.stress > 55 || (car.push === 'conserve' && car.stress > 25)) return 'conserve';
+  const style = styleOf(state.setup.grid[car.entrant]!);
+  if (car.stress > style.conserveAbove || (car.push === 'conserve' && car.stress > 25)) return 'conserve';
   const next = car.plan[0];
   const lap = Math.max(1, Math.floor(car.pos) + 1);
-  if (car.wear > 0.9 && next && next.lap - lap > 3) return 'conserve';
+  if (car.wear > style.nurseTyresAt && next && next.lap - lap > 3) return 'conserve';
   const lap0 = state.setup.refLap;
-  if (car.gapAhead < 0.6 && lapsToGo(state, car) <= 2 && car.stress < 40) return 'all-out';
-  if (car.held > 3 * lap0 && car.stress < 30) return 'push';
-  if (car.push === 'push' && car.gapAhead < 1 && car.stress < 45) return 'push';
+  if (car.gapAhead < style.allOutGap && lapsToGo(state, car) <= style.allOutLaps && car.stress < style.allOutStress) {
+    return 'all-out';
+  }
+  if (car.held > style.pushAfterLaps * lap0 && car.stress < style.pushStress) return 'push';
+  if (car.push === 'push' && car.gapAhead < 1 && car.stress < style.keepPushStress) return 'push';
   return 'normal';
 }

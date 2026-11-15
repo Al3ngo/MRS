@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'preact/hooks';
-import { command, options, type CarState, type RaceState } from '../../game/sim';
+import { command, planChoices, type CarState, type RaceState } from '../../game/sim';
 import { Sheet } from '../Sheet';
+import { Forecast } from './Forecast';
 import { placeWords } from './words';
 
 const tyreName = (state: RaceState, id: string): string => state.setup.compounds.find((tyre) => tyre.id === id)!.name;
@@ -20,8 +21,15 @@ export function Grid({ state, onChange }: { state: RaceState; onChange: () => vo
 
   return (
     <>
+      <section class="card weather-card" aria-labelledby="grid-weather">
+        <h2 class="card__title" id="grid-weather">
+          Weather for the first laps
+        </h2>
+        <Forecast state={state} inCard />
+      </section>
       {mine.length > 0 && (
-        <section class="card stack" aria-labelledby="grid-plan">
+
+        <section class="card stack card--gap" aria-labelledby="grid-plan">
           <h2 class="card__title" id="grid-plan">
             Your plan
           </h2>
@@ -48,7 +56,7 @@ export function Grid({ state, onChange }: { state: RaceState; onChange: () => vo
         </section>
       )}
 
-      <section class={`card card--list${mine.length > 0 ? ' card--gap' : ''}`} aria-label="Starting grid">
+      <section class="card card--list card--gap" aria-label="Starting grid">
         <ol>
           {grid.map((entrant, index) => (
             <li key={entrant.id}>
@@ -83,16 +91,7 @@ export function Grid({ state, onChange }: { state: RaceState; onChange: () => vo
 function PlanSheet({ state, car, onClose }: { state: RaceState; car: CarState; onClose: () => void }) {
   const { setup } = state;
   const entrant = setup.grid[car.entrant]!;
-  const choices = useMemo(() => {
-    const all = options(setup, entrant, setup.laps, {
-      current: null,
-      used: [],
-      ruleApplies: setup.rules.twoCompoundRule,
-      maxStops: 3,
-      stopCost: setup.traits.pitLoss + 1,
-    });
-    return all.slice(0, 6);
-  }, [setup, entrant]);
+  const choices = useMemo(() => planChoices(state, car), [state, car]);
   const best = choices[0]?.cost ?? 0;
   const current = [car.tyre, ...car.plan.map((stop) => `${stop.lap}:${stop.compound}`)].join('|');
 

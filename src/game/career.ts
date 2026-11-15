@@ -206,6 +206,33 @@ export function finishManagement(state: CareerState): CareerState {
   };
 }
 
+/** A whole career's record for the player's team, across every season run so far. */
+export interface CareerTotals {
+  seasons: SeasonRecord[];
+  teamTitles: number;
+  driverTitles: number;
+  wins: number;
+  podiums: number;
+  /** Best finishing place in the teams' championship; null before a season is complete. */
+  bestPlace: number | null;
+}
+
+export function careerTotals(state: CareerState): CareerTotals {
+  const seasons = [...state.history, ...(state.finished ? [seasonRecord(state)] : [])];
+  const totals: CareerTotals = { seasons, teamTitles: 0, driverTitles: 0, wins: 0, podiums: 0, bestPlace: null };
+  for (const record of seasons) {
+    const ours = record.teams.find((row) => row.id === state.team);
+    if (ours) {
+      totals.bestPlace = Math.min(totals.bestPlace ?? Infinity, ours.position);
+      if (ours.position === 1) totals.teamTitles += 1;
+      totals.wins += ours.wins;
+      totals.podiums += ours.podiums;
+    }
+    if (record.drivers[0]?.team === state.team) totals.driverTitles += 1;
+  }
+  return totals;
+}
+
 /** Races of the current season that have been run. */
 export const racesRun = (state: CareerState): number => state.results.length;
 

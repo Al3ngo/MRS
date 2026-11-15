@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { batteryMeter, fuelMeter, meterColour, stressMeter, tyreMeter, wetMeter } from '../src/ui/Meter';
 import { causeLabel, causePhrase, placeWords, raceGuide } from '../src/ui/race/words';
-import { sessionRules } from '../src/game/sim';
+import { BLOWOUT_WEAR, sessionRules } from '../src/game/sim';
 
 describe('meters', () => {
   it('run from red through amber to green', () => {
@@ -14,8 +14,10 @@ describe('meters', () => {
 
   it('read tyres, fuel, battery, wetness and stress the right way round', () => {
     expect(tyreMeter(0)).toMatchObject({ fill: 1, good: 1, words: 'fresh' });
-    expect(tyreMeter(0.5).fill).toBeCloseTo(0.5);
-    expect(tyreMeter(1.2)).toMatchObject({ fill: 0, good: 0, words: 'worn out' });
+    // Empty where the engine starts to risk a puncture, not at the tyre's nominal life.
+    expect(tyreMeter(BLOWOUT_WEAR / 2).fill).toBeCloseTo(0.5);
+    expect(tyreMeter(1).fill).toBeGreaterThan(0.2);
+    expect(tyreMeter(BLOWOUT_WEAR)).toMatchObject({ fill: 0, good: 0, words: 'worn out' });
     // Fuel: the bar empties as the race goes on; its colour says whether what is left is enough.
     expect(fuelMeter(50, 60, 1.2)).toMatchObject({ good: 1, words: 'enough to finish' });
     expect(fuelMeter(50, 60, 1.2).fill).toBeCloseTo(50 / 60);

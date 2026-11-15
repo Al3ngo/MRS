@@ -2,8 +2,8 @@ import { driver as driverById } from '../../game/data';
 import {
   DRY_LIMIT,
   classification,
+  raceStats,
   type QualifyingState,
-  type RaceEvent,
   type RaceState,
   type ResultRow,
 } from '../../game/sim';
@@ -38,21 +38,17 @@ export const ordinal = (place: number): string =>
   `${place}${place % 100 >= 11 && place % 100 <= 13 ? 'th' : (ORDINALS[place % 10] ?? 'th')}`;
 
 function summary({ state, rows, pole }: Outcome): [string, string][] {
-  const { setup, events } = state;
-  const count = (type: RaceEvent['type']): number => events.filter((event) => event.type === type).length;
-  const passes = events.filter((event) => event.type === 'overtake');
-  const fought = passes.filter((event) => event.type === 'overtake' && !event.error).length;
-  const rain = events.find((event) => event.type === 'rain' && event.state === 'started');
-  const dry = setup.compounds.filter((tyre) => tyre.kind === 'dry').map((tyre) => tyre.name);
+  const { setup } = state;
+  const stats = raceStats(state);
 
   let weather = 'Dry';
-  if (state.declaredWet) weather = rain && rain.time > 60 ? `Rain from lap ${rain.lap}` : 'Wet from the start';
-  else if (rain) weather = `A shower on lap ${rain.lap}`;
+  if (stats.wet) weather = stats.wetFromStart ? 'Wet from the start' : `Rain from lap ${stats.rainFromLap}`;
+  else if (stats.rainFromLap !== null) weather = `A shower on lap ${stats.rainFromLap}`;
 
   const cautions = [
-    count('safety-car') > 0 ? plural(count('safety-car'), 'safety car') : '',
-    count('virtual-safety-car') > 0 ? plural(count('virtual-safety-car'), 'virtual safety car') : '',
-    state.redFlags > 0 ? plural(state.redFlags, 'red flag') : '',
+    stats.safetyCars > 0 ? plural(stats.safetyCars, 'safety car') : '',
+    stats.virtualSafetyCars > 0 ? plural(stats.virtualSafetyCars, 'virtual safety car') : '',
+    stats.redFlags > 0 ? plural(stats.redFlags, 'red flag') : '',
   ].filter(Boolean);
 
   const winner = rows[0]!;
@@ -68,9 +64,11 @@ function summary({ state, rows, pole }: Outcome): [string, string][] {
     ['Safety car', cautions.join(', ') || 'None'],
     [
       'Overtakes',
-      passes.length - fought > 0 ? `${fought}, plus ${passes.length - fought} past a car in trouble` : `${fought}`,
+      stats.overtakesOnTrouble > 0
+        ? `${stats.overtakes}, plus ${stats.overtakesOnTrouble} past a car in trouble`
+        : `${stats.overtakes}`,
     ],
-    ['Pit stops', `${count('pit')} in all, on ${dry.join(', ').toLowerCase()} tyres`],
+    ['Pit stops', `${stats.pitStops} in all, on ${stats.dryTypes.join(', ').toLowerCase()} tyres`],
   ];
   if (state.fastestLap) {
     const holder = setup.grid.find((entrant) => entrant.id === state.fastestLap!.car)!;

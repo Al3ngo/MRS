@@ -12,6 +12,7 @@ import {
   ageIn,
   calendar,
   circuitTraits,
+  teamStyle,
   ratingsAtAge,
   rulesFor,
   teamsIn,
@@ -142,6 +143,7 @@ export function realEntrants(season: number, round: number, playerTeam?: string,
         setup: clamp(weekend ? found + 0.05 * gaussian(weekend) : found, 0.4, 1),
         engineAge: 0.3,
         player: team.team === playerTeam,
+        style: teamStyle(team.team, season),
       });
     });
   }
