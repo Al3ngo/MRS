@@ -597,3 +597,158 @@ out. It is noted for the balancing in Stage 8.
   colours. A browser test checks the car cards carry no percentages.
 - New terms are explained where they appear: "Tyre and fuel graph" and "Weather" in the race
   guide, race styles on the team lists.
+
+## Stage 6: team management, finances, development, contracts
+
+The brief's Stage 6, with its brainstorm decisions: Golden Lap-style staff with traits plus the
+modern roles; a split power unit with its own upgrades plus chassis work; this year's car against
+next year's before the big rule changes; sponsors copied from Golden Lap; prize money; the budget
+cap from 2021 with penalties; small abstract money; and contracts for drivers and staff. Golden
+Lap's own rules were checked against its official guide, player guides and reviews (the guides
+themselves could not be opened from this session; their content was read through search).
+
+### What Golden Lap does, and what this game takes from it
+
+- **Sponsors** (copied, as the brief asks): one title sponsor a season, chosen from three offers.
+  Each pays a fixed sum after every Grand Prix and a bonus when a car finishes at or above its
+  target place. A steady deal pays more for turning up, a bold one more for results. Better
+  standing (last season's place) brings richer offers. Before each race the sponsor offers
+  challenges: extra money for one particular result; take on one, or none.
+- **Car parts**: an upgrade is cheap (a little pace, mostly reliability); building a new version
+  gains much more but is fragile at first, and each new version of a part that season costs more
+  than the last (Golden Lap adds 1 each time; here 2, on bigger budgets).
+- **Staff**: hired with stats and traits; Golden Lap's engineer has one stat for how much new parts
+  gain and one for how reliable they are, and its crew chief one for stop speed and one for
+  sureness. Here each person has one skill and up to two traits, and the technical director and
+  pit crew chief cover those two jobs. Someone kept into a new season keeps the salary they had, as
+  in Golden Lap.
+- **The rhythm**: between seasons, sign people and a sponsor; between races, develop the car and
+  take on a challenge; staff and drivers change only between seasons. Golden Lap has no contract
+  negotiation (players asked for it on its forums); the brief does, so it is added (below).
+
+### Money
+
+- **The scale**: the brief's. Budgets run from about 40 a season (HRT) to 240 (the big four before
+  the cap); the best driver asks low to mid twenties a season (never more than 28); a new aero part
+  costs 8 and up; one decimal place at most. Never millions.
+- **Where it comes from**: the team's backers at the start of each season; prize money for last
+  season's place in the teams' championship (40 for the champions down to 2), also at the start;
+  the sponsor and its challenges after each Grand Prix; and the backers some drivers bring.
+- **Realistic gaps, kept by construction**: the backers' share is set so that a team finishing
+  where the real team finished, with the sponsor its standing earns, has the real team's spending
+  power. Do better than history and there is more; worse, less. From 2021 a team's income is its
+  spending power, up to the cap plus 45 (room for the salaries the cap leaves out), so the rich
+  teams sit at the cap and Williams-sized teams cannot reach it, as the brief says.
+- **What it goes on**: drivers' and staff salaries (paid race by race), car parts, next year's car,
+  and a customer team's engine lease. Money carries over between seasons. In debt, nothing can be
+  bought until it is paid off; salaries are still paid.
+- **Pay drivers**: drivers who really brought backers' money bring it here (Maldonado's PDVSA
+  money the most, 15 a season). The amounts are the game's estimates; the real deals were never
+  published in full.
+
+### The budget cap (from 2021)
+
+- 145 in 2021, 140 in 2022, 135 from 2023, as the brief sets it. It counts car development, next
+  year's car, the engine lease and staff salaries, except the three best-paid staff and the
+  drivers, who sit outside it as in the real rules.
+- **Overspend is allowed, and punished at the season's end**: up to 5% over, a fine of twice the
+  overspend and development a tenth slower next season; more than 5%, three times the overspend
+  and a quarter slower. Modelled on the real "minor" and "material" breaches; the real penalties
+  (Red Bull's 2021 fine and wind-tunnel cut) were of this kind.
+
+### Development
+
+- **The parts**: aero and chassis, and the power unit as three (the brainstorm's split): engine,
+  battery and energy recovery. 2010 has no energy recovery; 2011 to 2013 have KERS (battery and
+  recovery); hybrids from 2014. The V8 engines were frozen by the rules until the end of 2013, so
+  the engine can only be upgraded then. Only a works team rebuilds its power unit; a customer gets
+  its maker's progress. From 2026 the power unit is about half electric, and the parts weigh that
+  way.
+- **The player's car is the real car plus the team's own work.** Each part's performance is
+  counted against the real car of that team and season. A team starts each season behind its real
+  car by half a season's typical development and, by spending what the real team spent, ends it
+  ahead by as much: on average it races at its real pace. The yardstick is worked out from the
+  team's real money, its real drivers' salaries, and the staff its money buys.
+- **Proof it holds**: whole careers, 2010 to 2026, played with the team spending as the real one
+  did (`npm run lab:economy`), for every starting team. Average place against where the real car
+  ranked: Ferrari +0.06, Red Bull −0.06, Mercedes +0.13, Lotus 0.00, Virgin −0.13, HRT −0.06,
+  Force India +0.13, Sauber +0.50, Renault +0.63, Williams +0.81, Toro Rosso +0.88, McLaren −0.69
+  (negative is better). Across all twelve, 0.2 of a place behind history: no lean worth the name,
+  and each a single career with race luck in it. Money left at a season's end ran from −5 to 170;
+  the high end is a rich team under the cap with money it is not allowed to spend.
+- **Across seasons**: half of this season's gains beyond the usual carry into next year's car in a
+  quiet year, a third after a minor rules change, a tenth across a major reset (2014, 2017, 2022,
+  2026). Money put into next year's car counts against what the real team usually put in; in the
+  year before a major reset it counts more than twice as much (the brief's "teams that prepared
+  early benefit"). A typical team puts a tenth of its development money into next year's car, and
+  three tenths before a reset.
+- **Reliability**: each new version lowers its part's reliability; upgrades bring it back. The
+  car's reliability is the real car's plus the parts' average.
+- **What a step is worth** is shown in seconds a lap ("about 0.05 s a lap quicker"), on an ordinary
+  90-second lap.
+
+### Engines
+
+- **Works teams** (Ferrari, Mercedes, Renault, McLaren with Honda in 2015 to 2017, Red Bull with
+  Honda from 2019 and with Ford in 2026, Audi in 2026) build and develop their own power units.
+- **Customer teams** choose a supplier each winter from the makers that really sold engines that
+  year, at a lease that is dearer for a better engine. How strong each maker's engine was, season
+  by season, is the game's reading of the record (Mercedes ahead from 2014, Honda's hard 2015 to
+  2017, Ferrari's 2020 dip); it only matters when a customer changes supplier.
+
+### Power units
+
+- **The allowance per car per season** is the real one, as set in Stage 2 (eight engines to 2013,
+  then the hybrid limits, plus batteries from 2014). Every weekend wears the fitted units:
+  practice and qualifying a fixed amount, the race as hard as it was driven (engine modes, laps).
+  A worn-out unit is replaced before the next weekend; the team can fit one early.
+- **Penalties**: 10 grid places for each extra engine to 2013; from 2014, 10 for the first extra
+  of each kind in a season and 5 for each one after (the rule since 2015), applied to the Grand
+  Prix grid. Units last so that a season at the standard engine mode, sprints included, just fits
+  the allowance; pushing hard does not. Worn units break down more often.
+
+### Staff
+
+- **Five roles**: technical director (gain and reliability of new parts), aerodynamicist (extra
+  gain on aero parts and on next year's car), race engineer (a closer baseline setup and clearer
+  feedback in practice), strategist (how far ahead the forecast can be trusted, and better calls
+  when the team runs a car), pit crew chief (stop speed and sureness).
+- **Traits**: innovator, meticulous, thrifty, rising star, veteran, demanding, rain reader, calm,
+  each with one plain line on what it does. Each comes up for about one person in six; more than
+  half have none.
+- **Staff are invented people** with invented names, as in Golden Lap; so are the sponsors. The
+  brief asks for real teams and drivers; putting real engineers or brands to work in a game was not
+  asked for.
+
+### Contracts and the market
+
+- **Contracts run one to three seasons.** The asking salary follows the driver's overall rating.
+  Young drivers ask more for long deals (they want to stay free to move up); older ones take less
+  for security. Staff ask by skill.
+- **Negotiation, by clear rules**: offer the asking salary and he signs; offer 85% of it and he may
+  take it (more readily from a top-four team), but turns it down for good that winter if not. The
+  best drivers only talk to teams that can win (a driver rated 92 or more to a top-five team, and so
+  on).
+- **The market opens between seasons**: the player's drivers whose contracts ended, every driver
+  whose real career moved him that winter, the coming season's rookies, and drivers between drives
+  who raced in one of the two seasons before. A driver who really stayed with his team is under
+  contract and not for sale. Drivers who retired in reality are gone (the driver lifecycle comes in
+  Stage 7).
+- **The other teams keep the real record**: they race the drivers who really raced for them, except
+  that a driver the player has signed races for the player, and his real team puts the best free
+  driver in his seat. The other teams' finances and development are not simulated: their cars stay
+  the real ones.
+
+### When the game makes the choices
+
+"Skip ahead" (and the tests) settle the team's business the way the real team did where it can:
+the drivers who really drove for it that season, otherwise its own drivers renewed, otherwise the
+best it can afford; staff renewed unless the market has clearly better; the same engine; the
+balanced sponsor; between races, this round's share of the real team's development money on the
+cheapest new parts, upgrades for fragile parts, and its share of next year's car.
+
+### Saves
+
+Save version 3. A career from Stage 5 takes over its team's business when loaded: the team's real
+drivers and the staff its money buys, with the season's backers' and prize money, and it signs a
+sponsor before its next session.

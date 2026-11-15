@@ -105,7 +105,7 @@ export function traitLine(trait: TraitId, role: StaffRole): string {
 
 /** How good someone is at the job, in a word. */
 export function skillWord(skill: number): string {
-  if (skill >= 88) return 'world class';
+  if (skill >= 88) return 'outstanding';
   if (skill >= 75) return 'very good';
   if (skill >= 60) return 'good';
   if (skill >= 45) return 'average';

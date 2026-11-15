@@ -136,6 +136,14 @@ laps.
 npm run lab:styles -- 2019 ferrari 3
 ```
 
+```bash
+npm run lab:economy -- ferrari williams hrt
+```
+
+plays whole careers with the team's business run the way the real team ran it, and prints each
+season's place against the real team's, the money left, how far each part is ahead of or behind
+the real car, the engines used against the allowance and the budget cap.
+
 runs one team's cars through a season under each race style (cautious, balanced, aggressive) and
 prints grid and finishing places, points, crashes, stops, laps on all-out and stress.
 
@@ -169,6 +177,8 @@ src/game/               the game itself: plain data and pure functions, no brows
 src/game/data/          the seasons: generated facts, and the game's own ratings and rules
 src/game/sim/           the race engine: practice, qualifying, the race, the pit wall
 src/game/season/        the season: weekend formats, the grid of a round, sessions, championships
+src/game/team/          the team off the track: money, sponsors, staff, contracts, engines,
+                        development, power units, the budget cap
 src/platform/           the browser: save store, backup files, service worker, storage
 src/app/                app state, screen addresses, the actions screens call
 src/ui/                 screens and components

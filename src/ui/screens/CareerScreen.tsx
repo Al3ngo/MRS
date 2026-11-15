@@ -377,6 +377,8 @@ function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team:
         </section>
       )}
 
+      <MoneyCard career={career} />
+
       {seasonOver ? (
         <SeasonReview record={seasonRecord(career)} team={team} />
       ) : (
@@ -410,7 +412,6 @@ function BetweenRaces({ career, team, seasonOver }: { career: CareerState; team:
       )}
 
       {!seasonOver && <SponsorCard career={career} />}
-      <MoneyCard career={career} />
       <PeopleCard career={career} />
       <p class="smallprint">Between races: the Car tab is where the car is developed.</p>
     </div>

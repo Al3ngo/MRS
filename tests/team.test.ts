@@ -202,6 +202,8 @@ describe('drivers and the market', () => {
     expect(market).not.toContain('lewis-hamilton');
     expect(marketDrivers(2013, 'williams', [], []).map((entry) => entry.driver)).not.toContain('robert-kubica');
     expect(marketDrivers(2013, 'williams', [], []).map((entry) => entry.driver)).toContain('lewis-hamilton');
+    // Retired in reality: gone, even straight after his last season.
+    expect(marketDrivers(2013, 'williams', [], []).map((entry) => entry.driver)).not.toContain('michael-schumacher');
   });
 
   it('knows who retired', () => {

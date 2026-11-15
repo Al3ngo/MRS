@@ -95,7 +95,7 @@ export function MoneyCard({ career }: { career: CareerState }) {
             : 'Car development, next year’s car, the engine lease and most staff pay count against the cap. Drivers and the three best-paid staff do not.'}
         </p>
       )}
-      <button type="button" class="button button--secondary button--block" onClick={() => setOpen(true)}>
+      <button type="button" class="button button--secondary button--block money__books" onClick={() => setOpen(true)}>
         See the books
       </button>
       {open && (

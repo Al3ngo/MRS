@@ -1753,8 +1753,12 @@ button.slot__main:disabled .slot__go {
 }
 
 .money__figure {
-  font-size: 34px;
-  line-height: 40px;
+  font-size: 22px;
+  line-height: 28px;
+}
+
+.money__books {
+  margin-top: 20px;
 }
 
 .money__figure--short {

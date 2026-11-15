@@ -1,8 +1,9 @@
 /**
  * Drivers' contracts and the driver market.
  *
- * A driver's asking salary follows how good he is (his overall rating): about 24 a season for the
- * very best, around 4 for a solid midfielder, under 1 for a beginner. Some drivers bring backers
+ * A driver's asking salary follows how good he is (his overall rating): low to mid twenties a
+ * season for the very best (never more than 28), around 4 for a solid midfielder, under 1 for a
+ * beginner. Some drivers bring backers
  * who pay the team; a few of them pay more than they ask. Contracts run one to three seasons.
  *
  * The market opens between seasons. On it are the player's own drivers whose contracts have run
@@ -58,14 +59,17 @@ export const driverIn = (driver: string, season: number): DriverSeason | undefin
   season >= 2010 && season <= 2026 ? driversBy(season).find((entry) => entry.driver.id === driver) : undefined;
 
 /** What a driver asks a season on a contract of `length` seasons. */
+/** The most any driver asks a season: the brief's "around 20-something" for the very best. */
+const TOP_SALARY = 28;
+
 export function driverAsk(entry: DriverSeason, length = 1): number {
-  let ask = Math.exp(0.127 * (entry.overall - 70));
+  let ask = Math.exp(0.118 * (entry.overall - 70));
   if (entry.age <= 22) ask *= 0.75;
   if (entry.age >= 37) ask *= 0.8;
   // Young drivers want to stay free to move up; older ones want security.
   if (entry.age <= 25) ask *= 1 + 0.06 * (length - 1);
   if (entry.age >= 33) ask *= 1 - 0.06 * (length - 1);
-  return money(Math.max(0.5, ask));
+  return money(Math.min(TOP_SALARY, Math.max(0.5, ask)));
 }
 
 const realTeams = new Map<number, ReadonlyMap<string, string>>();
@@ -141,7 +145,7 @@ export function marketDrivers(season: number, team: string, keep: readonly strin
     // seasons before (a year out counts; a long absence, like Kubica's after his injury, does not).
     const next = realTeamOf(id, season);
     const before = realTeamOf(id, season - 1);
-    if (next === null && !recentlyRaced(id, season) && fact.debut !== season) continue;
+    if (next === null && (fact.raced[1] < season || !recentlyRaced(id, season)) && fact.debut !== season) continue;
     const mine = expired.includes(id);
     if (!mine && before !== null && before === next && next !== team) continue; // stays where he was
     const entry = driverIn(id, season);
@@ -182,13 +186,15 @@ export function contractFor(entry: DriverSeason, season: number, length: number,
 
 /**
  * The best driver not otherwise racing: who a team the simulation runs puts in a seat the player
- * has taken from it. Drivers racing that season or in one of the two before, 40 or under.
+ * has taken from it. Drivers whose real careers go on that season, racing then or in one of the two
+ * seasons before, 40 or under.
  */
 export function bestFreeDriver(season: number, taken: ReadonlySet<string>): DriverSeason | undefined {
   return driversBy(season).find(
     (entry) =>
       !taken.has(entry.driver.id) &&
       entry.age <= 40 &&
+      entry.driver.raced[1] >= season &&
       (realTeamOf(entry.driver.id, season) !== null || recentlyRaced(entry.driver.id, season)),
   );
 }

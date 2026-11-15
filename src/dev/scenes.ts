@@ -7,7 +7,7 @@
 import { openDB } from 'idb';
 import { finishManagement, newCareer, roundsIn, type CareerState, type SessionKind } from '../game/career';
 import { SCHEMA_VERSION } from '../game/save-schema';
-import { autoPreseason, newOutfit } from '../game/team';
+import { autoPreseason, newOutfit, sponsorOffers } from '../game/team';
 import { DEFAULT_DATABASE_NAME, SLOT_IDS, createSaveStore, type SlotId } from '../platform/saves';
 
 const MINUTE = 60_000;
@@ -76,7 +76,10 @@ const SCENES: Readonly<Record<string, () => Promise<void>>> = {
   /** The turn of a season: Williams going into 2013, with a seat, staff and a sponsor to sign. */
   winter: async () => {
     const last = careerAt('scene-winter', 'williams', 2012, roundsIn(2012), 'management');
-    await put(1, finishManagement(last), 5 * MINUTE);
+    const winter = finishManagement(last);
+    // The staged season has no results; give Williams its real 2012 place, eighth.
+    const outfit = winter.outfit && { ...winter.outfit, lastPlace: 8, sponsorOffers: sponsorOffers(8, 2013, 1) };
+    await put(1, { ...winter, outfit }, 5 * MINUTE);
   },
   /** A finished career, a damaged save with a safety copy, and a save from a newer version. */
   trouble: async () => {

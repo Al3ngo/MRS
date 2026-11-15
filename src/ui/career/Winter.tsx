@@ -173,7 +173,19 @@ function ContractsSheet({ career, close }: { career: CareerState; close: () => v
   const signed = outfit.drivers.filter((contract) => contract.until >= season);
   const lapsed = outfit.drivers.filter((contract) => contract.until < season);
 
-  if (offer) return <OfferSheet career={career} offer={offer} back={() => setOffer(null)} />;
+  // After a signing, back to the contracts to see what is left; otherwise back to the list.
+  if (offer) {
+    return (
+      <OfferSheet
+        career={career}
+        offer={offer}
+        back={(signed) => {
+          setOffer(null);
+          if (signed) setMarket(null);
+        }}
+      />
+    );
+  }
   if (market === 'drivers') return <DriverMarket career={career} pick={(id) => setOffer({ kind: 'driver', id })} back={() => setMarket(null)} />;
   if (market) return <StaffMarket career={career} role={market} pick={(member) => setOffer({ kind: 'staff', member })} back={() => setMarket(null)} />;
 
@@ -317,7 +329,7 @@ function StaffMarket({ career, role, pick, back }: { career: CareerState; role: 
   );
 }
 
-function OfferSheet({ career, offer, back }: { career: CareerState; offer: NonNullable<Offer>; back: () => void }) {
+function OfferSheet({ career, offer, back }: { career: CareerState; offer: NonNullable<Offer>; back: (signed: boolean) => void }) {
   const [length, setLength] = useState(2);
   const [answer, setAnswer] = useState<string | null>(null);
   const outfit = career.outfit!;
@@ -355,7 +367,7 @@ function OfferSheet({ career, offer, back }: { career: CareerState; offer: NonNu
   };
 
   return (
-    <Sheet title={`An offer to ${name}`} onClose={back}>
+    <Sheet title={`An offer to ${name}`} onClose={() => back(signedNow)}>
       {!isDriver && <p class="muted">{ROLE_LINES[offer.member.role]}</p>}
       {isDriver && entry && (
         <p class="muted">
@@ -391,7 +403,7 @@ function OfferSheet({ career, offer, back }: { career: CareerState; offer: NonNu
             </button>
           </>
         )}
-        <button type="button" class="button button--quiet button--block" onClick={back}>
+        <button type="button" class="button button--quiet button--block" onClick={() => back(signedNow)}>
           {signedNow ? 'Done' : 'Back'}
         </button>
       </div>
