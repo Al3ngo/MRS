@@ -39,6 +39,8 @@ function careerAt(
     sessionsCompleted: (seasonYear - 2010) * 90 + round * 4,
     finished,
     outfit,
+    // Staged careers are well under way: the tutorial is done, unless a scene says otherwise.
+    tutorial: { seen: [], off: true },
   };
 }
 
@@ -112,6 +114,11 @@ const SCENES: Readonly<Record<string, () => Promise<void>>> = {
       },
       5 * MINUTE,
     );
+  },
+  /** A career just started, at its first tip: Williams before its first season. */
+  tutorial: async () => {
+    const career = careerAt('scene-tutorial', 'williams', 2010, 1, 'practice');
+    await put(1, { ...career, sessionsCompleted: 0, tutorial: { seen: [], off: false } }, 1 * MINUTE);
   },
   /** A finished career, a damaged save with a safety copy, and a save from a newer version. */
   trouble: async () => {

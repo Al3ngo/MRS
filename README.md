@@ -3,18 +3,16 @@
 A single-player motorsport team management game for the phone, covering the 2010 to 2026 seasons.
 It installs to the home screen and plays with no network at all. A personal project.
 
-**Status: Stage 5 of 8 is built.** The app installs, runs offline and keeps three save slots
-(Stage 1); it carries the real data of all 17 seasons (Stage 2); it has its race engine (Stage 3)
-and a race view run from the pit wall (Stage 4), now with driver push levels and stress; and a
-career is a real season loop (Stage 5): choose a team, then practice, qualifying, the sprint
-sessions on sprint weekends and the race, round after round on the real calendar, with the
-drivers' and constructors' championships scored by each year's rules, from 2010 to the end of
-2026. Between races there is nothing to manage yet: money, development, staff and contracts are
-Stage 6, and until then every team runs the drivers and car it really had. A single race can still
-be run from the season almanac. A readability pass since then shows tyres, fuel, battery, track
-wetness and stress as coloured bars, explains every setup option, draws the driver's feedback as
-arrows on the setup sliders, and puts the whole game in plain English. The build plan is in the brief; choices made along the way are in
-[DECISIONS.md](DECISIONS.md).
+**Status: all 8 stages are built.** The app installs, runs offline and keeps three save slots; it
+carries the real data of all 17 seasons; its race engine runs every car from a pit wall, with push
+levels, driver stress, team race styles, tyres, fuel, batteries and weather. A career is the real
+season loop (practice, qualifying, sprints, the race, both championships by each year's rules) with
+the team to run between races: money, sponsors and their challenges, staff, contracts and the
+driver market, car development, engines, power units and the budget cap. Drivers age, improve,
+retire and, rarely, are lost; made-up drivers and a junior academy keep the grid full to 2026. A
+one-time tutorial walks through the first weekend, and the races have sound made in code (engines
+that sound as each era did). A single race can still be run from the season almanac. The build
+plan is in the brief; choices made along the way are in [DECISIONS.md](DECISIONS.md).
 
 ## Run it
 
@@ -48,10 +46,10 @@ works from the root of a site or from any sub-folder, with no configuration.
 Then, on the phone:
 
 - **iPhone or iPad:** open the address in Safari, tap Share, then Add to Home Screen.
-- **Android:** open it in Chrome and choose Install app (the System screen in the game also offers
+- **Android:** open it in Chrome and choose Install app (the Settings screen in the game also offers
   an Install button).
 
-Open the installed app once while still online, and check that **System > Offline play** says
+Open the installed app once while still online, and check that **Settings > Offline play** says
 *Stored*. From then on it needs no connection.
 
 Two things worth knowing about saves:
@@ -170,6 +168,8 @@ npm run data -- --f1db <path to f1db> --circuits <path to f1-circuits>
 
 - [F1DB](https://github.com/f1db/f1db), CC BY 4.0: calendars, entries, drivers, results.
 - [f1-circuits](https://github.com/bacinger/f1-circuits) by Tomislav Bacinger, MIT: circuit outlines.
+- [OpenStreetMap](https://www.openstreetmap.org/copyright), © OpenStreetMap contributors, ODbL 1.0:
+  the outlines of Buddh and Yeongam, kept in `scripts/data/osm-outlines.json`.
 
 Ratings, team colours, money and circuit character are the game's own and live beside them in
 `src/game/data/`.
@@ -188,11 +188,12 @@ src/game/season/        the season: weekend formats, the grid of a round, sessio
 src/game/team/          the team off the track: money, sponsors, staff, contracts, engines,
                         development, power units, the budget cap, the junior academy
 src/game/world/         the drivers' world: retirements, fatal accidents, made-up drivers
-src/platform/           the browser: save store, backup files, service worker, storage
+src/platform/           the browser: save store, backup files, service worker, storage, sound
 src/app/                app state, screen addresses, the actions screens call
 src/ui/                 screens and components
 src/ui/race/            the race view: circuit map, drawing, race clock, wording
-src/ui/career/          pieces of the career screens: standings, names
+src/ui/career/          pieces of the career screens: the team, the car, the winter, standings
+src/ui/tutorial/        the one-time tutorial: its tips and the pop-up that shows them
 src/styles/             design tokens and styles
 src/dev/                staged save states for screenshots (left out of normal builds)
 scripts/                data generator, icon maker, the balance lab
@@ -218,14 +219,15 @@ Rules the code keeps to:
 ## Releasing a new version
 
 Build and upload `dist/` again. A phone that has the game installed downloads the new version in the
-background the next time it is opened online, and offers **Update now** on the Careers and System
+background the next time it is opened online, and offers **Update now** on the Careers and Settings
 screens. It never reloads on its own, so a session in progress is not interrupted; if the offer is
 ignored, the new version takes over the next time the app is fully closed and reopened.
 
 ## Credits
 
 Typefaces: Inter and Barlow Condensed, both under the SIL Open Font License (licences in
-`src/assets/fonts/`). Season data from F1DB (CC BY 4.0); circuit outlines from f1-circuits (MIT).
+`src/assets/fonts/`). Season data from F1DB (CC BY 4.0); circuit outlines from f1-circuits (MIT) and, for Buddh and
+Yeongam, OpenStreetMap (© OpenStreetMap contributors, ODbL 1.0). Every sound is made in code.
 The icon and all artwork are drawn for this project.
 
 This is a fan-made, personal-use project. It is not affiliated with any racing series, team, driver

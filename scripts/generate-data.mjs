@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Builds the game's factual data (src/game/data/generated/) from two open sources:
+ * Builds the game's factual data (src/game/data/generated/) from these open sources:
  *
  *   F1DB                 https://github.com/f1db/f1db              CC BY 4.0
  *   F1 circuits GeoJSON  https://github.com/bacinger/f1-circuits   MIT
+ *   OpenStreetMap        two circuits the set above lacks, kept in scripts/data/osm-outlines.json
+ *                        (© OpenStreetMap contributors, ODbL 1.0)
  *
  * Usage, with both repositories cloned somewhere outside this project:
  *
@@ -11,7 +13,7 @@
  *
  * Everything in the output is a fact about the real 2010 to 2026 seasons. The game's own
  * judgements (ratings, colours, circuit character) are written by hand elsewhere in src/game/data.
- * Circuits the outline set lacks are drawn by hand in scripts/data/sketched-outlines.json.
+ * A circuit with no open outline at all is drawn by hand in scripts/data/sketched-outlines.json.
  *
  * The output is deterministic: the same two checkouts always give the same files.
  */
@@ -106,8 +108,17 @@ const OUTLINE_FILES = {
  *
  * Silverstone: the outline starts on the old pit straight before Copse. Since 2011 the start line
  * has been on the straight between Club and Abbey, a little over half a lap further on.
+ *
+ * Yeongam: the OpenStreetMap line starts in the last sector. The start line is on the straight
+ * before Turn 1, the left-hander that leads to the 1.2 km straight and the Turn 3 hairpin.
  */
-const START_LINES = { silverstone: 3240 };
+const START_LINES = { silverstone: 3240, yeongam: 1990 };
+
+/** Outlines from OpenStreetMap, for circuits the f1-circuits set lacks. */
+const osmFile = join(root, 'scripts', 'data', 'osm-outlines.json');
+const OSM_OUTLINES = existsSync(osmFile)
+  ? Object.fromEntries(JSON.parse(readFileSync(osmFile, 'utf8')).features.map((feature) => [feature.properties.id, feature]))
+  : {};
 
 // ── Race results ────────────────────────────────────────────────────────────────────────────
 
@@ -220,8 +231,7 @@ function settle(points) {
 }
 
 function surveyedOutline(id, direction, officialKm) {
-  const file = join(circuitsRepo, 'circuits', `${OUTLINE_FILES[id]}.geojson`);
-  const geo = JSON.parse(readFileSync(file, 'utf8'));
+  const geo = OSM_OUTLINES[id] ?? JSON.parse(readFileSync(join(circuitsRepo, 'circuits', `${OUTLINE_FILES[id]}.geojson`), 'utf8'));
   const geometry = (geo.features ? geo.features[0] : geo).geometry;
   if (geometry.type !== 'LineString') throw new Error(`${id}: expected a LineString outline`);
   let points = toMetres(geometry.coordinates);
@@ -556,7 +566,7 @@ const circuits = [...circuitIds].sort().map((id) => {
   const circuit = record('circuits', id);
   const shown = CIRCUIT_NAMES[id] ?? {};
   const direction = DIRECTIONS[circuit.direction];
-  const surveyed = OUTLINE_FILES[id] !== undefined;
+  const surveyed = OUTLINE_FILES[id] !== undefined || OSM_OUTLINES[id] !== undefined;
   // The outline set shows each circuit as it is today, so it is checked against the lap length of
   // the circuit's most recent race in these seasons.
   const km = latestLapKm.get(id);
@@ -587,7 +597,8 @@ const HEADER = `/*
  * GENERATED FILE. Do not edit by hand: run scripts/generate-data.mjs instead.
  *
  * Facts from F1DB ${sources.f1db}, https://github.com/f1db/f1db, CC BY 4.0,
- * and circuit outlines from https://github.com/bacinger/f1-circuits (${sources.circuits}), MIT.
+ * and circuit outlines from https://github.com/bacinger/f1-circuits (${sources.circuits}), MIT,
+ * and for Buddh and Yeongam from OpenStreetMap, © OpenStreetMap contributors, ODbL 1.0.
  */
 `;
 

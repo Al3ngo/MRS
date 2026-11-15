@@ -114,18 +114,20 @@ export function SystemScreen() {
                   Volume
                 </label>
                 <div class="volume">
-                  <input
-                    id="sound-volume"
-                    class="volume__slider"
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={Math.round(sound.volume * 100)}
-                    disabled={sound.muted}
-                    style={{ '--fill': `${Math.round(sound.volume * 100)}%` }}
-                    onInput={(event) => setSound({ volume: Number((event.target as HTMLInputElement).value) / 100 })}
-                  />
+                  <span class={`volume__track${sound.muted ? ' volume__track--off' : ''}`}>
+                    <span class="volume__fill" style={{ width: `${Math.round(sound.volume * 100)}%` }} />
+                    <input
+                      id="sound-volume"
+                      class="volume__slider"
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={Math.round(sound.volume * 100)}
+                      disabled={sound.muted}
+                      onInput={(event) => setSound({ volume: Number((event.target as HTMLInputElement).value) / 100 })}
+                    />
+                  </span>
                   <span class="figure volume__value">{Math.round(sound.volume * 100)}</span>
                 </div>
               </div>

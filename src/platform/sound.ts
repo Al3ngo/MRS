@@ -62,7 +62,7 @@ let noiseBuffer: AudioBuffer | null = null;
 type AudioWindow = Window & { webkitAudioContext?: typeof AudioContext };
 type SessionNavigator = Navigator & { audioSession?: { type: string } };
 
-function unlock(): void {
+function startAudio(): void {
   if (!context) {
     const Maker = window.AudioContext ?? (window as AudioWindow).webkitAudioContext;
     if (!Maker) return;
@@ -92,7 +92,7 @@ function unlock(): void {
 /** Starts listening for the first touch, and for button presses (each one clicks). Once, at boot. */
 export function armSound(): void {
   for (const name of ['pointerup', 'touchend', 'click', 'keydown']) {
-    window.addEventListener(name, unlock, { capture: true, passive: true });
+    window.addEventListener(name, startAudio, { capture: true, passive: true });
   }
   document.addEventListener('visibilitychange', () => {
     if (!context) return;

@@ -2055,10 +2055,45 @@ button.slot__main:disabled .slot__go {
   font-size: 18px;
 }
 
-/* The volume slider: a white bar filled to the level, on a grey track, with a white thumb. */
-.volume__slider {
+/*
+ * The volume slider: a white bar filled to the level, on a grey track, with a white thumb. The bar
+ * is drawn behind the browser's own slider, whose track is left clear.
+ */
+.volume__track {
+  position: relative;
   flex: 1;
   min-width: 0;
+  height: var(--control-height);
+  display: flex;
+  align-items: center;
+}
+
+.volume__track::before,
+.volume__fill {
+  content: '';
+  position: absolute;
+  left: 0;
+  height: 6px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.volume__track::before {
+  right: 0;
+  background: var(--control);
+}
+
+.volume__fill {
+  background: var(--text);
+}
+
+.volume__track--off {
+  opacity: 0.4;
+}
+
+.volume__slider {
+  position: relative;
+  width: 100%;
   height: var(--control-height);
   margin: 0;
   background: transparent;
@@ -2069,14 +2104,12 @@ button.slot__main:disabled .slot__go {
 
 .volume__slider::-webkit-slider-runnable-track {
   height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(to right, var(--text) var(--fill), var(--control) var(--fill));
+  background: transparent;
 }
 
 .volume__slider::-moz-range-track {
   height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(to right, var(--text) var(--fill), var(--control) var(--fill));
+  background: transparent;
 }
 
 .volume__slider::-webkit-slider-thumb {
@@ -2099,7 +2132,6 @@ button.slot__main:disabled .slot__go {
 
 .volume__slider:disabled {
   cursor: default;
-  opacity: 0.4;
 }
 
 .volume__slider:focus-visible {

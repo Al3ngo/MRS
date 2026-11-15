@@ -112,7 +112,8 @@ closest in how the game plays (quick, simple, few screens), not as a copy of how
   of the official lap length.
 - **Three are rough hand sketches: Valencia, Yeongam and Buddh.** No open outline for them could be
   reached from the build environment. They are marked as sketches in the data and on screen, and
-  are the one known weak spot of this stage (ten races out of 352).
+  are the one known weak spot of this stage (ten races out of 352). *Stage 8: Buddh and Yeongam are
+  now surveyed too, from OpenStreetMap; only Valencia is still a sketch (see Stage 8).*
 - **Each circuit has one outline, its present-day layout.** Lap length and turn count are correct
   for every year, but the drawing does not change for the 2010 Bahrain endurance loop, the 2020
   Bahrain outer circuit, or the older Yas Marina, Albert Park and Marina Bay layouts.
@@ -890,3 +891,53 @@ Overtakes, stops, safety cars, breakdowns and finishes stay inside the Stage 3 b
 The team business stays neutral: run by the game's own choices, Ferrari finishes on average where
 the real Ferrari did (+0.00 places), Williams 0.63 places lower, HRT 0.06 places higher
 (`npm run lab:economy`).
+
+### The tutorial
+
+- **Golden Lap's way: short pop-ups through the first race weekend.** Twenty-one tips, a sentence
+  or two each, each pointing at the part of the screen it explains: the team's home (and the
+  sponsor to sign first), practice and the driver's arrows, qualifying, the briefing, the race plan,
+  the race screen (the race is held while a tip is up), the result, and the first management phase
+  (the challenge, the Car tab). Each tip shows once per career; which have been read is kept in the
+  save, so a reload carries on where it was.
+- **Skip or replay.** Every tip has "Skip the tutorial". The settings list each career with a
+  "Replay tutorial" button; the tips then show again, each the next time its screen comes up.
+- **Careers from before Stage 8** (save version 4) count the tutorial as done, since the player has
+  already learned the game by playing it; it can be replayed. Save version 5.
+
+### Sound
+
+- **Made in code, fully offline.** Every sound is synthesised with the Web Audio API at the moment
+  it plays; nothing is downloaded, so there are no sound files and nothing to license.
+- **Engines by era**, after the real ones:
+  - 2010-13: the V8 at 18,000 rpm, a high, hard scream (its firing note about 1,200 Hz).
+  - 2014-25: the turbo V6 hybrid at about 11,000 rpm, an octave lower, muffled, with the turbo's
+    whistle.
+  - 2026: the same engine duller, under the whine of the bigger electric motor.
+
+  The settings have a button for each, to hear the difference.
+- **What plays in a race**: each car passing the pit wall on the start-and-finish straight (rising
+  then falling as it goes by, across the speakers; spray in the wet); the rest of the field in the
+  distance, quieter behind a safety car; rain, as hard as it is raining; the wheel guns at the
+  player's pit stops; crashes and collisions; the field's roar at lights out. At 4x only the
+  player's own cars are heard going past. A paused race is silent.
+- **Button clicks** everywhere: a short, soft tick.
+- **Settings**: on or off, and a volume, kept on the device (not in a career). A sound button on
+  the race screen turns it off and on. On iPhone the game plays as "ambient" audio: it mixes with
+  the player's music and stays quiet when the phone is on silent.
+
+### Settings
+
+- The System screen is now **Settings**: sound and the tutorial first, then offline play, the home
+  screen and the saves. A gear on the team's home screen opens it.
+
+### Polish
+
+- **The race starts when Start is pressed.** Before, a race in a career opened paused: the screen
+  took the race it had just saved for one being carried on. A race carried on still opens paused.
+- **Buddh and Yeongam are drawn from OpenStreetMap** (© OpenStreetMap contributors, ODbL 1.0)
+  instead of hand sketches: both centre-lines measure within 0.3% of the official lap. Yeongam's
+  start line is set on the straight before Turn 1. The lines are kept in
+  `scripts/data/osm-outlines.json`, where the data generator reads them. No open outline of the
+  Valencia street circuit could be found from the build environment, so it is still a sketch,
+  marked as one in the almanac (three races, 2010-12).
