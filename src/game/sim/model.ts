@@ -97,11 +97,11 @@ export const PUSH_LEVELS: readonly PushLevel[] = ['conserve', 'normal', 'push', 
  * negative figure is stress shed). All-out is worth about seven tenths a lap and fills the stress
  * gauge in about three laps: a burst, not a way to run a race.
  */
-export const PUSH: Readonly<Record<PushLevel, { pace: number; tyres: number; stress: number }>> = {
-  conserve: { pace: 0.0035, tyres: 0.82, stress: -22 },
-  normal: { pace: 0, tyres: 1, stress: -10 },
-  push: { pace: -0.0028, tyres: 1.18, stress: 4 },
-  'all-out': { pace: -0.0075, tyres: 1.4, stress: 32 },
+export const PUSH: Readonly<Record<PushLevel, { pace: number; tyres: number; stress: number; mistakes: number }>> = {
+  conserve: { pace: 0.0035, tyres: 0.82, stress: -22, mistakes: 0.85 },
+  normal: { pace: 0, tyres: 1, stress: -10, mistakes: 1 },
+  push: { pace: -0.0028, tyres: 1.18, stress: 4, mistakes: 1.15 },
+  'all-out': { pace: -0.0075, tyres: 1.4, stress: 32, mistakes: 1.4 },
 };
 
 /** Stress gained per lap holding off a car within striking distance, at normal. */

@@ -848,3 +848,45 @@ hiring pool is topped up with young drivers with room to grow.
 
 Save version 4. A Stage 6 career gains its drivers' world when loaded: nobody lost, this season's
 prospects, fatal accidents on, an empty academy.
+
+## Stage 8: polish, balancing, the tutorial and sound
+
+### Balancing the races
+
+Before this stage, 3 runs of every round of seven seasons showed the best car winning too often:
+Red Bull took 82% of the 2010 races (really 47%), McLaren 68% of 2012's (really 35%), Mercedes
+80% of 2017's (really 60%). The car on pole won 42% to 76% of the time, against about half in the
+real seasons. The cause was that a team's car was equally quick at every round, all season.
+Three changes, all small:
+
+- **A team's weekend form.** Each team's car is a little better or worse than its season average
+  each weekend: a spread of 3 points on aero, chassis and power, the same for qualifying and the
+  race. Real teams had circuits that suited them and upgrades that did not work; this stands in
+  for both. It applies to every team, the player's included, and depends only on the career, the
+  round and the team, so a weekend replays the same.
+- **Race pace against one-lap pace.** Each car also runs a little quicker or slower on Sunday than
+  it qualified: a spread of 0.2% of a lap (about two tenths). Some cars are kinder to their tyres
+  over a stint, some are quick over one lap only.
+- **The push level adds mistakes of its own.** Left open before Stage 6 for this stage: the brief
+  says the push level trades pace against tyre wear, mistakes and stress. Mistakes now rise
+  straight away with the push level (conserve 0.85 times as likely, push 1.15, all-out 1.4), as
+  well as with the stress that pushing builds.
+
+After (3 runs of every round; the real share in brackets):
+
+| Season | Pole wins | Leading team's wins |
+|---|---|---|
+| 2010 | 44% | Red Bull 68% (47%) |
+| 2012 | 42% | McLaren 53% (35%) |
+| 2014 | 53% | Mercedes 81% (84%) |
+| 2017 | 50% | Mercedes 65% (60%) |
+| 2019 | 56% | Mercedes 63% (71%) |
+| 2022 | 56% | Red Bull 74% (77%) |
+| 2025 | 53% | McLaren 50% (58%) |
+
+Overtakes, stops, safety cars, breakdowns and finishes stay inside the Stage 3 bands
+(`tests/sim-seasons.test.ts`). The engine fingerprints were recorded again for the new results
+(`tests/engine-fingerprints.test.ts`); the test still proves that reading a race never changes it.
+The team business stays neutral: run by the game's own choices, Ferrari finishes on average where
+the real Ferrari did (+0.00 places), Williams 0.63 places lower, HRT 0.06 places higher
+(`npm run lab:economy`).

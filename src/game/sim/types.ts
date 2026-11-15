@@ -67,6 +67,11 @@ export interface Entrant {
   style?: TeamStyle;
   /** The player's strategist, 0 to 1, for the calls the team makes when a car is handed over. */
   strategist?: number;
+  /**
+   * How much slower (or, below zero, quicker) the car runs on race day than its qualifying pace
+   * suggests, as a share of a lap: tyre wear, a race setup, the car on heavy fuel. Missing means none.
+   */
+  racePace?: number;
 }
 
 export interface SessionRules {

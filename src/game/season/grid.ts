@@ -12,7 +12,7 @@
  */
 import { DRIVERS, TEAMS, driver, driversBy, teamColour, teamStyle, teamsIn } from '../data';
 import { activeIn, newWorld, type World } from '../world';
-import { realCar, realEntrants, ratingsIn, USUAL_SETUP } from '../sim/session';
+import { racePaceOf, realCar, realEntrants, ratingsIn, USUAL_SETUP, weekendForm, withForm } from '../sim/session';
 import { seedFrom } from '../sim/rng';
 import type { Entrant } from '../sim/types';
 import {
@@ -78,7 +78,10 @@ export function roundEntrants(
   const real = entrants.filter((entrant) => entrant.team === team);
   const last = lastReal(team);
   const named = realTeamIn(team, season) ? real[0] : undefined;
-  const car = playerCar(baseCar(team, season), outfit.parts, season, supplierDelta(outfit, team, season), pitCrewRating(outfit));
+  const car = withForm(
+    playerCar(baseCar(team, season), outfit.parts, season, supplierDelta(outfit, team, season), pitCrewRating(outfit)),
+    weekendForm(team, seed),
+  );
   const weekend = seedFrom(team, season, round, 'survivor');
   const mine: Entrant[] = outfit.drivers.slice(0, 2).map((contract, seat) => {
     const id = `${team}-${seat + 1}`;
@@ -98,6 +101,7 @@ export function roundEntrants(
       player: true,
       style: teamStyle(team, Math.min(season, last.season)),
       strategist: strategistSureness(outfit),
+      racePace: racePaceOf(seed, team, seat),
     };
   });
 

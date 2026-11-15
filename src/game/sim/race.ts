@@ -99,7 +99,8 @@ function facts(setup: SessionSetup): Facts {
   let found = factsBySetup.get(setup);
   if (!found) {
     found = {
-      deficit: setup.grid.map((entrant) => M.carDeficit(entrant.car, setup.traits)),
+      // Race pace: the car, and how it runs on race day against how it qualified (racePace).
+      deficit: setup.grid.map((entrant) => M.carDeficit(entrant.car, setup.traits) + (entrant.racePace ?? 0)),
       compounds: new Map(setup.compounds.map((tyre) => [tyre.id, tyre])),
       nominal: setup.refLap * (1 + M.RACE_TRIM + 0.03),
       breakdowns:
@@ -601,7 +602,8 @@ function hazards(state: RaceState, car: CarState, travelled: number): void {
 
   let slip = MISTAKE * (1 + (88 - ratings.consistency) / 22) * (1 + 2.5 * wet * M.wetSkill(ratings.wet));
   if (car.engineMode === 'push') slip *= 1.15;
-  slip *= M.stressMistakes(car.stress);
+  // Driving harder makes mistakes likelier straight away; the stress it builds adds more over time.
+  slip *= M.PUSH[car.push].mistakes * M.stressMistakes(car.stress);
   if (car.wear > 0.95) slip *= 1.4;
   if (M.gripLoss(tyre.kind, wet) > 0.09) slip *= 2;
   if (state.lap < state.bunchedUntilLap) slip *= 1.4;

@@ -107,6 +107,28 @@ export function realCar(season: number, teamId: string): CarSpec {
   };
 }
 
+/**
+ * A car's form on a weekend, in car-rating points: some circuits suit a car better than others,
+ * and upgrades arrive at different times, so the fastest car of a season is not the fastest at
+ * every round. Seeded by the weekend; none without a seed.
+ */
+export const WEEKEND_FORM = 3;
+
+export const weekendForm = (team: string, seed?: number): number =>
+  seed === undefined ? 0 : WEEKEND_FORM * gaussian({ rng: seedFrom(seed, team, 'form') });
+
+/** A car's race-day pace against its qualifying pace, as a share of a lap. */
+export const RACE_PACE_SPREAD = 0.002;
+
+export const racePaceOf = (seed: number, team: string, seat: number): number =>
+  RACE_PACE_SPREAD * gaussian({ rng: seedFrom(seed, team, seat, 'race-pace') });
+
+/** A car with its weekend's form added to its pace. */
+export const withForm = (car: CarSpec, form: number): CarSpec =>
+  form === 0
+    ? car
+    : { ...car, aero: clamp(car.aero + form, 1, 100), chassis: clamp(car.chassis + form, 1, 100), power: clamp(car.power + form, 1, 100) };
+
 /** Setup quality when nobody has worked on it: an ordinary weekend. */
 export const USUAL_SETUP = 0.8;
 
@@ -127,9 +149,9 @@ export function realEntrants(season: number, round: number, playerTeam?: string,
     const others = team.drivers
       .filter((entry) => !entry.rounds.includes(round))
       .sort((a, b) => nearest(a.rounds) - nearest(b.rounds));
-    const car = realCar(season, team.team);
     const weekend: Luck | null = seed === undefined ? null : { rng: seedFrom(seed, team.team, 'weekend') };
     const found = weekend ? USUAL_SETUP + 0.13 * gaussian(weekend) : USUAL_SETUP;
+    const car = withForm(realCar(season, team.team), weekendForm(team.team, seed));
     [...here, ...others].slice(0, 2).forEach((entry, seat) => {
       const fact = driversById.get(entry.id)!;
       entrants.push({
@@ -146,6 +168,7 @@ export function realEntrants(season: number, round: number, playerTeam?: string,
         engineAge: 0.3,
         player: team.team === playerTeam,
         style: teamStyle(team.team, season),
+        ...(seed === undefined ? {} : { racePace: racePaceOf(seed, team.team, seat) }),
       });
     });
   }
