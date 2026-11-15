@@ -62,6 +62,8 @@ interface Props {
   keepOnLeave?: boolean;
   /** Starts with the clock stopped: for a race being carried on. */
   startPaused?: boolean;
+  /** The team strategist's sureness, 0 to 1, for the weather forecast. */
+  sureness?: number;
 }
 
 /** Room the weather takes on the map: a strip along the top, or columns down the left and right. */
@@ -69,7 +71,7 @@ const FORECAST_STRIP = 30;
 const FORECAST_LEFT = 62;
 const FORECAST_RIGHT = 54;
 
-export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = false, startPaused = false }: Props) {
+export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = false, startPaused = false, sureness = 0.5 }: Props) {
   const { setup } = state;
   const clock = useMemo(() => new RaceClock(state), [state]);
   const map = useMemo(() => trackMap(circuitById(setup.circuit).outline), [setup.circuit]);
@@ -232,7 +234,7 @@ export function LiveRace({ state, onFinish, onLeave, onProgress, keepOnLeave = f
 
       <div class="race__map">
         <canvas ref={canvas} role="img" aria-label={`${setup.name}: the circuit from above, with every car`} />
-        <Forecast state={state} layout={forecastAt} />
+        <Forecast state={state} layout={forecastAt} sureness={sureness} />
       </div>
 
       <ol class="feed" aria-label="Race feed" aria-live="polite">

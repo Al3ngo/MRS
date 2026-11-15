@@ -195,6 +195,50 @@ export function weatherForecast(state: RaceState, laps = 5, sureness = 0.5): For
   return out;
 }
 
+export interface RaceWeather {
+  /** The laps this part of the race covers, from the leader's lap now. */
+  from: number;
+  to: number;
+  kind: ForecastKind;
+  /** Chance of rain in this part, 0 to 1. */
+  chance: number;
+}
+
+/**
+ * The weather for the rest of the race in a few parts (the start, the middle and the end, by
+ * default): for the briefing before the lights. Drawn from the race's real rain like the lap-by-lap
+ * forecast, and less sure the further off a part is; a surer strategist stays surer further ahead.
+ */
+export function raceWeather(state: RaceState, parts = 3, sureness = 0.5): RaceWeather[] {
+  const { setup } = state;
+  const clock = state.time + state.stopped;
+  const done = state.phase === 'grid' ? 0 : Math.min(setup.laps, state.lap);
+  const size = (setup.laps - done) / parts;
+  const fade = 0.17 - 0.1 * sureness;
+  const out: RaceWeather[] = [];
+  for (let part = 0; part < parts && size > 0; part++) {
+    const from = part * size;
+    let peak = 0;
+    for (let sample = 0; sample <= 8; sample++) peak = Math.max(peak, rainAt(state.rain, clock + clockAhead(state, from + (size * sample) / 8)));
+    let near = 0;
+    for (const edge of [from - size * 0.3, from + size * 1.3]) near = Math.max(near, rainAt(state.rain, clock + clockAhead(state, Math.max(0, edge))));
+    let chance: number;
+    if (peak > 0) chance = Math.max(0.55, 0.95 - fade * part);
+    else if (near > 0) chance = 0.35;
+    else chance = Math.min(0.25, setup.traits.rain * 0.25 + 0.03 * part);
+    const expected = Math.max(peak, near * 0.6);
+    const kind: ForecastKind =
+      chance >= 0.5 ? (expected >= 0.45 ? 'heavy-rain' : 'light-rain') : chance >= 0.3 ? 'cloud' : 'dry';
+    out.push({
+      from: Math.round(done + from) + 1,
+      to: Math.round(done + from + size),
+      kind,
+      chance: Math.round(chance * 20) / 20,
+    });
+  }
+  return out;
+}
+
 // ── A pit stop ──────────────────────────────────────────────────────────────────────────────
 
 export interface PitAdvice {

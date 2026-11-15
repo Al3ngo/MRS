@@ -16,14 +16,17 @@ export function Forecast({
   laps = 5,
   inCard = false,
   layout = 'top',
+  sureness = 0.5,
 }: {
   state: RaceState;
   laps?: number;
   inCard?: boolean;
   /** Over the map: a strip along the top, or the track on the left and the laps down the right. */
   layout?: 'top' | 'sides';
+  /** The team strategist's sureness, 0 to 1: a better one is surer further ahead. */
+  sureness?: number;
 }) {
-  const forecast = weatherForecast(state, laps);
+  const forecast = weatherForecast(state, laps, sureness);
   const words = trackWords(state.wetness);
   return (
     <div class={`forecast${inCard ? ' forecast--card' : ''}${layout === 'sides' ? ' forecast--sides' : ''}`}>

@@ -907,6 +907,15 @@ async function main() {
       await page.getByRole('button', { name: 'Continue' }).click();
 
       expectEqual(await meta(), 'Race', 'after qualifying');
+      // The briefing before the lights: the circuit, the sponsor, the character, tyres and weather.
+      await page.getByRole('heading', { name: '2010 Bahrain Grand Prix' }).waitFor();
+      expectEqual(await page.locator('.briefing__map svg').count(), 1, 'the circuit drawn on the briefing');
+      expectEqual(await page.locator('.briefing__part').count(), 3, 'weather for the start, middle and end');
+      expect((await page.locator('.briefing .compound').count()) >= 4, 'the tyres on offer, wet ones included');
+      expect((await page.locator('.briefing__traits .trait').count()) >= 1, "the circuit's character");
+      await page.getByRole('heading', { name: 'Sponsor challenge' }).waitFor();
+      await shot(page, '22b-career-briefing');
+      await page.getByRole('button', { name: 'To the grid' }).click();
       await page.getByRole('button', { name: 'Start the race' }).click();
       await page.getByRole('button', { name: 'Speed 4x' }).click();
       await page.waitForFunction(() => /Lap ([4-9]|\d\d)/.test(document.querySelector('.race__lap')?.textContent ?? ''), null, { timeout: 30000 });

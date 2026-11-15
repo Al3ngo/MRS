@@ -15,6 +15,7 @@ import {
   planChoices,
   raceSetup,
   raceStats,
+  raceWeather,
   realEntrants,
   step,
   tyreLife,
@@ -154,6 +155,29 @@ describe('the weather forecast', () => {
     const forecast = weatherForecast(state, 5);
     expect(forecast.length).toBeLessThanOrEqual(2);
     expect(Math.max(...forecast.map((ahead) => ahead.lap))).toBeLessThanOrEqual(state.setup.laps);
+  });
+});
+
+describe('the weather for the whole race', () => {
+  it('splits the race into a start, a middle and an end, dry when it is dry', () => {
+    const state = race();
+    const parts = raceWeather(state);
+    expect(parts).toHaveLength(3);
+    expect(parts[0]!.from).toBe(1);
+    expect(parts[2]!.to).toBe(state.setup.laps);
+    for (const part of parts) {
+      expect(part.kind).toBe('dry');
+      expect(part.chance).toBeLessThanOrEqual(0.25);
+    }
+  });
+
+  it('puts the rain in the part of the race it falls in, surer for a better strategist', () => {
+    const lap = 95;
+    const state = race([{ from: lap * 25, to: lap * 40, intensity: 0.8 }]);
+    const parts = raceWeather(state, 3, 0.5);
+    expect(parts[0]!.kind).toBe('dry');
+    expect(parts[1]!.kind).toBe('heavy-rain');
+    expect(raceWeather(state, 3, 1)[1]!.chance).toBeGreaterThan(raceWeather(state, 3, 0)[1]!.chance);
   });
 });
 

@@ -752,3 +752,25 @@ cheapest new parts, upgrades for fragile parts, and its share of next year's car
 Save version 3. A career from Stage 5 takes over its team's business when loaded: the team's real
 drivers and the staff its money buys, with the season's backers' and prize money, and it signs a
 sponsor before its next session.
+
+## The briefing before the race (after Stage 6)
+
+Asked for in chat (15 November), from a Golden Lap screenshot: a screen after qualifying that shows
+the track and the forecast. Built in this game's own look, not a copy of Golden Lap's art.
+
+- **When**: before every career race and sprint, after the qualifying (or sprint) that set its
+  grid; "To the grid" goes on to the grid and the plan. A race carried on after closing the app goes
+  straight back to it.
+- **What**: the season and the race, the circuit and its country, the round; the circuit drawn
+  large; the sponsor challenge taken on (or that none was) and the title sponsor's bonus target;
+  what stands out about the circuit in a few plain words ("Hard on tyres", "Hard to overtake",
+  "Safety cars likely", "Walls close by: mistakes cost dear"); the laps; how wet the track is now;
+  the tyres on offer, wet ones included; and the weather for the start, middle and end of the race.
+- **The forecast in thirds** is drawn from the race's real rain, like the lap-by-lap one, and is
+  less sure the further off a part is.
+- **The strategist now reaches every forecast**: the briefing, the grid and the race. A better
+  strategist stays surer further ahead (Stage 6 promised this; the race screens were still using an
+  average strategist).
+- **No flags**: Golden Lap shows the country's flag. Flags here would mean drawing one for every
+  country on the calendar (emoji flags are not used in this design), so the country is named
+  instead. It can be added in the polish stage.

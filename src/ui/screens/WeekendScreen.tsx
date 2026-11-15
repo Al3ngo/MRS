@@ -12,7 +12,8 @@ import {
   type CareerState,
   type PracticeState,
 } from '../../game/career';
-import { calendar, driver as driverById, knockoutCuts } from '../../game/data';
+import { calendar, circuit as circuitById, driver as driverById, knockoutCuts } from '../../game/data';
+import { strategistSureness } from '../../game/team';
 import {
   PRACTICE_RUNS,
   finishesOf,
@@ -32,6 +33,7 @@ import { DIALS, runPart, type Approach, type Dial, type Hint, type QualifyingSta
 import type { SlotId } from '../../platform/saves';
 import { formatLap } from '../format';
 import { IconBack } from '../icons';
+import { Briefing } from '../race/Briefing';
 import { Grid } from '../race/Grid';
 import { LiveRace } from '../race/LiveRace';
 import { RaceResult, poleOf, type Pole } from '../race/Result';
@@ -471,7 +473,8 @@ function RaceSession({
   const resumed = career.weekend.live !== null;
   const race = useMemo(() => career.weekend.live ?? startRace(career), []);
   const pole = useMemo(() => poleInfo(career, race), [race]);
-  const [step, setStep] = useState<'grid' | 'live' | 'result'>(resumed ? 'live' : 'grid');
+  const [step, setStep] = useState<'briefing' | 'grid' | 'live' | 'result'>(resumed ? 'live' : 'briefing');
+  const sureness = career.outfit ? strategistSureness(career.outfit) : 0.5;
   const [, setBeat] = useState(0);
   const round = roundOf(career);
   const name = sessionName(career.seasonYear, kind);
@@ -506,6 +509,7 @@ function RaceSession({
         onProgress={keep}
         keepOnLeave
         startPaused={resumed}
+        sureness={sureness}
       />
     );
   }
@@ -515,11 +519,13 @@ function RaceSession({
       <SessionBar slot={slot} title={step === 'result' ? `${name} result` : name} />
       <main class="canvas canvas--above-bar" data-sessions={career.sessionsCompleted}>
         <div class="title-row">
-          <h1 class="title">{round.name}</h1>
+          <h1 class="title">{step === 'briefing' ? `${career.seasonYear} ${round.name}` : round.name}</h1>
           <p class="subtitle">
             {step === 'result'
               ? `${name} result.`
-              : (
+              : step === 'briefing'
+                ? `${circuitById(race.setup.circuit).name}, ${circuitById(race.setup.circuit).country} · Round ${career.round} of ${calendar(career.seasonYear).length}`
+                : (
                 <>
                   {name}, {race.setup.laps} laps. <TrackReading wetness={race.wetness} />
                   {gridSource(career.seasonYear, career.round, kind) === 'sprint'
@@ -529,12 +535,32 @@ function RaceSession({
               )}
           </p>
         </div>
-        {step === 'grid' && <Grid state={race} onChange={() => setBeat((beat) => beat + 1)} />}
+        {step === 'briefing' && (
+          <Briefing
+            state={race}
+            sponsor={career.outfit?.sponsor ?? null}
+            challenge={career.outfit?.challenge ?? null}
+            sureness={sureness}
+          />
+        )}
+        {step === 'grid' && <Grid state={race} onChange={() => setBeat((beat) => beat + 1)} sureness={sureness} />}
         {step === 'result' && <RaceResult state={race} pole={pole} title={name} />}
       </main>
       <div class="actionbar">
         <div class="actionbar__inner">
-          {step === 'grid' ? (
+          {step === 'briefing' ? (
+            <button
+              type="button"
+              class="button button--primary"
+              data-quick
+              onClick={() => {
+                setStep('grid');
+                window.scrollTo(0, 0);
+              }}
+            >
+              To the grid
+            </button>
+          ) : step === 'grid' ? (
             <>
               <button
                 type="button"

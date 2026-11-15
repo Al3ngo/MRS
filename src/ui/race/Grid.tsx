@@ -13,7 +13,7 @@ function planWords(state: RaceState, car: CarState): string {
 }
 
 /** The starting grid, with the player's plan for each car and the chance to change it. */
-export function Grid({ state, onChange }: { state: RaceState; onChange: () => void }) {
+export function Grid({ state, onChange, sureness = 0.5 }: { state: RaceState; onChange: () => void; sureness?: number }) {
   const { grid } = state.setup;
   const mine = state.cars.filter((car) => grid[car.entrant]!.player);
   const [planning, setPlanning] = useState<CarState | null>(null);
@@ -25,7 +25,7 @@ export function Grid({ state, onChange }: { state: RaceState; onChange: () => vo
         <h2 class="card__title" id="grid-weather">
           Weather for the first laps
         </h2>
-        <Forecast state={state} inCard />
+        <Forecast state={state} inCard sureness={sureness} />
       </section>
       {mine.length > 0 && (
 

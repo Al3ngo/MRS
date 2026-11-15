@@ -1,7 +1,7 @@
 {
   "name": "modern-racing-manager",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Single-player motorsport team management game, 2010-2026. Offline-first PWA. Personal use.",
   "type": "module",
   "scripts": {
