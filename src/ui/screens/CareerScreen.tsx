@@ -40,6 +40,7 @@ import { WinterCard, WinterSheets, type WinterSheet } from '../career/Winter';
 import { AcademyCard, MemorialCard } from '../career/Lifecycle';
 import { Coach } from '../tutorial/Coach';
 import { hubTips } from '../tutorial/tips';
+import { scrollStageTo } from '../stage';
 
 /**
  * A career's home: the team, the round in progress, the calendar and the championships. Between
@@ -267,7 +268,7 @@ function Hub({
       run: () => {
         void updateCareer(finishManagement);
         if (next) navigate({ screen: 'weekend', slot });
-        else window.scrollTo(0, 0);
+        else scrollStageTo(0);
       },
     };
   }

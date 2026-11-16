@@ -54,8 +54,9 @@ Open the installed app once while still online, and check that **Settings > Offl
 *Stored*. From then on it needs no connection.
 
 The game plays sideways. An installed app on Android locks itself to landscape. iPhones and iPads
-do not let a web app lock its orientation, so hold the phone sideways (with rotation lock off); held
-upright, the game asks to be turned.
+do not let a web app turn the screen, so held upright (with the rotation lock on, say) the game
+turns itself a quarter: hold the phone sideways and play. Settings > Phone held upright chooses
+which way it turns, or asks for the phone to be turned instead.
 
 Two things worth knowing about saves:
 
@@ -199,6 +200,7 @@ src/ui/                 screens and components
 src/ui/race/            the race view: circuit map, drawing, race clock, wording
 src/ui/career/          pieces of the career screens: the team, the car, the winter, standings
 src/ui/tutorial/        the one-time tutorial: its tips and the pop-up that shows them
+src/ui/stage.ts         the stage the game is drawn in, turned when the phone is upright
 src/styles/             design tokens and styles
 src/dev/                staged save states for screenshots (left out of normal builds)
 scripts/                data generator, icon maker, the balance lab

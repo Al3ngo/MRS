@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { toast, updateCareer } from '../../app/session';
 import { endTutorial, seeTip, type CareerState } from '../../game/career';
+import { scrollStageTo, stageBox, stageScroll, stageSize } from '../stage';
 import { nextTip, type Tip } from './tips';
 
 /**
@@ -32,7 +33,9 @@ const ROOM = 170;
 function CoachTip({ tip, last }: { tip: Tip; last: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [box, setBox] = useState<Box | null>(null);
-  const [view, setView] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
+  // Everything is measured on the stage (the game's landscape box), which is turned on the screen
+  // when the phone is upright: see stage.ts.
+  const [view, setView] = useState(stageSize);
   const card = useRef<HTMLDivElement>(null);
   const [cardHeight, setCardHeight] = useState(220);
   useLayoutEffect(() => {
@@ -65,29 +68,31 @@ function CoachTip({ tip, last }: { tip: Tip; last: boolean }) {
     const target = tip.target ? document.querySelector<HTMLElement>(tip.target) : null;
     if (target) {
       // Bring it into view: centred if it fits, from its top (below the top bar) if it is tall.
-      const first = target.getBoundingClientRect();
-      if (first.top < 64 || first.bottom > window.innerHeight - 96) {
-        const tall = first.height > window.innerHeight * 0.55;
-        const offset = tall ? 72 : (window.innerHeight - first.height) / 2;
-        window.scrollTo({ top: Math.max(0, window.scrollY + first.top - offset), behavior: 'instant' });
+      const first = stageBox(target);
+      const { height } = stageSize();
+      if (first.top < 64 || first.bottom > height - 96) {
+        const tall = first.bottom - first.top > height * 0.55;
+        const offset = tall ? 72 : (height - (first.bottom - first.top)) / 2;
+        scrollStageTo(stageScroll() + first.top - offset);
       }
     }
     const measure = (): void => {
-      setView({ width: window.innerWidth, height: window.innerHeight });
+      const size = stageSize();
+      setView(size);
       if (!target?.isConnected) {
         setBox(null);
         return;
       }
-      const rect = target.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) {
+      const rect = stageBox(target);
+      if (rect.right - rect.left === 0 && rect.bottom - rect.top === 0) {
         setBox(null);
         return;
       }
       const seen = {
         top: Math.max(EDGE, rect.top - AROUND),
         left: Math.max(EDGE, rect.left - AROUND),
-        right: Math.min(window.innerWidth - EDGE, rect.right + AROUND),
-        bottom: Math.min(window.innerHeight - EDGE, rect.bottom + AROUND),
+        right: Math.min(size.width - EDGE, rect.right + AROUND),
+        bottom: Math.min(size.height - EDGE, rect.bottom + AROUND),
       };
       // Scrolled out of sight: the tip shows on its own, in the middle.
       setBox(seen.bottom - seen.top < 16 || seen.right - seen.left < 16 ? null : seen);

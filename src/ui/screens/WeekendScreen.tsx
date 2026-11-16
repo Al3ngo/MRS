@@ -44,6 +44,7 @@ import { TrackReading } from '../race/TrackReading';
 import { teamLabel } from '../career/names';
 import { Coach } from '../tutorial/Coach';
 import { BRIEFING_TIPS, GRID_TIPS, QUALIFYING_TIPS, RESULT_TIPS, nextTip, practiceTips, raceTips } from '../tutorial/tips';
+import { scrollStageTo } from '../stage';
 
 /**
  * The sessions of a race weekend, one after another: practice, qualifying, the sprint sessions on
@@ -85,7 +86,7 @@ export function WeekendScreen({ slot }: { slot: SlotId }) {
       return;
     }
     setView(now.phase);
-    window.scrollTo(0, 0);
+    scrollStageTo(0);
   };
   const colour = teamLabel(career.team, career.seasonYear).colour;
   const key = `${career.seasonYear}-${career.round}-${shown}`;
@@ -375,7 +376,7 @@ function Qualifying({
     runPart(session, approach);
     setBeat((beat) => beat + 1);
     void updateCareer((current) => saveQualifying(current, session));
-    window.scrollTo(0, 0);
+    scrollStageTo(0);
   };
 
   return (
@@ -562,7 +563,7 @@ function RaceSession({
       finishRace(current, finishesOf(race), poleDriver, unitWear(current, race), fatalities(current.world, current.id, race)),
     );
     setStep('result');
-    window.scrollTo(0, 0);
+    scrollStageTo(0);
   };
   const keep = (): void => {
     void updateCareer((current) => saveLive(current, race));
@@ -636,7 +637,7 @@ function RaceSession({
               data-quick
               onClick={() => {
                 setStep('grid');
-                window.scrollTo(0, 0);
+                scrollStageTo(0);
               }}
             >
               To the grid

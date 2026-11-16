@@ -80,6 +80,38 @@
   --fs-small: 12px;
   --fs-figure: 32px;
 
+  /*
+   * The screen's safe edges (clear of the notch and the home bar) and its size, as the game sees
+   * them: held sideways. With the phone upright and the game turned a quarter (data-turn on
+   * <html>), each edge of the game is a different edge of the screen; see the rules below.
+   */
+  --safe-top: env(safe-area-inset-top);
+  --safe-right: env(safe-area-inset-right);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+  --land-w: 100vw;
+  --land-h: 100dvh;
+
   /* Motion is feedback only: a press, a sheet opening. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Turned clockwise: the game's top runs down the screen's right edge. */
+:root[data-turn='right'] {
+  --safe-top: env(safe-area-inset-right);
+  --safe-right: env(safe-area-inset-bottom);
+  --safe-bottom: env(safe-area-inset-left);
+  --safe-left: env(safe-area-inset-top);
+  --land-w: 100dvh;
+  --land-h: 100vw;
+}
+
+/* Turned anticlockwise: the game's top runs up the screen's left edge. */
+:root[data-turn='left'] {
+  --safe-top: env(safe-area-inset-left);
+  --safe-right: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-right);
+  --safe-left: env(safe-area-inset-bottom);
+  --land-w: 100dvh;
+  --land-h: 100vw;
 }

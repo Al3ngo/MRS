@@ -10,6 +10,7 @@ import './styles/base.css';
 import './styles/components.css';
 import './styles/screens.css';
 import { App } from './ui/App';
+import { followTurnedTouches } from './ui/turnedScroll';
 
 // Design-check builds only (`vite build --mode inspect`): `?scene=three` stages the save slots first.
 if (import.meta.env.MODE === 'inspect') {
@@ -22,6 +23,7 @@ startInstallWatch();
 startAutosaveOnHide();
 armSound();
 watchOrientation();
+followTurnedTouches();
 void startOffline();
 void boot();
 

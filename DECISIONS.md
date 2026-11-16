@@ -1026,3 +1026,39 @@ are untouched: only the screens and the race clock changed.
   supplier). The work buttons stay on each part.
 - **The Car tab's other views**: next year's car, the power units, and the rankings of the car's
   four qualities against the field.
+
+### Played upright, with the rotation lock on (v0.9.1)
+
+Asked for in chat: make the landscape game work on an iPhone with its portrait orientation lock on.
+iPhones do not let a web app turn the screen, so the game turns itself.
+
+- **The game is drawn in a stage**: the landscape box the whole game lives in. Held sideways, the
+  stage is the screen. Held upright, the stage is turned a quarter, so the game plays held
+  sideways whatever the rotation lock says. This is on by default.
+- **Settings > Phone held upright**:
+  - Choose between "Turn the game" and "Ask to turn the phone" (the "Turn your phone sideways"
+    prompt from v0.9.0, which now also offers "Turn the game instead").
+  - Choose which side the charging port goes: right (the game turns clockwise) or left.
+- **Everything measures the stage, not the screen**, so a turned game is laid out exactly as a
+  sideways one:
+  - The layouts' size rules are container queries on the stage.
+  - Screens scroll inside the stage, not the page.
+  - Dialogs and the tutorial's tips are drawn over the page, so they are turned on their own.
+  - The race map takes the canvas's own size.
+  - The tutorial maps its ring and tip into the stage.
+  - The clear edges around the notch and the home bar are mapped to the game's edges (the notch
+    is on the game's left with the port on the right).
+- **Scrolling a turned game**: browsers are unreliable at scrolling a turned box by touch (in
+  testing, Chromium did not scroll it at all). So while the game is turned, it scrolls itself under
+  the finger, in the game's own up and down, with a glide after the finger lifts. Taps, and drags
+  on the volume slider, are left to the browser.
+- **What stays upright**: iOS itself, so its notifications, Control Centre, the home bar and the
+  file picker for backups appear sideways to a player holding the phone sideways.
+- **Tested** by the end-to-end check at 390 by 844 (an upright phone), both ways round:
+  - Taps land.
+  - Lists, a dialog and the race's running order scroll under a dragged finger, and only along
+    the game's up and down.
+  - A tap on the volume slider sets the right volume.
+  - Turning the phone mid-race keeps the race going.
+
+  A real iPhone is the final word on touch: this needs trying there.

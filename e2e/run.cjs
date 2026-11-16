@@ -1114,6 +1114,100 @@ async function main() {
     });
 
     await context.close();
+
+    // ── 9. A phone held upright, its rotation lock on: the game turns itself ─────────────────
+    const upright = await browser.newContext({ ...PHONE, viewport: { width: 390, height: 844 } });
+    const tall = await upright.newPage();
+    const tallLog = [];
+    watch(tall, tallLog);
+    /** A finger dragged across the screen, as raw touches. */
+    const drag = async (x, y, dx, dy) => {
+      const cdp = await upright.newCDPSession(tall);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+      for (let i = 1; i <= 12; i++) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + (dx * i) / 12, y: y + (dy * i) / 12 }] });
+        await tall.waitForTimeout(16);
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      // Let the glide after the finger lifts come to rest before anything is measured.
+      await tall.evaluate(
+        () =>
+          new Promise((resolve) => {
+            const boxes = [...document.querySelectorAll('.scroller, .tower, dialog')];
+            let last = '';
+            let still = 0;
+            const look = () => {
+              const now = boxes.map((box) => box.scrollTop).join(',');
+              still = now === last ? still + 1 : 0;
+              last = now;
+              if (still >= 8) resolve();
+              else requestAnimationFrame(look);
+            };
+            look();
+            setTimeout(resolve, 3000);
+          }),
+      );
+    };
+    const scrolled = (selector) => tall.evaluate((s) => document.querySelector(s).scrollTop, selector);
+
+    await check('upright: the game turns itself sideways, and taps and scrolling follow it', async () => {
+      await tall.goto(site.url);
+      await tall.locator('.slots').waitFor();
+      expectEqual(await tall.evaluate(() => document.documentElement.getAttribute('data-turn')), 'right', 'turned, with the port on the right');
+      const stage = await tall.evaluate(() => ({ w: document.getElementById('app').clientWidth, h: document.getElementById('app').clientHeight }));
+      expectEqual(stage, { w: 844, h: 390 }, 'the game is laid out sideways');
+      await startNewCareer(tall, 1);
+      await tall.getByRole('tab', { name: 'Team' }).tap();
+      // Up the game, as the phone is held, is towards the screen's right edge.
+      await drag(195, 420, 220, 0);
+      expect((await scrolled('.scroller')) > 100, `the team list scrolls under the finger: ${await scrolled('.scroller')}`);
+      await drag(195, 420, -440, 0);
+      expectEqual(await scrolled('.scroller'), 0, 'and back to the top');
+      // A dialog, turned with the game, scrolls the same way.
+      await tall.getByRole('tab', { name: 'Money' }).tap();
+      await tall.getByRole('button', { name: 'See the books' }).tap();
+      const sheet = await tall.locator('dialog.sheet').boundingBox();
+      expect(sheet.y > 300 && Math.round(sheet.width) === 390, `the panel is along the game's right edge (the screen's foot): ${JSON.stringify(sheet)}`);
+      await tall.locator('dialog').getByRole('button', { name: 'Close' }).tap();
+      await tall.locator('dialog').waitFor({ state: 'detached' });
+      await tall.screenshot({ path: path.join(OUT, '26-upright-turned.png') });
+      expectEqual(tallLog, [], 'browser errors held upright');
+    });
+
+    await check('upright: the race runs turned, and its running order scrolls', async () => {
+      await tall.goto(site.url + '#/race/2012/3');
+      await tall.getByRole('button', { name: /^McLaren/ }).first().tap();
+      await tall.getByRole('button', { name: 'Start the race' }).tap();
+      await tall.locator('.race').waitFor();
+      await tall.getByRole('button', { name: 'Speed 4x' }).tap();
+      await tall.waitForFunction(() => /Lap [2-9]/.test(document.querySelector('.race__lap')?.textContent ?? ''), null, { timeout: 30000 });
+      const canvas = await tall.evaluate(() => { const c = document.querySelector('.race__map canvas'); return c.clientWidth > c.clientHeight * 0.6 && c.width > 0; });
+      expect(canvas, 'the map is drawn the game\'s way up');
+      const order = await tall.locator('.tower--compact').boundingBox();
+      await drag(order.x + order.width / 2, order.y + order.height / 2, 150, 0);
+      expect((await scrolled('.tower--compact')) > 40, `the running order scrolls: ${await scrolled('.tower--compact')}`);
+      await tall.getByRole('button', { name: 'Pause' }).tap();
+      expectEqual(await tall.getByRole('button', { name: 'Pause' }).getAttribute('aria-pressed'), 'true', 'a tap on the turned race lands');
+    });
+
+    await check('upright: the other way round, or ask for the phone to be turned instead', async () => {
+      await tall.goto(site.url + '#/system');
+      await tall.getByRole('heading', { name: 'Settings' }).waitFor();
+      await tall.getByRole('group', { name: 'Charging port side' }).getByRole('button', { name: 'Left' }).tap();
+      expectEqual(await tall.evaluate(() => document.documentElement.getAttribute('data-turn')), 'left', 'turned the other way');
+      await tall.getByRole('group', { name: 'When the phone is upright' }).getByRole('button', { name: 'Ask to turn the phone' }).tap();
+      await tall.getByText('Turn your phone sideways').waitFor();
+      expect(!(await tall.locator('#app').isVisible()), 'the game waits behind the prompt');
+      await tall.getByRole('button', { name: 'Turn the game instead' }).tap();
+      await tall.getByRole('heading', { name: 'Settings' }).waitFor();
+      expectEqual(await tall.evaluate(() => localStorage.getItem('mrm-view')), '{"upright":"turn","port":"left"}', 'kept on the device');
+      // Turned sideways for real: no turning needed, the same layout.
+      await tall.setViewportSize({ width: 844, height: 390 });
+      await tall.waitForFunction(() => !document.documentElement.hasAttribute('data-turn'));
+      expectEqual(tallLog, [], 'browser errors held upright');
+    });
+
+    await upright.close();
     await site.close();
   }
 

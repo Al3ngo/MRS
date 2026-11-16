@@ -15,7 +15,7 @@ import {
   type RaceState,
 } from '../../game/sim';
 import { useStore } from '../../app/store';
-import { landscape } from '../../platform/orientation';
+import { view } from '../../platform/orientation';
 import { setSound, soundSettings } from '../../platform/sound';
 import { IconBack, IconForward, IconHelp, IconMuted, IconPause, IconSkip, IconSound } from '../icons';
 import { Meter, batteryMeter, fuelMeter, stressMeter, tyreMeter } from '../Meter';
@@ -107,7 +107,8 @@ export function LiveRace({
 
   const [, setBeat] = useState(0);
   const sound = useStore(soundSettings);
-  const upright = !useStore(landscape);
+  // Held upright with the game asking to be turned, it is hidden: the race waits.
+  const asking = useStore(view).asking;
   const [speed, setSpeed] = useState<Speed>(startPaused ? 0 : 1);
   const [selected, setSelected] = useState(0);
   const [sheet, setSheet] = useState<'pit' | 'skip' | 'leave' | 'guide' | 'order' | null>(null);
@@ -137,8 +138,8 @@ export function LiveRace({
   }, [state]);
 
   // A sheet stops the clock: nobody should lose places while choosing tyres. So does a tip, and
-  // so does a phone turned upright (the game is hidden behind "turn your phone sideways").
-  clock.speed = sheet || hold || upright ? 0 : speed;
+  // so does the game hiding behind "turn your phone sideways".
+  clock.speed = sheet || hold || asking ? 0 : speed;
 
   useEffect(() => {
     const element = canvas.current;
@@ -151,10 +152,10 @@ export function LiveRace({
     let fit: Fit | null = null;
     let path: Path2D | null = null;
     const measure = (): void => {
-      const box = element.getBoundingClientRect();
+      // The canvas's own size, not its box on the screen: with the game turned, the two differ.
       const ratio = Math.min(3, window.devicePixelRatio || 1);
-      width = box.width;
-      height = box.height;
+      width = element.clientWidth;
+      height = element.clientHeight;
       element.width = Math.round(width * ratio);
       element.height = Math.round(height * ratio);
       context.setTransform(ratio, 0, 0, ratio, 0, 0);

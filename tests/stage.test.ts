@@ -1,0 +1,50 @@
+import { describe, expect, it } from 'vitest';
+import { viewFor } from '../src/platform/orientation';
+import { toStage } from '../src/ui/stage';
+
+/** A phone held upright: 390 across, 844 down. The stage is 844 across, 390 down. */
+const screen = { width: 390, height: 844 };
+
+/**
+ * Where a point of the stage lands on the screen, by the same transforms as the styles:
+ * turned right, translateX(100vw) rotate(90deg); turned left, translateY(100dvh) rotate(-90deg).
+ */
+const onScreen = (x: number, y: number, turn: 'right' | 'left'): [number, number] =>
+  turn === 'right' ? [screen.width - y, x] : [y, screen.height - x];
+
+describe('the turned stage', () => {
+  it('maps a box on the screen back to where it is on the stage, either way round', () => {
+    for (const turn of ['right', 'left'] as const) {
+      // A box on the stage: 100 to 300 across, 40 to 90 down.
+      const corners = [onScreen(100, 40, turn), onScreen(300, 90, turn)];
+      const xs = corners.map(([x]) => x);
+      const ys = corners.map(([, y]) => y);
+      const box = { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
+      expect(toStage(box, turn, screen), turn).toEqual({ left: 100, right: 300, top: 40, bottom: 90 });
+    }
+  });
+
+  it('leaves a box alone when the game is not turned', () => {
+    const box = { left: 1, top: 2, right: 3, bottom: 4 };
+    expect(toStage(box, null, screen)).toEqual(box);
+  });
+
+  it('turns the game, or asks for the phone to be turned, only when the phone is upright', () => {
+    expect(viewFor(false, { upright: 'turn', port: 'right' })).toEqual({ upright: false, turn: null, asking: false });
+    expect(viewFor(true, { upright: 'turn', port: 'right' })).toEqual({ upright: true, turn: 'right', asking: false });
+    expect(viewFor(true, { upright: 'turn', port: 'left' })).toEqual({ upright: true, turn: 'left', asking: false });
+    expect(viewFor(true, { upright: 'ask', port: 'left' })).toEqual({ upright: true, turn: null, asking: true });
+  });
+});
+
+describe('a finger on the turned game', () => {
+  it('moves in the game’s own directions', async () => {
+    const { gameDelta } = await import('../src/ui/turnedScroll');
+    // Turned right, the game's top is at the screen's right edge: a finger moving right moves up the game.
+    expect(gameDelta(10, 0, 'right')).toEqual({ x: 0, y: -10 });
+    expect(gameDelta(0, 10, 'right')).toEqual({ x: 10, y: -0 });
+    // Turned left, the game's top is at the screen's left edge: a finger moving left moves up the game.
+    expect(gameDelta(-10, 0, 'left')).toEqual({ x: -0, y: -10 });
+    expect(gameDelta(0, 10, 'left')).toEqual({ x: -10, y: 0 });
+  });
+});

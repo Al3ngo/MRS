@@ -10,6 +10,7 @@ import { RaceScreen } from './screens/RaceScreen';
 import { SystemScreen } from './screens/SystemScreen';
 import { WeekendScreen } from './screens/WeekendScreen';
 import { Toasts } from './Toasts';
+import { scrollStageTo } from './stage';
 
 export function App() {
   const current = useStore(route);
@@ -17,13 +18,20 @@ export function App() {
 
   // Each screen starts at its top.
   useEffect(() => {
-    window.scrollTo(0, 0);
+    scrollStageTo(0);
   }, [current.screen]);
 
-  if (crash) return <Crash error={crash} />;
+  if (crash)
+    return (
+      <div class="scroller">
+        <Crash error={crash} />
+      </div>
+    );
 
+  // Screens scroll inside the stage, never the page: see stage.ts.
   return (
     <>
+      <div class="scroller">
       {current.screen === 'careers' && <CareersScreen />}
       {current.screen === 'career' && <CareerScreen key={current.slot} slot={current.slot} />}
       {current.screen === 'weekend' && <WeekendScreen key={current.slot} slot={current.slot} />}
@@ -36,6 +44,7 @@ export function App() {
         />
       )}
       {current.screen === 'system' && <SystemScreen />}
+      </div>
       <Toasts aboveBar={current.screen === 'career' || current.screen === 'weekend' || current.screen === 'race'} />
     </>
   );

@@ -14,6 +14,7 @@ import { Grid } from '../race/Grid';
 import { LiveRace } from '../race/LiveRace';
 import { RaceResult, ordinal, poleOf, type Pole } from '../race/Result';
 import { TrackReading } from '../race/TrackReading';
+import { scrollStageTo } from '../stage';
 
 /**
  * A race at a real round: choose a team (or none, to watch), look over the grid and the plan, run
@@ -71,7 +72,7 @@ export function RaceScreen({ season, round }: { season: number; round: RoundFact
             onPick={(picked) => {
               setTeam(picked);
               setStep('grid');
-              window.scrollTo(0, 0);
+              scrollStageTo(0);
             }}
           />
         </main>
@@ -116,7 +117,7 @@ export function RaceScreen({ season, round }: { season: number; round: RoundFact
                 onClick={() => {
                   setRun(run + 1);
                   setStep('grid');
-                  window.scrollTo(0, 0);
+                  scrollStageTo(0);
                 }}
               >
                 Race it again

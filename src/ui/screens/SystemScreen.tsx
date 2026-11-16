@@ -3,6 +3,7 @@ import { goBack } from '../../app/router';
 import { app, replayTutorialIn, toast, updateNow } from '../../app/session';
 import { useStore } from '../../app/store';
 import { checkForUpdate, install, offline, promptInstall } from '../../platform/pwa';
+import { setView, viewSettings } from '../../platform/orientation';
 import { passBy, setSound, soundSettings, type EngineEra } from '../../platform/sound';
 import { readStorage, requestPersistence, type StorageReport } from '../../platform/storage';
 import { formatBytes } from '../format';
@@ -26,6 +27,7 @@ export function SystemScreen() {
   const net = useStore(offline);
   const home = useStore(install);
   const sound = useStore(soundSettings);
+  const upright = useStore(viewSettings);
   const { slots } = useStore(app);
   const careers = slots.flatMap((view) => (view.kind === 'career' && view.record.summary?.team ? [{ slot: view.slot, summary: view.record.summary }] : []));
   const [storage, setStorage] = useState<StorageReport | null>(null);
@@ -148,6 +150,57 @@ export function SystemScreen() {
                   ))}
                 </div>
               </div>
+            </div>
+          </section>
+
+          <section class="setting" aria-labelledby="system-upright">
+            <div class="setting__about">
+              <h2 class="setting__title" id="system-upright">
+                Phone held upright
+              </h2>
+              <p class="setting__text">
+                The game plays sideways. iPhones do not let a web app turn the screen, so with the rotation lock on the game can
+                turn itself instead: hold the phone sideways and play.
+              </p>
+            </div>
+            <div class="card setting__panel">
+              <div class="status status--action">
+                <p class="status__title">When upright</p>
+                <div class="segmented segmented--wide" role="group" aria-label="When the phone is upright">
+                  {(['turn', 'ask'] as const).map((choice) => (
+                    <button
+                      type="button"
+                      key={choice}
+                      class={`segmented__option${upright.upright === choice ? ' segmented__option--on' : ''}`}
+                      aria-pressed={upright.upright === choice}
+                      onClick={() => setView({ upright: choice })}
+                    >
+                      {choice === 'turn' ? 'Turn the game' : 'Ask to turn the phone'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {upright.upright === 'turn' && (
+                <div class="status status--action">
+                  <div>
+                    <p class="status__title">Charging port</p>
+                    <p class="status__text">Which side of the game the phone's charging port goes, held sideways.</p>
+                  </div>
+                  <div class="segmented" role="group" aria-label="Charging port side">
+                    {(['left', 'right'] as const).map((side) => (
+                      <button
+                        type="button"
+                        key={side}
+                        class={`segmented__option${upright.port === side ? ' segmented__option--on' : ''}`}
+                        aria-pressed={upright.port === side}
+                        onClick={() => setView({ port: side })}
+                      >
+                        {side === 'left' ? 'Left' : 'Right'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

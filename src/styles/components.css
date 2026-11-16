@@ -1,9 +1,56 @@
 /* Shared building blocks. Screen-specific layout lives in screens.css. */
 
-/* ── Shell ─────────────────────────────────────────────────────────────────────────────────── */
+/* ── Stage and shell ───────────────────────────────────────────────────────────────────────── */
+
+/*
+ * The stage: the landscape box the game is drawn in, the size of the screen held sideways. Its
+ * size rules use container queries against it (@container stage), not the screen, so they hold
+ * when the game is turned. Screens scroll in .scroller; the page itself never scrolls.
+ */
+#app {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--land-w);
+  height: var(--land-h);
+  overflow: hidden;
+  container: stage / size;
+}
+
+/* With the phone upright, the stage is turned a quarter, so the game plays held sideways. */
+:root[data-turn] #app {
+  transform-origin: 0 0;
+}
+
+/* Turned, the game scrolls itself under the finger (turnedScroll.ts); the browser does not pan. */
+:root[data-turn] #app,
+:root[data-turn] dialog {
+  touch-action: none;
+}
+
+:root[data-turn] input[type='range'] {
+  touch-action: none;
+}
+
+:root[data-turn='right'] #app {
+  transform: translateX(100vw) rotate(90deg);
+}
+
+:root[data-turn='left'] #app {
+  transform: translateY(100dvh) rotate(-90deg);
+}
+
+.scroller {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
 
 .shell {
-  min-height: 100dvh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -14,7 +61,7 @@
   z-index: 20;
   background: var(--ground);
   border-bottom: 1px solid var(--border);
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-top);
 }
 
 .topbar__inner {
@@ -22,8 +69,8 @@
   width: 100%;
   max-width: calc(var(--canvas) + 2 * var(--page));
   margin-inline: auto;
-  padding-left: max(var(--page), env(safe-area-inset-left));
-  padding-right: max(var(--page), env(safe-area-inset-right));
+  padding-left: max(var(--page), var(--safe-left));
+  padding-right: max(var(--page), var(--safe-right));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -36,7 +83,7 @@
   gap: 10px;
   min-width: 0;
   /* Eases down a little on the narrowest phones so the name is never cut short. */
-  font-size: clamp(14px, 4.4vw, var(--fs-section));
+  font-size: var(--fs-section);
   line-height: 24px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -101,14 +148,14 @@
   max-width: calc(var(--canvas) + 2 * var(--page));
   margin-inline: auto;
   padding-top: 16px;
-  padding-left: max(var(--page), env(safe-area-inset-left));
-  padding-right: max(var(--page), env(safe-area-inset-right));
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  padding-left: max(var(--page), var(--safe-left));
+  padding-right: max(var(--page), var(--safe-right));
+  padding-bottom: calc(24px + var(--safe-bottom));
 }
 
 /* Room for the actions floating at the bottom right. */
 .canvas--above-bar {
-  padding-bottom: calc(var(--control-height) + 32px + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--control-height) + 32px + var(--safe-bottom));
 }
 
 /* A screen's title and its line, side by side: in landscape the height is what runs short. */
@@ -164,7 +211,7 @@
 
 .split__side {
   position: sticky;
-  top: calc(var(--bar-height) + env(safe-area-inset-top) + 12px);
+  top: calc(var(--bar-height) + var(--safe-top) + 12px);
   display: flex;
   flex-direction: column;
   gap: var(--gap);
@@ -415,12 +462,13 @@
  * list has room in landscape. The screen behind stays in sight, dimmed.
  */
 dialog.sheet {
+  --sheet-w: min(460px, calc(var(--land-w) * 0.62));
   position: fixed;
   inset: 0 0 0 auto;
-  width: min(460px, 62vw);
+  width: var(--sheet-w);
   max-width: 100%;
-  height: 100dvh;
-  max-height: 100dvh;
+  height: var(--land-h);
+  max-height: var(--land-h);
   margin: 0;
   padding: 0;
   border: 0;
@@ -447,7 +495,7 @@ dialog.sheet[open]::backdrop {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
-  padding: 18px max(var(--pad), env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) var(--pad);
+  padding: 18px max(var(--pad), var(--safe-right)) calc(18px + var(--safe-bottom)) var(--pad);
 }
 
 .sheet__title {
@@ -521,6 +569,28 @@ dialog.sheet[open]::backdrop {
   color: var(--pill-negative-ink);
 }
 
+/*
+ * Turned with the game: the panel along the game's right edge, which is the screen's bottom edge
+ * (turned clockwise) or its top edge (turned anticlockwise). Dialogs are drawn over the whole page,
+ * outside the stage, so they are turned on their own.
+ */
+:root[data-turn] dialog.sheet {
+  inset: 0 auto auto 0;
+  transform-origin: 0 0;
+}
+
+:root[data-turn='right'] dialog.sheet {
+  transform: translate(100vw, calc(100dvh - var(--sheet-w))) rotate(90deg);
+}
+
+:root[data-turn='left'] dialog.sheet {
+  transform: translate(0, var(--sheet-w)) rotate(-90deg);
+}
+
+:root[data-turn] dialog.sheet[open] {
+  animation: fade-in 200ms var(--ease-out);
+}
+
 @keyframes sheet-in {
   from {
     transform: translateX(24px);
@@ -548,7 +618,7 @@ dialog.sheet[open]::backdrop {
   bottom: 0;
   z-index: 15;
   max-width: 100%;
-  padding: 10px max(var(--page), env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) 14px;
+  padding: 10px max(var(--page), var(--safe-right)) calc(10px + var(--safe-bottom)) 14px;
   border-top-left-radius: var(--radius-card);
   background: var(--ground);
 }
@@ -574,7 +644,7 @@ dialog.sheet[open]::backdrop {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(20px + env(safe-area-inset-bottom));
+  bottom: calc(20px + var(--safe-bottom));
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -585,7 +655,7 @@ dialog.sheet[open]::backdrop {
 }
 
 .toasts--above-bar {
-  bottom: calc(var(--control-height) + 30px + env(safe-area-inset-bottom));
+  bottom: calc(var(--control-height) + 30px + var(--safe-bottom));
 }
 
 .toast {
@@ -668,8 +738,8 @@ dialog.sheet[open]::backdrop {
 dialog.coach {
   position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  width: var(--land-w);
+  height: var(--land-h);
   max-width: none;
   max-height: none;
   margin: 0;
@@ -678,6 +748,19 @@ dialog.coach {
   background: transparent;
   color: var(--text);
   overflow: hidden;
+}
+
+:root[data-turn] dialog.coach {
+  inset: 0 auto auto 0;
+  transform-origin: 0 0;
+}
+
+:root[data-turn='right'] dialog.coach {
+  transform: translateX(100vw) rotate(90deg);
+}
+
+:root[data-turn='left'] dialog.coach {
+  transform: translateY(100dvh) rotate(-90deg);
 }
 
 dialog.coach::backdrop {
@@ -772,12 +855,14 @@ dialog.coach[open] {
   color: var(--muted);
 }
 
-@media (orientation: portrait) {
-  #app {
-    display: none;
-  }
+:root[data-ask] #app {
+  display: none;
+}
 
-  .rotate {
-    display: flex;
-  }
+:root[data-ask] .rotate {
+  display: flex;
+}
+
+.rotate__turn {
+  margin-top: 14px;
 }

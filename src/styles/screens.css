@@ -35,7 +35,7 @@
 }
 
 /* Sideways: the three slots side by side. */
-@media (min-width: 640px) {
+@container stage (min-width: 640px) {
   .slots {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: stretch;
@@ -293,7 +293,7 @@ button.slot__main:disabled .slot__go {
 }
 
 /* Sideways: what a setting is on the left, the setting itself on the right. */
-@media (min-width: 640px) {
+@container stage (min-width: 640px) {
   .setting {
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     align-items: start;
@@ -358,7 +358,7 @@ button.slot__main:disabled .slot__go {
   color: var(--muted);
 }
 
-@media (max-width: 479px) {
+@container stage (max-width: 479px) {
   .status--action {
     flex-direction: column;
     align-items: stretch;
@@ -455,7 +455,7 @@ button.slot__main:disabled .slot__go {
 }
 
 /* A long list in two columns, to use the width of a screen held sideways. */
-@media (min-width: 640px) {
+@container stage (min-width: 640px) {
   .card--columns > ol,
   .card--columns > ul {
     display: grid;
@@ -747,10 +747,10 @@ button.slot__main:disabled .slot__go {
   column-gap: 10px;
   width: 100%;
   max-width: 1280px;
-  height: 100dvh;
+  height: 100cqh;
   margin-inline: auto;
-  padding: env(safe-area-inset-top) max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
-    max(10px, env(safe-area-inset-left));
+  padding: var(--safe-top) max(10px, var(--safe-right)) max(8px, var(--safe-bottom))
+    max(10px, var(--safe-left));
   overflow: hidden;
 }
 
@@ -801,7 +801,7 @@ button.slot__main:disabled .slot__go {
 }
 
 /* On the smallest phones "Leave" is the arrow alone; its name stays for screen readers. */
-@media (max-width: 720px) {
+@container stage (max-width: 720px) {
   .race__leave {
     position: absolute;
     width: 1px;
@@ -1450,7 +1450,7 @@ button.slot__main:disabled .slot__go {
 }
 
 /* A short screen (a small phone on its side): smaller cards, no line of help. */
-@media (max-height: 400px) {
+@container stage (max-height: 400px) {
   .carcard {
     min-height: 62px;
     padding: 6px 8px 8px;
@@ -1911,7 +1911,7 @@ button.slot__main:disabled .slot__go {
   height: 8px;
 }
 
-@media (max-height: 400px) {
+@container stage (max-height: 400px) {
   .outlook {
     gap: 3px;
   }
@@ -2008,7 +2008,7 @@ button.slot__main:disabled .slot__go {
  */
 .garage__head {
   position: sticky;
-  top: calc(var(--bar-height) + env(safe-area-inset-top));
+  top: calc(var(--bar-height) + var(--safe-top));
   z-index: 10;
   display: flex;
   align-items: center;
@@ -2227,7 +2227,7 @@ button.slot__main:disabled .slot__go {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: clamp(200px, 38dvh, 320px);
+  height: clamp(180px, 46cqh, 320px);
   padding: 20px;
   border-radius: var(--radius-card);
   background: var(--surface);
@@ -2326,6 +2326,11 @@ button.slot__main:disabled .slot__go {
 .junior__label {
   color: var(--muted);
   font-size: 13px;
+}
+
+/* A choice whose options are words, not a word each: it takes the room it needs. */
+.status--action > .segmented--wide {
+  min-width: 300px;
 }
 
 /* ── Settings: sound ───────────────────────────────────────────────────────────────────────── */
@@ -2579,7 +2584,7 @@ button.slot__main:disabled .slot__go {
 }
 
 /* Drivers and staff in two columns. */
-@media (min-width: 640px) {
+@container stage (min-width: 640px) {
   .hub .people {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
