@@ -33,12 +33,13 @@ import { gridSource, sessionName, type SessionKind } from '../../game/season/wee
 import { DIALS, runPart, type Approach, type Dial, type Hint, type QualifyingState, type RaceState } from '../../game/sim';
 import type { SlotId } from '../../platform/saves';
 import { formatLap } from '../format';
-import { IconBack } from '../icons';
+import { IconBack, IconHelp } from '../icons';
 import { Briefing } from '../race/Briefing';
+import { Sheet } from '../Sheet';
 import { TragedySheet } from '../career/Lifecycle';
 import { Grid } from '../race/Grid';
 import { LiveRace } from '../race/LiveRace';
-import { RaceResult, poleOf, type Pole } from '../race/Result';
+import { RaceResult, ordinal, poleOf, type Pole } from '../race/Result';
 import { TrackReading } from '../race/TrackReading';
 import { teamLabel } from '../career/names';
 import { Coach } from '../tutorial/Coach';
@@ -157,8 +158,9 @@ const HINT_WORDS: Readonly<Record<Hint, { words: string; reach: number }>> = {
 };
 
 /**
- * One setup dial: its two ends and what they do, the slider, and the driver's verdict drawn on the
- * slider as an arrow from the setting he drove, pointing the way to move it.
+ * One setup dial, as a column: its name and setting, what the driver said, the slider with the
+ * driver's verdict drawn on it as an arrow from the setting he drove, and the names of its two
+ * ends. What each end does is a tap away.
  */
 function DialRow({
   dial,
@@ -166,12 +168,14 @@ function DialRow({
   hint,
   tested,
   onStep,
+  onExplain,
 }: {
   dial: Dial;
   value: number;
   hint: Hint | null;
   tested: number | null;
   onStep: (change: number) => void;
+  onExplain: () => void;
 }) {
   const words = DIAL_WORDS[dial];
   const said = hint ? HINT_WORDS[hint] : null;
@@ -180,10 +184,15 @@ function DialRow({
   return (
     <div class="dial">
       <div class="dial__head">
-        <span class="dial__name">{words.name}</span>
-        {said && <span class={`dial__said${hint === 'good' ? ' dial__said--good' : ''}`}>Driver: {said.words.toLowerCase()}</span>}
+        <button type="button" class="dial__name" aria-label={`${words.name}: what it does`} onClick={onExplain}>
+          {words.name}
+          <IconHelp />
+        </button>
         <span class="figure dial__value">{value}</span>
       </div>
+      <p class={`dial__said${hint === 'good' ? ' dial__said--good' : ''}${said ? '' : ' dial__said--none'}`}>
+        {said ? `Driver: ${said.words.toLowerCase()}` : 'No run yet'}
+      </p>
       <div class="dial__control">
         <button type="button" class="button button--secondary dial__step" aria-label={`${words.name}: towards ${words.low.toLowerCase()}`} onClick={() => onStep(-5)}>
           −
@@ -211,16 +220,41 @@ function DialRow({
         </button>
       </div>
       <div class="dial__ends">
-        <span class="dial__end">
-          <span class="dial__end-name">{words.low}</span>
-          {words.lowDoes}
-        </span>
-        <span class="dial__end dial__end--high">
-          <span class="dial__end-name">{words.high}</span>
-          {words.highDoes}
-        </span>
+        <span class="dial__end">{words.low}</span>
+        <span class="dial__end dial__end--high">{words.high}</span>
       </div>
     </div>
+  );
+}
+
+/** What a setting does, end to end, and how to read the driver's arrows. */
+function DialSheet({ dial, onClose }: { dial: Dial; onClose: () => void }) {
+  const words = DIAL_WORDS[dial];
+  return (
+    <Sheet title={words.name} onClose={onClose}>
+      <dl class="guide">
+        <div class="guide__entry">
+          <dt class="guide__term">{words.low}</dt>
+          <dd class="guide__meaning">{words.lowDoes}</dd>
+        </div>
+        <div class="guide__entry">
+          <dt class="guide__term">{words.high}</dt>
+          <dd class="guide__meaning">{words.highDoes}</dd>
+        </div>
+        <div class="guide__entry">
+          <dt class="guide__term">The driver's arrow</dt>
+          <dd class="guide__meaning">
+            After a run, an arrow starts at the setting the car ran with (the small mark) and points the way to move it; a long
+            arrow means a big change. A consistent driver's feedback is more exact.
+          </dd>
+        </div>
+      </dl>
+      <div class="sheet__actions">
+        <button type="button" class="button button--block button--secondary" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
@@ -228,6 +262,7 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
   const cars = useMemo(() => playerCars(career), [career.seasonYear, career.round]);
   const [practice, setPractice] = useState<PracticeState>(() => career.weekend.practice ?? startPractice(career));
   const [selected, setSelected] = useState(0);
+  const [explain, setExplain] = useState<Dial | null>(null);
   const car = cars[selected]!;
   const dials = practice.dials[car.id]!;
   const hints = practice.hints[car.id];
@@ -250,29 +285,25 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
     <>
       <SessionBar slot={slot} title="Practice" />
       <main class="canvas canvas--above-bar" data-sessions={career.sessionsCompleted}>
-        <div class="title-row">
+        <div class="title-row title-row--split">
           <h1 class="title">{round.name}</h1>
-          <p class="subtitle">
-            Practice. Adjust each car's setup, send the driver out, and the driver tells you which way to move each setting.{' '}
-            {PRACTICE_RUNS} runs per car.
-          </p>
+          <p class="subtitle">Practice: set each car up, and the driver says which way to move each setting. {PRACTICE_RUNS} runs a car.</p>
+          <div class="segmented title-row__end" role="group" aria-label="Car">
+            {cars.map((entrant, index) => (
+              <button
+                type="button"
+                key={entrant.id}
+                class={`segmented__option${index === selected ? ' segmented__option--on' : ''}`}
+                aria-pressed={index === selected}
+                onClick={() => setSelected(index)}
+              >
+                {entrant.driverName.split(' ').at(-1)}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div class="segmented segmented--large" role="group" aria-label="Car">
-          {cars.map((entrant, index) => (
-            <button
-              type="button"
-              key={entrant.id}
-              class={`segmented__option${index === selected ? ' segmented__option--on' : ''}`}
-              aria-pressed={index === selected}
-              onClick={() => setSelected(index)}
-            >
-              {entrant.driverName.split(' ').at(-1)}
-            </button>
-          ))}
-        </div>
-
-        <section class="card card--gap" aria-label={`Setup of ${car.driverName}'s car`}>
+        <section class="dials" aria-label={`Setup of ${car.driverName}'s car`}>
           {DIALS.map((dial) => (
             <DialRow
               key={dial}
@@ -281,12 +312,13 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
               hint={hints ? hints[dial] : null}
               tested={tested ? tested[dial] : null}
               onStep={(change) => setPractice(setDial(practice, car.id, dial, dials[dial] + change))}
+              onExplain={() => setExplain(dial)}
             />
           ))}
         </section>
         <p class="smallprint">
           {hints
-            ? `The arrows show what ${car.driverName.split(' ').at(-1)} said after the last run. Each starts at the setting the car was run with (the small mark) and points the way to move it; a long arrow means a big change. A consistent driver's feedback is more exact.`
+            ? `The arrows show what ${car.driverName.split(' ').at(-1)} said after the last run. Move each setting the way its arrow points, and run again.`
             : "The car starts on the team's own first guess at a setup. Do a run, and the driver tells you which way to move each setting."}
         </p>
       </main>
@@ -300,6 +332,7 @@ function Practice({ slot, career, onContinue }: { slot: SlotId; career: CareerSt
           </button>
         </div>
       </div>
+      {explain && <DialSheet dial={explain} onClose={() => setExplain(null)} />}
       <Coach career={career} tips={practiceTips(Object.values(practice.runs).some((count) => count > 0))} />
     </>
   );
@@ -364,6 +397,25 @@ function Qualifying({
           </p>
         </div>
 
+        <div class="split split--list">
+        <div class="split__side">
+        {done && (
+          <section class="card stack" aria-labelledby="quali-done">
+            <h2 class="card__title" id="quali-done">
+              {name} is over
+            </h2>
+            <p class="muted">
+              {cars
+                .map((entrant) => {
+                  const at = session.parts.at(-1)!.laps.findIndex((lap) => lap.car === entrant.id);
+                  return at >= 0 ? `${entrant.driverName.split(' ').at(-1)} starts ${ordinal(at + 1)}` : null;
+                })
+                .filter(Boolean)
+                .join(', ') || 'The grid is set.'}
+              .
+            </p>
+          </section>
+        )}
         {!done && (
           <section class="card stack" aria-labelledby="quali-approach">
             <h2 class="card__title" id="quali-approach">
@@ -402,8 +454,14 @@ function Qualifying({
           </section>
         )}
 
+        </div>
+        {!last && (
+          <section class="card" aria-label="Times">
+            <p class="muted">The times of each part appear here once it has been run.</p>
+          </section>
+        )}
         {last && (
-          <section class={`card card--list${done ? '' : ' card--gap'}`} aria-label={`${prefix}${last.part} times`}>
+          <section class="card card--list" aria-label={`${prefix}${last.part} times`}>
             <h2 class="card__title card__title--list">
               Part {last.part} times ({prefix}
               {last.part})
@@ -436,6 +494,7 @@ function Qualifying({
             </ol>
           </section>
         )}
+        </div>
       </main>
       <div class="actionbar">
         <div class="actionbar__inner">

@@ -33,23 +33,23 @@ export function hubTips(career: CareerState, place: { tab: string; winterStep: s
       id: 'garage',
       title: 'Developing the car',
       lines: [
-        'Spend money here on the car, between races. An upgrade is cheap and gains a little; a new version costs more and gains much more, but breaks down more at first.',
-        'The bars at the top compare your car with the rest of the field.',
+        'Spend money on the car here, between races. Each part shows its level against the field and its reliability.',
+        'An upgrade is cheap and gains a little; a new version gains much more, but costs more and is fragile at first.',
       ],
       target: 'section[aria-labelledby="parts"]',
     });
     return tips;
   }
-  if (place.tab !== 'Weekend') return tips;
+  if (place.tab !== 'Home') return tips;
 
   tips.push({
     id: 'welcome',
     title: 'Your team',
     lines: [
       'This is your team’s home. A season is a run of race weekends: practice, qualifying, then the race. Between races, you run the team.',
-      'The tabs hold the car, the season’s calendar and the championships.',
+      'The tabs along the top hold the money, the drivers and staff, the car, the season’s calendar and the championships.',
     ],
-    target: '.hub .title-row',
+    target: '.topbar__title',
   });
   if (place.winterStep === 'sponsor') {
     tips.push({
@@ -71,7 +71,7 @@ export function hubTips(career: CareerState, place: { tab: string; winterStep: s
         lines: [
           'The sponsor and the prize money pay after every race. Money pays the drivers and staff, and buys new parts for the car.',
         ],
-        target: 'section[aria-labelledby="money"]',
+        target: '.glance',
       },
       {
         id: 'go',
@@ -103,7 +103,7 @@ export function hubTips(career: CareerState, place: { tab: string; winterStep: s
       id: 'car-tab',
       title: 'Develop the car',
       lines: ['The Car tab is where the money goes on new parts. The car can only be worked on between races.'],
-      target: '.tabs .tab:nth-child(2)',
+      target: '[data-tab="Car"]',
     },
     {
       id: 'basics',
@@ -203,15 +203,13 @@ export function raceTips(hasBattery: boolean): Tip[] {
     {
       id: 'tower',
       title: 'The running order',
-      lines: ['Places, the gap to the car ahead, each car’s tyres and how worn they are, and its stops so far.'],
-      target: '.tower',
+      lines: ['Places, the gap to the car ahead and each car’s tyre. Tap Order for how worn the tyres are, and the stops.'],
+      target: '.race__order',
     },
     {
       id: 'cars',
       title: 'Your cars',
-      lines: [
-        'Tap a car to give it orders. Its graph shows how long the tyres and the fuel will last.',
-      ],
+      lines: ['Tap a car to give it orders. Its graph shows how long the tyres and the fuel will last.'],
       target: '.pitwall__cars',
     },
     {
@@ -225,12 +223,18 @@ export function raceTips(hasBattery: boolean): Tip[] {
     },
     {
       id: 'pit',
-      title: 'Pit stops and speed',
+      title: 'Pit stops',
+      lines: ['The team plans the stops. Call one yourself when the tyres are worn or the weather turns.'],
+      target: '.pitwall__pit',
+    },
+    {
+      id: 'speed',
+      title: 'The race’s speed',
       lines: [
-        'The team plans the stops. Call one yourself when the tyres are worn or the weather turns.',
-        'Pause, speed up or skip to the end at the bottom right. The question mark at the top explains everything here.',
+        'Pause, speed up or skip to the end here. The race slows down by itself for overtakes by your cars, crashes, retirements and safety cars.',
+        'The question mark at the top left explains everything on this screen.',
       ],
-      target: '.dock',
+      target: '.race__speed',
     },
   ];
 }

@@ -24,7 +24,8 @@ const DIST = path.join(root, 'dist');
 const DIST_NEXT = path.join(root, 'dist-next');
 const OUT = path.join(__dirname, 'output');
 
-const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
+// A phone held sideways: the game plays in landscape.
+const PHONE = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -281,7 +282,7 @@ async function main() {
       await startNewCareer(page, 1);
       expect(/#\/career\/1$/.test(page.url()), `expected the career address, got ${page.url()}`);
       await completeSessions(page, 6); // practice, qualifying, race, management, then round 2 practice, qualifying
-      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 2 of 19', 'career position');
+      expectEqual(await page.locator('.topbar__sub').innerText(), 'Season 2010 · Round 2 of 19', 'career position');
       await shot(page, '02-career');
       await backToCareers(page);
       const [first] = await slotTexts(page);
@@ -312,7 +313,7 @@ async function main() {
       await completeSessions(page, 3); // race, management, round 3 practice
       await page.reload();
       await page.locator('.hub').waitFor();
-      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 3 of 19', 'position after an offline reload');
+      expectEqual(await page.locator('.topbar__sub').innerText(), 'Season 2010 · Round 3 of 19', 'position after an offline reload');
       expectEqual(await page.locator('.row--next .row__label').innerText(), 'Qualifying', 'next session after an offline reload');
       // (The browser's own re-check of sw.js ignores the test's offline switch; the cold start further down
       // repeats all this with the server actually gone.)
@@ -381,7 +382,7 @@ async function main() {
       await slotCard(page, 2).getByRole('button', { name: 'Continue' }).click();
       await page.locator('.hub').waitFor();
       expectEqual(await page.locator('.row--next .row__label').innerText(), 'Qualifying', 'next session in the restored career');
-      expectEqual(await page.locator('.title').innerText(), 'Williams', 'team of the restored career');
+      expectEqual(await page.locator('.topbar__name').innerText(), 'Williams', 'team of the restored career');
       await backToCareers(page);
     });
 
@@ -449,7 +450,7 @@ async function main() {
         await page.locator('.slots').waitFor();
         await page.goForward();
         await page.locator('.hub').waitFor({ timeout: 5000 });
-        expectEqual(await page.locator('.subtitle').innerText(), 'Season 2014 · Round 5 of 19', 'career shown after going forward');
+        expectEqual(await page.locator('.topbar__sub').innerText(), 'Season 2014 · Round 5 of 19', 'career shown after going forward');
         await page.goBack();
         await page.locator('.slots').waitFor();
       }
@@ -459,7 +460,7 @@ async function main() {
       await page.goto(site.url + '#/career/2');
       await page.reload();
       await page.locator('.hub').waitFor();
-      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 3 of 19', 'career opened by address');
+      expectEqual(await page.locator('.topbar__sub').innerText(), 'Season 2010 · Round 3 of 19', 'career opened by address');
       await backToCareers(page);
       // An address for a slot with nothing in it falls back to the list.
       await slotCard(page, 1).getByRole('button', { name: 'More for slot 1' }).click();
@@ -869,21 +870,23 @@ async function main() {
       await page.goto(site.url);
       await page.locator('.slots').waitFor();
       await startNewCareer(page, 1, 'McLaren', false);
-      expectEqual(await page.locator('.title').innerText(), 'McLaren', 'team on the home screen');
-      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2010 · Round 1 of 19', 'where the career starts');
+      expectEqual(await page.locator('.topbar__name').innerText(), 'McLaren', 'team on the home screen');
+      expectEqual(await page.locator('.topbar__sub').innerText(), 'Season 2010 · Round 1 of 19', 'where the career starts');
       expectEqual(await page.locator('.row--next .row__label').innerText(), 'Practice', 'first session');
-      // Stage 7: the junior academy, with young drivers to sign.
+      // Stage 7: the junior academy, with young drivers to sign (the Team tab).
+      await page.getByRole('tab', { name: 'Team' }).click();
       await page.getByRole('heading', { name: 'Junior academy' }).waitFor();
       await page.getByRole('button', { name: /^Sign a junior/ }).click();
       expect((await page.locator('dialog .choice').count()) >= 3, 'young drivers to sign');
       await page.locator('dialog .choice').first().click();
       await page.locator('dialog').waitFor({ state: 'detached' });
       expectEqual(await page.locator('section[aria-labelledby="academy"] .person').count(), 1, 'one junior in the academy');
-      // Stage 6: before the first session, a title sponsor; the team's money and people are on show.
-      await page.getByRole('heading', { name: 'Before the 2010 season' }).waitFor();
-      const startMoney = Number(await page.locator('.money__figure').innerText());
-      expect(startMoney > 100, `McLaren's money at the start: ${startMoney}`);
       expectEqual(await page.locator('section[aria-labelledby="people"] .person').count(), 7, 'two drivers and five staff');
+      // Stage 6: before the first session, a title sponsor; the team's money is on show.
+      await page.getByRole('tab', { name: 'Home' }).click();
+      await page.getByRole('heading', { name: 'Before the 2010 season' }).waitFor();
+      const startMoney = Number(await page.locator('.glance__money').innerText());
+      expect(startMoney > 100, `McLaren's money at the start: ${startMoney}`);
       await shot(page, '20-career-home');
       await page.getByRole('button', { name: 'Sign a title sponsor' }).click();
       expectEqual(await page.locator('dialog .choice').count(), 3, 'three sponsor offers');
@@ -894,14 +897,21 @@ async function main() {
       // The car: the field, the parts, and a new version of the aero bought before the season.
       await page.getByRole('tab', { name: 'Car' }).click();
       expectEqual(await page.locator('.part').count(), 3, 'aero, chassis and engine in 2010');
-      expect(await page.locator('.part', { hasText: 'Built by Mercedes' }).count() === 1, 'a Mercedes customer does not build engines');
+      expectEqual(await page.locator('.part .art').count(), 3, 'a drawing of each part');
+      expectEqual(await page.locator('.part .meter').count(), 6, 'a level and a reliability bar for each part');
+      expectEqual(await page.locator('.part', { hasText: 'Engine' }).getByRole('button', { name: /^New version/ }).count(), 0, 'a Mercedes customer does not build engines');
+      // What a part does, and where it stands, is a tap away.
+      await page.locator('.part', { hasText: 'Engine' }).locator('.part__look').click();
+      await page.locator('dialog').getByText(/^Built by Mercedes/).waitFor();
+      await page.locator('dialog').getByRole('button', { name: 'Close' }).click();
+      await page.locator('dialog').waitFor({ state: 'detached' });
       // The money to spend is in sight on the Car tab, and follows each purchase.
       expectEqual(Number(await page.locator('.money-strip__figure').first().innerText()), startMoney, 'money shown on the Car tab');
       await page.locator('.part', { hasText: 'Aero' }).getByRole('button', { name: /^New version/ }).click();
       expectEqual(Number(await page.locator('.money-strip__figure').first().innerText()), Math.round((startMoney - 8) * 10) / 10, 'the Car tab shows the money left');
       expectEqual(await page.locator('.money-strip__change').innerText(), '−8', 'and what the part cost');
-      await page.getByRole('tab', { name: 'Weekend' }).click();
-      expectEqual(Number(await page.locator('.money__figure').innerText()), Math.round((startMoney - 8) * 10) / 10, 'a new aero part costs 8');
+      await page.getByRole('tab', { name: 'Home' }).click();
+      expectEqual(Number(await page.locator('.glance__money').innerText()), Math.round((startMoney - 8) * 10) / 10, 'a new aero part costs 8');
 
       await page.getByRole('button', { name: 'Go to practice' }).click();
       await page.getByRole('button', { name: 'Do a run (4 left)' }).click();
@@ -959,28 +969,31 @@ async function main() {
 
       await page.locator('.hub').waitFor();
       await page.getByRole('button', { name: 'Go to the Australian Grand Prix' }).waitFor();
-      // Between races: the sponsor has paid, a challenge is on offer, and the car can be worked on.
-      const books = await page.locator('.money .row__value, .facts .row__value').allInnerTexts();
-      expect(books.some((value) => /^\+\d/.test(value)), `money in this season: ${books.join(' / ')}`);
+      // Between races: a challenge is on offer, the sponsor has paid, and the car can be worked on.
       expectEqual(await page.locator('[role=radiogroup][aria-label="Sponsor challenge for the next race"] [role=radio]').count(), 3, 'three challenges for the next race');
       await page.locator('[role=radio]').first().click();
       expectEqual(await page.locator('[role=radio][aria-checked=true]').count(), 1, 'a challenge taken on');
+      await page.getByRole('tab', { name: 'Money' }).click();
+      const books = await page.locator('.money .row__value, .facts .row__value').allInnerTexts();
+      expect(books.some((value) => /^\+\d/.test(value)), `money in this season: ${books.join(' / ')}`);
       await page.getByRole('button', { name: 'See the books' }).click();
       const ledger = await page.locator('dialog .row__label').allInnerTexts();
       for (const line of ["Backers' money", 'Prize money', 'Sponsor', "Drivers' salaries"]) expect(ledger.includes(line), `"${line}" in the books: ${ledger.join(' / ')}`);
       await page.locator('dialog').getByRole('button', { name: 'Close' }).click();
       await shot(page, '23-career-between');
       await page.getByRole('tab', { name: 'Car' }).click();
+      await page.getByRole('group', { name: 'The car' }).getByRole('button', { name: 'Power units' }).click();
       expectEqual(await page.locator('.unit').count(), 2, 'power units for both cars');
+      await page.getByRole('group', { name: 'The car' }).getByRole('button', { name: 'Rankings' }).click();
       expectEqual(await page.locator('#against-field ~ .facts .row').count(), 4, 'the car against the field: four qualities');
       await shot(page, '23b-career-car');
       await page.getByRole('tab', { name: 'Team' }).click();
       await page.getByRole('tab', { name: 'Standings' }).click();
       const points = await page.locator('.standing .standing__points').allInnerTexts();
       expectEqual(points[0], '25', 'points for the win, 2010 rules');
-      expectEqual(await page.locator('.standing--mine').count(), 2, 'both McLaren drivers marked');
-      await page.getByRole('button', { name: 'Teams', exact: true }).click();
-      expect(Number((await page.locator('.standing .standing__points').first().innerText())) >= 25, 'constructors lead');
+      expectEqual(await page.locator('section[aria-label$="drivers\' championship"] .standing--mine').count(), 2, 'both McLaren drivers marked');
+      const teams = page.locator('section[aria-label$="teams\' championship"] .standing__points');
+      expect(Number(await teams.first().innerText()) >= 25, 'constructors lead');
       await page.getByRole('tab', { name: 'Calendar' }).click();
       expect(/won · Your cars: /.test(await page.locator('.round').first().innerText()), 'round 1 shows its winner and our result');
       await shot(page, '24-career-calendar');
@@ -1022,14 +1035,16 @@ async function main() {
       await page.getByText('Career restored to slot 2.').waitFor();
       await slotCard(page, 2).getByRole('button', { name: 'Continue' }).click();
       await page.locator('.hub').waitFor();
-      expectEqual(await page.locator('.subtitle').innerText(), 'Season 2023 · Round 4 of 22', 'the restored round');
+      expectEqual(await page.locator('.topbar__sub').innerText(), 'Season 2023 · Round 4 of 22', 'the restored round');
       expectEqual(
         await page.locator('.sessions .row__label').allInnerTexts(),
         ['Practice', 'Qualifying', 'Sprint shootout', 'Sprint', 'Race'],
         'the 2023 sprint weekend',
       );
       // A save from before Stage 6 takes over its team's business, and signs a sponsor first.
+      await page.getByRole('tab', { name: 'Team' }).click();
       expectEqual(await page.locator('section[aria-labelledby="people"] .person').count(), 7, 'the upgraded save has drivers and staff');
+      await page.getByRole('tab', { name: 'Home' }).click();
       await page.getByRole('button', { name: 'Sign a title sponsor' }).click();
       await page.locator('dialog .choice').first().click();
       await page.locator('dialog').waitFor({ state: 'detached' });

@@ -59,6 +59,29 @@
   text-overflow: ellipsis;
 }
 
+/* The screen's name in the top bar, beside the way back: saves a title row's height. */
+.topbar__title {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.topbar__name {
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+
+.topbar__sub {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+}
+
 .topbar__end {
   display: flex;
   align-items: center;
@@ -77,19 +100,25 @@
   width: 100%;
   max-width: calc(var(--canvas) + 2 * var(--page));
   margin-inline: auto;
-  padding-top: 24px;
+  padding-top: 16px;
   padding-left: max(var(--page), env(safe-area-inset-left));
   padding-right: max(var(--page), env(safe-area-inset-right));
-  padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
-/* Room for the action bar pinned to the bottom of the screen. */
+/* Room for the actions floating at the bottom right. */
 .canvas--above-bar {
-  padding-bottom: calc(var(--control-height) + 56px + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--control-height) + 32px + env(safe-area-inset-bottom));
 }
 
+/* A screen's title and its line, side by side: in landscape the height is what runs short. */
 .title-row {
-  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 14px;
+  row-gap: 2px;
+  margin-bottom: 14px;
 }
 
 .title {
@@ -100,8 +129,46 @@
 }
 
 .subtitle {
-  margin-top: 4px;
+  flex: 1 1 320px;
+  min-width: 0;
   color: var(--muted);
+}
+
+/* ── Two columns ───────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * The usual landscape screen: the main thing and what goes with it side by side. A list (a
+ * result, a grid) takes the wider right column and scrolls with the page, while the left column
+ * stays in view.
+ */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+
+/* Two cards (or a card and a column of cards) that share a bottom edge. */
+.split--even {
+  align-items: stretch;
+}
+
+.split--even > .card,
+.split--even > .stack > .card:last-child {
+  flex: 1;
+}
+
+.split--list {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+
+.split__side {
+  position: sticky;
+  top: calc(var(--bar-height) + env(safe-area-inset-top) + 12px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
 }
 
 /* ── Surfaces ──────────────────────────────────────────────────────────────────────────────── */
@@ -343,17 +410,21 @@
 
 /* ── Sheets ────────────────────────────────────────────────────────────────────────────────── */
 
-/* A dialog that rises from the bottom edge on a phone, where the thumb is; centred on wide screens. */
+/*
+ * A dialog: a panel that slides in from the right edge, the full height of the screen, so a long
+ * list has room in landscape. The screen behind stays in sight, dimmed.
+ */
 dialog.sheet {
   position: fixed;
-  inset: auto 0 0 0;
-  width: 100%;
+  inset: 0 0 0 auto;
+  width: min(460px, 62vw);
   max-width: 100%;
-  max-height: 88dvh;
+  height: 100dvh;
+  max-height: 100dvh;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
   background: var(--surface);
   color: var(--text);
   overflow: auto;
@@ -365,7 +436,7 @@ dialog.sheet::backdrop {
 }
 
 dialog.sheet[open] {
-  animation: sheet-up 200ms var(--ease-out);
+  animation: sheet-in 200ms var(--ease-out);
 }
 
 dialog.sheet[open]::backdrop {
@@ -376,8 +447,7 @@ dialog.sheet[open]::backdrop {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
-  padding: var(--pad);
-  padding-bottom: calc(var(--pad) + env(safe-area-inset-bottom));
+  padding: 18px max(var(--pad), env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) var(--pad);
 }
 
 .sheet__title {
@@ -451,22 +521,9 @@ dialog.sheet[open]::backdrop {
   color: var(--pill-negative-ink);
 }
 
-@media (min-width: 600px) {
-  dialog.sheet {
-    inset: 0;
-    width: 420px;
-    height: fit-content;
-    margin: auto;
-    border-radius: var(--radius-card);
-  }
-  .sheet__body {
-    padding-bottom: var(--pad);
-  }
-}
-
-@keyframes sheet-up {
+@keyframes sheet-in {
   from {
-    transform: translateY(24px);
+    transform: translateX(24px);
     opacity: 0;
   }
 }
@@ -480,25 +537,27 @@ dialog.sheet[open]::backdrop {
 /* ── Pinned action bar and toasts ──────────────────────────────────────────────────────────── */
 
 /* The screen's main action, within reach of the thumb and clear of the home indicator. */
+/*
+ * The screen's main action: at the bottom right, under the right thumb, as in a console game.
+ * The buttons sit on a patch of the ground colour so that what scrolls under them stays out of
+ * the way; the rest of the bottom edge is left to the screen.
+ */
 .actionbar {
   position: fixed;
-  left: 0;
   right: 0;
   bottom: 0;
   z-index: 15;
+  max-width: 100%;
+  padding: 10px max(var(--page), env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) 14px;
+  border-top-left-radius: var(--radius-card);
   background: var(--ground);
-  border-top: 1px solid var(--border);
-  padding: 12px max(var(--page), env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom))
-    max(var(--page), env(safe-area-inset-left));
 }
 
 .actionbar__inner {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--gap);
-  max-width: var(--canvas);
-  margin-inline: auto;
+  gap: 10px;
 }
 
 .actionbar__note {
@@ -508,7 +567,7 @@ dialog.sheet[open]::backdrop {
 }
 
 .actionbar .button {
-  flex: 1;
+  min-width: 168px;
 }
 
 .toasts {
@@ -526,7 +585,7 @@ dialog.sheet[open]::backdrop {
 }
 
 .toasts--above-bar {
-  bottom: calc(var(--control-height) + 44px + env(safe-area-inset-bottom));
+  bottom: calc(var(--control-height) + 30px + env(safe-area-inset-bottom));
 }
 
 .toast {
@@ -643,9 +702,6 @@ dialog.coach[open] {
 
 .coach__card {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(420px, calc(100% - 2 * var(--page)));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -682,4 +738,46 @@ dialog.coach[open] {
 
 .coach__actions .button {
   flex: 1;
+}
+
+/* ── Turn the phone sideways ───────────────────────────────────────────────────────────────── */
+
+/* The game plays in landscape: held upright, the screen asks to be turned, and the game waits. */
+.rotate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  background: var(--ground);
+  color: var(--text);
+  text-align: center;
+}
+
+.rotate__icon {
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+.rotate__title {
+  font-size: var(--fs-title);
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.rotate__text {
+  color: var(--muted);
+}
+
+@media (orientation: portrait) {
+  #app {
+    display: none;
+  }
+
+  .rotate {
+    display: flex;
+  }
 }

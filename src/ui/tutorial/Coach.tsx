@@ -113,18 +113,28 @@ function CoachTip({ tip, last }: { tip: Tip; last: boolean }) {
     toast('Tutorial off. It can be replayed from the settings.');
   }
 
-  // The tip goes on whichever side of the lit-up part has more room, or at the foot of the screen;
-  // there, the ring stops short of it, around the part still in view above.
+  // The tip goes beside the lit-up part where there is room (on a screen held sideways, usually
+  // to its left or right), else above or below it, else at the foot of the screen; there, the
+  // ring stops short of it, around the part still in view above.
+  const cardWidth = Math.min(380, view.width - 2 * EDGE * 2);
+  const left = box ? box.left : 0;
+  const right = box ? view.width - box.right : 0;
   const above = box ? box.top : 0;
   const below = box ? view.height - box.bottom : 0;
-  const atFoot = box !== null && Math.max(above, below) < ROOM;
+  const sideways = box !== null && Math.max(left, right) >= cardWidth + 24;
+  const atFoot = box !== null && !sideways && Math.max(above, below) < Math.min(ROOM, cardHeight + 24);
+  const middle = box ? Math.min(Math.max(EDGE * 2, (box.top + box.bottom) / 2 - cardHeight / 2), view.height - cardHeight - EDGE * 2) : 0;
   const place: Record<string, string> = !box
-    ? { top: '50%', transform: 'translate(-50%, -50%)' }
-    : atFoot
-      ? { bottom: `${EDGE * 2}px` }
-      : below >= above
-        ? { top: `${box.bottom + 12}px` }
-        : { bottom: `${view.height - box.top + 12}px` };
+    ? { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+    : sideways
+      ? right >= left
+        ? { top: `${middle}px`, left: `${box.right + 16}px` }
+        : { top: `${middle}px`, left: `${box.left - 16 - cardWidth}px` }
+      : atFoot
+        ? { bottom: `${EDGE * 2}px`, left: '50%', transform: 'translateX(-50%)' }
+        : below >= above
+          ? { top: `${box.bottom + 12}px`, left: '50%', transform: 'translateX(-50%)' }
+          : { bottom: `${view.height - box.top + 12}px`, left: '50%', transform: 'translateX(-50%)' };
   const ring = box && atFoot ? { ...box, bottom: Math.min(box.bottom, view.height - EDGE * 2 - cardHeight - 12) } : box;
   const lit = ring && ring.bottom - ring.top >= 24 ? ring : null;
 
@@ -146,7 +156,7 @@ function CoachTip({ tip, last }: { tip: Tip; last: boolean }) {
           />
         )}
       </svg>
-      <div class="coach__card" ref={card} style={place}>
+      <div class="coach__card" ref={card} style={{ ...place, width: `${cardWidth}px` }}>
         <p class="coach__kicker">Tutorial</p>
         <h2 class="coach__title" id={`tip-${tip.id}`}>
           {tip.title}

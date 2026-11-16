@@ -57,7 +57,8 @@ export function Briefing({
   const weather = raceWeather(state, 3, sureness);
   const words = trackWords(state.wetness);
   return (
-    <div class="stack briefing">
+    <div class="split briefing">
+      <div class="split__side">
       <div class="briefing__map" aria-hidden="true">
         <TrackOutline circuit={venue} stroke={2.4} />
       </div>
@@ -80,6 +81,8 @@ export function Briefing({
           </p>
         </section>
       )}
+
+      </div>
 
       <section class="card" aria-labelledby="briefing-race">
         <h2 class="card__title" id="briefing-race">

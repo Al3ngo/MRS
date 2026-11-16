@@ -11,8 +11,9 @@ the team to run between races: money, sponsors and their challenges, staff, cont
 driver market, car development, engines, power units and the budget cap. Drivers age, improve,
 retire and, rarely, are lost; made-up drivers and a junior academy keep the grid full to 2026. A
 one-time tutorial walks through the first weekend, and the races have sound made in code (engines
-that sound as each era did). A single race can still be run from the season almanac. The build
-plan is in the brief; choices made along the way are in [DECISIONS.md](DECISIONS.md).
+that sound as each era did). A single race can still be run from the season almanac. The game
+plays in landscape, like a console game. The build plan is in the brief; choices made along the
+way are in [DECISIONS.md](DECISIONS.md).
 
 ## Run it
 
@@ -51,6 +52,10 @@ Then, on the phone:
 
 Open the installed app once while still online, and check that **Settings > Offline play** says
 *Stored*. From then on it needs no connection.
+
+The game plays sideways. An installed app on Android locks itself to landscape. iPhones and iPads
+do not let a web app lock its orientation, so hold the phone sideways (with rotation lock off); held
+upright, the game asks to be turned.
 
 Two things worth knowing about saves:
 

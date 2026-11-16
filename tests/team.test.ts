@@ -456,3 +456,25 @@ describe('a career with a team business', () => {
     expect((MIGRATIONS[2]!({ ...old, team: null }) as CareerState).outfit).toBeNull();
   });
 });
+
+describe('each part against the field', () => {
+  it('ranks aero and chassis as the car does, and the power parts by the power each would give', async () => {
+    const { carAgainstField, partLevels } = await import('../src/game/season/business');
+    const career = chooseTeam(newCareer('levels', new Date('2026-11-16T10:00:00Z')), 'mclaren');
+    const levels = partLevels({ ...career, seasonYear: 2014 });
+    const field = carAgainstField({ ...career, seasonYear: 2014 });
+    expect(Object.keys(levels).sort()).toEqual(['aero', 'battery', 'chassis', 'engine', 'recovery']);
+    expect(levels.aero!.rank).toBe(field.find((row) => row.quality === 'aero')!.rank);
+    expect(levels.chassis!.share).toBeCloseTo(field.find((row) => row.quality === 'chassis')!.share, 9);
+    for (const level of Object.values(levels)) {
+      expect(level!.share).toBeGreaterThanOrEqual(0);
+      expect(level!.share).toBeLessThanOrEqual(1);
+      expect(level!.of).toBe(11);
+    }
+    // A power part that is further along than the others shows a higher level.
+    const ahead = { ...career, seasonYear: 2014, outfit: { ...career.outfit!, parts: { ...career.outfit!.parts, engine: { ...career.outfit!.parts.engine!, perf: (career.outfit!.parts.engine?.perf ?? 0) + 4 } } } };
+    expect(partLevels(ahead).engine!.share).toBeGreaterThanOrEqual(partLevels(ahead).battery!.share);
+    // 2010: no battery or energy recovery on the cars.
+    expect(Object.keys(partLevels(career)).sort()).toEqual(['aero', 'chassis', 'engine']);
+  });
+});

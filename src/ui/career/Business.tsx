@@ -126,11 +126,57 @@ export function MoneyCard({ career }: { career: CareerState }) {
   );
 }
 
-export function SponsorCard({ career }: { career: CareerState }) {
+/** The team in a few lines, on the home screen: money, sponsor, this race's challenge, drivers. */
+export function GlanceCard({ career }: { career: CareerState }) {
+  const view = moneyView(career);
+  const outfit = career.outfit;
+  if (!view || !outfit) return null;
+  const drivers = outfit.drivers.filter((contract) => contract.until >= career.seasonYear);
+  return (
+    <section class="card glance" aria-labelledby="glance">
+      <h2 class="card__title" id="glance">
+        The team
+      </h2>
+      <dl class="facts facts--tight">
+        <div class="row">
+          <dt class="row__label">Money</dt>
+          <dd class={`row__value figure glance__money${view.money < 0 ? ' money__figure--short' : ''}`}>{cash(view.money)}</dd>
+        </div>
+        {view.cap !== null && (
+          <div class="row">
+            <dt class="row__label">Budget cap used</dt>
+            <dd class="row__value">
+              {cash(view.capUsed)} of {view.cap}
+            </dd>
+          </div>
+        )}
+        {outfit.sponsor && (
+          <div class="row">
+            <dt class="row__label">Sponsor</dt>
+            <dd class="row__value">{outfit.sponsor.name}</dd>
+          </div>
+        )}
+        {outfit.challenge && (
+          <div class="row">
+            <dt class="row__label">Challenge</dt>
+            <dd class="row__value">{challengeWords(outfit.challenge, career.seasonYear)}</dd>
+          </div>
+        )}
+        <div class="row">
+          <dt class="row__label">Drivers</dt>
+          <dd class="row__value">{drivers.map((contract) => driverName(contract.driver)).join(', ') || 'A seat to fill'}</dd>
+        </div>
+      </dl>
+      <p class="muted">The Money and Team tabs have the rest.</p>
+    </section>
+  );
+}
+
+export function SponsorCard({ career, challenges = true }: { career: CareerState; challenges?: boolean }) {
   const outfit = career.outfit;
   if (!outfit?.sponsor) return null;
   const { sponsor } = outfit;
-  const open = canDevelop(career) && outfit.challengeOffers.length > 0;
+  const open = challenges && canDevelop(career) && outfit.challengeOffers.length > 0;
   return (
     <section class="card" aria-labelledby="sponsor">
       <h2 class="card__title" id="sponsor">

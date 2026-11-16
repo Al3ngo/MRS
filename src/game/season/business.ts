@@ -71,6 +71,52 @@ export function carAgainstField(career: CareerState): QualityRow[] {
   });
 }
 
+/** Where one part puts the car against the field: 1st is the best on the grid. */
+export interface PartLevel {
+  rank: number;
+  of: number;
+  /** Between the worst (0) and the best (1) on the grid. */
+  share: number;
+}
+
+/**
+ * Each part's level against the field. Aero and chassis are the car's own aero and chassis. The
+ * engine, battery and energy recovery share the car's power, so each is the power the car would
+ * have if all three were as far along as that one: a part that lags shows lower than the others.
+ */
+export function partLevels(career: CareerState): Partial<Record<PartId, PartLevel>> {
+  const mine = playerCarNow(career);
+  const { outfit, team, seasonYear: season } = career;
+  if (!mine || !outfit || !team) return {};
+  const others = teamsIn(season)
+    .filter((entry) => entry.team !== team)
+    .map((entry) => realCar(season, entry.team));
+  const level = (value: number, field: readonly number[]): PartLevel => {
+    const values = [value, ...field];
+    const best = Math.max(...values);
+    const worst = Math.min(...values);
+    return {
+      rank: 1 + field.filter((other) => other > value + 1e-9).length,
+      of: values.length,
+      share: best - worst < 1e-9 ? 1 : Math.min(1, Math.max(0, (value - worst) / (best - worst))),
+    };
+  };
+  const weights = powerWeights(season);
+  const powerParts = partsIn(season).filter((part): part is keyof typeof weights => part in weights);
+  const weightTotal = powerParts.reduce((sum, part) => sum + weights[part], 0);
+  const withoutParts = mine.power - powerParts.reduce((sum, part) => sum + weights[part] * (outfit.parts[part]?.perf ?? 0), 0);
+  const levels: Partial<Record<PartId, PartLevel>> = {};
+  for (const part of partsIn(season)) {
+    if (part === 'aero') levels.aero = level(mine.aero, others.map((car) => car.aero));
+    else if (part === 'chassis') levels.chassis = level(mine.chassis, others.map((car) => car.chassis));
+    else {
+      const power = withoutParts + weightTotal * (outfit.parts[part]?.perf ?? 0);
+      levels[part] = level(power, others.map((car) => car.power));
+    }
+  }
+  return levels;
+}
+
 /** Whether the team can work on the car now: between races, or before the season's first session. */
 export function canDevelop(career: CareerState): boolean {
   if (!career.outfit || career.finished) return false;

@@ -110,7 +110,8 @@ export function RaceResult({ state, pole, title }: { state: RaceState; pole: Pol
   const lines = story(state);
 
   return (
-    <>
+    <div class="split split--list">
+      <div class="split__side">
       <section class="card" aria-labelledby="result-numbers">
         <h2 class="card__title" id="result-numbers">
           {title}
@@ -124,8 +125,23 @@ export function RaceResult({ state, pole, title }: { state: RaceState; pole: Pol
           ))}
         </dl>
       </section>
+      {lines.length > 0 && (
+        <section class="card card--list" aria-label="Race story">
+          <ol>
+            {lines.map((line, index) => (
+              <li key={index}>
+                <div class="story">
+                  <span class="story__lap">Lap {line.lap}</span>
+                  <span class="story__text">{line.text}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      </div>
 
-      <section class="card card--list card--gap" aria-label="Result">
+      <section class="card card--list" aria-label="Result">
         <ol>
           {rows.map((row) => {
             const entrant = state.setup.grid.find((candidate) => candidate.id === row.car)!;
@@ -159,21 +175,6 @@ export function RaceResult({ state, pole, title }: { state: RaceState; pole: Pol
           })}
         </ol>
       </section>
-
-      {lines.length > 0 && (
-        <section class="card card--list card--gap" aria-label="Race story">
-          <ol>
-            {lines.map((line, index) => (
-              <li key={index}>
-                <div class="story">
-                  <span class="story__lap">Lap {line.lap}</span>
-                  <span class="story__text">{line.text}</span>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-    </>
+    </div>
   );
 }

@@ -34,7 +34,7 @@ function pointsRule(season: number): string {
   return `Each race pays ${table[0]} points for a win, down to ${table.at(-1)} for ${ordinal(table.length)}.`;
 }
 import { StandingsTable } from '../career/Standings';
-import { MoneyCard, NewsCard, PeopleCard, SponsorCard } from '../career/Business';
+import { GlanceCard, MoneyCard, NewsCard, PeopleCard, SponsorCard } from '../career/Business';
 import { Garage } from '../career/Garage';
 import { WinterCard, WinterSheets, type WinterSheet } from '../career/Winter';
 import { AcademyCard, MemorialCard } from '../career/Lifecycle';
@@ -46,7 +46,7 @@ import { hubTips } from '../tutorial/tips';
  * races it is the management phase; the sessions of a weekend open on their own screen.
  */
 
-const TABS = ['Weekend', 'Car', 'Calendar', 'Standings'] as const;
+const TABS = ['Home', 'Money', 'Team', 'Car', 'Calendar', 'Standings'] as const;
 type Tab = (typeof TABS)[number];
 
 const dayMonth = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -54,7 +54,7 @@ const raceDay = (iso: string): string => dayMonth.format(new Date(`${iso}T00:00:
 
 export function CareerScreen({ slot }: { slot: SlotId }) {
   const { active } = useStore(app);
-  const [tab, setTab] = useState<Tab>('Weekend');
+  const [tab, setTab] = useState<Tab>('Home');
 
   useEffect(() => {
     void enterCareer(slot);
@@ -85,6 +85,16 @@ export function CareerScreen({ slot }: { slot: SlotId }) {
             <IconBack />
             Careers
           </button>
+          {career?.team && (
+            <span class="topbar__title">
+              <span class="topbar__name">{teamLabel(career.team, career.seasonYear).name}</span>
+              <span class="topbar__sub">
+                {career.finished
+                  ? `Career complete, ${career.seasonYear}`
+                  : `Season ${career.seasonYear} · Round ${career.round} of ${roundsIn(career.seasonYear)}`}
+              </span>
+            </span>
+          )}
           <span class="topbar__end">
             <span class="topbar__meta" aria-live="polite">
               {saveLine}
@@ -130,7 +140,7 @@ function TeamChoice({ career }: { career: CareerState }) {
           Season {career.seasonYear}. The team is yours for the whole career, to the end of {LAST_SEASON}.
         </p>
       </div>
-      <section class="card card--list" aria-label="Teams">
+      <section class="card card--list card--columns" aria-label="Teams">
         <ul>
           {teams.map((team) => (
             <li key={team.team}>
@@ -265,43 +275,52 @@ function Hub({
   return (
     <>
       <main class={`canvas${action ? ' canvas--above-bar' : ''} hub`} data-sessions={career.sessionsCompleted}>
-        <div class="title-row">
-          <h1 class="title">{label.name}</h1>
-          <p class="subtitle">
-            {career.finished ? `Career complete, ${season}` : `Season ${season} · Round ${career.round} of ${roundsIn(season)}`}
-          </p>
-        </div>
-
+        <h1 class="visually-hidden">{label.name}</h1>
         <div class="tabs" role="tablist">
           {TABS.map((name) => (
             <button
               type="button"
               key={name}
               role="tab"
+              data-tab={name}
               aria-selected={name === tab}
               class={`tab${name === tab ? ' tab--on' : ''}`}
               onClick={() => setTab(name)}
             >
-              {name === 'Weekend' && between ? 'Team' : name}
+              {name}
             </button>
           ))}
         </div>
 
-        {tab === 'Weekend' && !between && (
-          <div class="stack">
-            <WinterCard career={career} open={setWinter} />
+        {tab === 'Home' && !between && (
+          <div class="split split--even">
             <ThisWeekend career={career} />
-            <SponsorCard career={career} />
+            <div class="stack">
+              <WinterCard career={career} open={setWinter} />
+              <GlanceCard career={career} />
+            </div>
+          </div>
+        )}
+        {tab === 'Home' && between && career.finished && <CareerSummary slot={slot} career={career} team={team} />}
+        {tab === 'Home' && between && !career.finished && (
+          <BetweenRaces career={career} team={team} seasonOver={lastSeason} openWinter={setWinter} />
+        )}
+        {tab === 'Money' && (
+          <div class="split split--even">
             <MoneyCard career={career} />
+            <SponsorCard career={career} challenges={false} />
+          </div>
+        )}
+        {tab === 'Team' && (
+          <div class="stack">
             <PeopleCard career={career} />
-            <AcademyCard career={career} />
+            <div class="split">
+              <AcademyCard career={career} />
+              <MemorialCard career={career} />
+            </div>
           </div>
         )}
         {tab === 'Car' && <Garage career={career} />}
-        {tab === 'Weekend' && between && career.finished && <CareerSummary slot={slot} career={career} team={team} />}
-        {tab === 'Weekend' && between && !career.finished && (
-          <BetweenRaces career={career} team={team} seasonOver={lastSeason} openWinter={setWinter} />
-        )}
         {tab === 'Calendar' && <Calendar career={career} team={team} />}
         {tab === 'Standings' && <Championships career={career} team={team} />}
       </main>
@@ -314,7 +333,7 @@ function Hub({
         />
       )}
 
-      {action && (tab === 'Weekend' || winterOpen) && (
+      {action && (tab === 'Home' || winterOpen) && (
         <div class="actionbar">
           <div class="actionbar__inner">
             <button type="button" class="button button--primary" data-quick onClick={action.run}>
@@ -403,80 +422,73 @@ function BetweenRaces({
   const { seasonYear: season } = career;
   const last = career.results.at(-1);
   const round = calendar(season)[career.round - 1]!;
-  const drivers = driverStandings(career.results);
   const teams = teamStandings(career.results);
   const ourTeam = teams.find((row) => row.id === team);
   const next = seasonOver ? null : calendar(season)[career.round]!;
 
   return (
-    <div class="stack">
-      <WinterCard career={career} open={openWinter} />
-      <NewsCard career={career} />
-      {last && (
-        <section class="card" aria-labelledby="last-round">
-          <h2 class="card__title" id="last-round">
-            {round.name}
-          </h2>
-          <dl class="facts facts--tight">
-            {last.race
-              .filter((finish) => finish.team === team)
-              .map((finish) => (
-                <div class="row" key={finish.driver}>
-                  <dt class="row__label">{driverName(finish.driver)}</dt>
+    <div class="split">
+      <div class="stack">
+        {last && (
+          <section class="card" aria-labelledby="last-round">
+            <h2 class="card__title" id="last-round">
+              {round.name}
+            </h2>
+            <dl class="facts facts--tight">
+              {last.race
+                .filter((finish) => finish.team === team)
+                .map((finish) => (
+                  <div class="row" key={finish.driver}>
+                    <dt class="row__label">{driverName(finish.driver)}</dt>
+                    <dd class="row__value">
+                      {finishWords(finish.position, finish.classified, finish.status)}
+                      {finish.points > 0 ? `, ${points(finish.points)}` : ''}
+                    </dd>
+                  </div>
+                ))}
+              <div class="row">
+                <dt class="row__label">Winner</dt>
+                <dd class="row__value">
+                  {driverName(last.race[0]!.driver)}, {teamLabel(last.race[0]!.team, season).name}
+                </dd>
+              </div>
+              {ourTeam && (
+                <div class="row">
+                  <dt class="row__label">Teams' championship</dt>
                   <dd class="row__value">
-                    {finishWords(finish.position, finish.classified, finish.status)}
-                    {finish.points > 0 ? `, ${points(finish.points)}` : ''}
+                    {ordinal(ourTeam.position)}, {points(ourTeam.points)}
                   </dd>
                 </div>
-              ))}
-            <div class="row">
-              <dt class="row__label">Winner</dt>
-              <dd class="row__value">
-                {driverName(last.race[0]!.driver)}, {teamLabel(last.race[0]!.team, season).name}
-              </dd>
-            </div>
-          </dl>
-        </section>
-      )}
-
-      <MoneyCard career={career} />
-
-      {seasonOver ? (
-        <SeasonReview record={seasonRecord(career)} team={team} />
-      ) : (
-        <section class="card card--list" aria-labelledby="table-now">
-          <h2 class="card__title card__title--list" id="table-now">
-            Teams' championship{ourTeam ? `: you are ${ordinal(ourTeam.position)}` : ''}
-          </h2>
-          <StandingsTable rows={teams} kind="teams" season={season} team={team} limit={5} label="Teams' championship" />
-          <h2 class="card__title card__title--list">Drivers' championship</h2>
-          <StandingsTable rows={drivers} kind="drivers" season={season} team={team} limit={5} label="Drivers' championship" />
-        </section>
-      )}
-
-      {next && (
-        <section class="card weekend" aria-labelledby="next-round">
-          <div class="weekend__head">
-            <span class="weekend__map">
-              <TrackOutline circuit={circuitById(next.circuit)} stroke={4} />
-            </span>
-            <span class="round__text">
-              <h2 class="card__title" id="next-round">
-                Next: {next.name}
-              </h2>
-              <span class="round__where">
-                {circuitById(next.circuit).name} · {raceDay(next.date)}
-                {next.sprintLaps !== null ? ' · Sprint weekend' : ''}
+              )}
+            </dl>
+          </section>
+        )}
+        <NewsCard career={career} />
+        {seasonOver && <SeasonReview record={seasonRecord(career)} team={team} />}
+      </div>
+      <div class="stack">
+        <WinterCard career={career} open={openWinter} />
+        {next && (
+          <section class="card weekend" aria-labelledby="next-round">
+            <div class="weekend__head">
+              <span class="weekend__map">
+                <TrackOutline circuit={circuitById(next.circuit)} stroke={4} />
               </span>
-            </span>
-          </div>
-        </section>
-      )}
-
-      {!seasonOver && <SponsorCard career={career} />}
-      <PeopleCard career={career} />
-      <AcademyCard career={career} />
-      <p class="smallprint">Between races: the Car tab is where the car is developed.</p>
+              <span class="round__text">
+                <h2 class="card__title" id="next-round">
+                  Next: {next.name}
+                </h2>
+                <span class="round__where">
+                  {circuitById(next.circuit).name} · {raceDay(next.date)}
+                  {next.sprintLaps !== null ? ' · Sprint weekend' : ''}
+                </span>
+              </span>
+            </div>
+          </section>
+        )}
+        {!seasonOver && <SponsorCard career={career} />}
+        <p class="smallprint">Between races: the Car tab is where the car is developed.</p>
+      </div>
     </div>
   );
 }
@@ -623,7 +635,7 @@ function Calendar({ career, team }: { career: CareerState; team: string }) {
   const { seasonYear: season } = career;
   const results = new Map<number, RoundResult>(career.results.map((result) => [result.round, result]));
   return (
-    <section class="card card--list" aria-label={`Calendar ${season}`}>
+    <section class="card card--list card--columns" aria-label={`Calendar ${season}`}>
       <ol>
         {calendar(season).map((round) => {
           const result = results.get(round.round);
@@ -659,39 +671,24 @@ function Calendar({ career, team }: { career: CareerState; team: string }) {
 }
 
 function Championships({ career, team }: { career: CareerState; team: string }) {
-  const [kind, setKind] = useState<'drivers' | 'teams'>('drivers');
   const { seasonYear: season } = career;
-  const rows = kind === 'drivers' ? driverStandings(career.results) : teamStandings(career.results);
   return (
     <div class="stack">
-      <div class="segmented" role="group" aria-label="Championship">
-        {(['drivers', 'teams'] as const).map((option) => (
-          <button
-            type="button"
-            key={option}
-            class={`segmented__option${kind === option ? ' segmented__option--on' : ''}`}
-            aria-pressed={kind === option}
-            onClick={() => setKind(option)}
-          >
-            {option === 'drivers' ? 'Drivers' : 'Teams'}
-          </button>
-        ))}
+      <div class="split">
+        <section class="card card--list" aria-label={`${season} drivers' championship`}>
+          <h2 class="card__title card__title--list">Drivers</h2>
+          <StandingsTable rows={driverStandings(career.results)} kind="drivers" season={season} team={team} label="Drivers' championship" />
+        </section>
+        <section class="card card--list" aria-label={`${season} teams' championship`}>
+          <h2 class="card__title card__title--list">Teams</h2>
+          <StandingsTable rows={teamStandings(career.results)} kind="teams" season={season} team={team} label="Teams' championship" />
+        </section>
       </div>
-      <section class="card card--list" aria-label={`${season} ${kind === 'drivers' ? "drivers'" : "teams'"} championship`}>
-        <StandingsTable
-          rows={rows}
-          kind={kind}
-          season={season}
-          team={team}
-          label={kind === 'drivers' ? "Drivers' championship" : "Teams' championship"}
-        />
-        <p class="list-note">
-          After {career.results.length} of {roundsIn(season)} rounds. {pointsRule(season)}
-          {career.results.some((result) => result.sprint) ? ' Sprints pay points too.' : ''}
-          {kind === 'teams' ? " The teams' championship (officially the constructors') adds up both cars' points." : ''}
-        </p>
-      </section>
-      <MemorialCard career={career} />
+      <p class="smallprint">
+        After {career.results.length} of {roundsIn(season)} rounds. {pointsRule(season)}
+        {career.results.some((result) => result.sprint) ? ' Sprints pay points too.' : ''} The teams' championship
+        (officially the constructors') adds up both cars' points.
+      </p>
       <PastSeasons seasons={career.history} team={team} />
     </div>
   );

@@ -34,11 +34,11 @@ describe('the tutorial', () => {
 
   it('starts at the sponsor before the first season, and points at the car between races', () => {
     const career = start();
-    const winter = hubTips(career, { tab: 'Weekend', winterStep: 'sponsor' }).map((tip) => tip.id);
+    const winter = hubTips(career, { tab: 'Home', winterStep: 'sponsor' }).map((tip) => tip.id);
     expect(winter).toEqual(['welcome', 'sponsor']);
-    const ready = hubTips(career, { tab: 'Weekend', winterStep: null }).map((tip) => tip.id);
+    const ready = hubTips(career, { tab: 'Home', winterStep: null }).map((tip) => tip.id);
     expect(ready).toEqual(['welcome', 'money', 'go']);
-    const between = hubTips({ ...career, phase: 'management' }, { tab: 'Weekend', winterStep: null }).map((tip) => tip.id);
+    const between = hubTips({ ...career, phase: 'management' }, { tab: 'Home', winterStep: null }).map((tip) => tip.id);
     expect(between).toContain('car-tab');
     expect(between.at(-1)).toBe('basics');
     expect(hubTips(career, { tab: 'Car', winterStep: null }).map((tip) => tip.id)).toEqual(['garage']);
@@ -47,9 +47,9 @@ describe('the tutorial', () => {
   it('gives every tip its own name, a title and something to say', () => {
     const career = start();
     const all = [
-      ...hubTips(career, { tab: 'Weekend', winterStep: 'sponsor' }),
-      ...hubTips(career, { tab: 'Weekend', winterStep: null }),
-      ...hubTips({ ...career, phase: 'management', outfit: { ...career.outfit!, challengeOffers: [{} as never] } }, { tab: 'Weekend', winterStep: null }),
+      ...hubTips(career, { tab: 'Home', winterStep: 'sponsor' }),
+      ...hubTips(career, { tab: 'Home', winterStep: null }),
+      ...hubTips({ ...career, phase: 'management', outfit: { ...career.outfit!, challengeOffers: [{} as never] } }, { tab: 'Home', winterStep: null }),
       ...hubTips(career, { tab: 'Car', winterStep: null }),
       ...practiceTips(true),
       ...QUALIFYING_TIPS,

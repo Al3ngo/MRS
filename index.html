@@ -25,10 +25,22 @@
     <!-- Painted before the stylesheet arrives, so the app never flashes white. -->
     <style>
       html { background: #000; color: #fff; }
+      .rotate { display: none; }
     </style>
   </head>
   <body>
     <div id="app"></div>
+    <!-- Shown instead of the game whenever the screen is upright: the game plays in landscape. -->
+    <div class="rotate" role="status">
+      <svg class="rotate__icon" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="24" y="8" width="24" height="42" rx="5" />
+        <path d="M32 44h8" />
+        <path d="M14 56c6 6 14 8 22 8h12" />
+        <path d="m44 58 6 6-6 6" />
+      </svg>
+      <p class="rotate__title">Turn your phone sideways</p>
+      <p class="rotate__text">Modern Racing Manager plays in landscape.</p>
+    </div>
     <noscript>Modern Racing Manager needs JavaScript to run.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -6,37 +6,69 @@ import {
   lapSeconds,
   moneyView,
   nextYearView,
+  partLevels,
   partViews,
   unitViews,
+  type PartView,
 } from '../../game/season/business';
 import { buildPart, fitUnit, investNextYear, upgradePart, worksTeam, type PartId } from '../../game/team';
 import { Meter } from '../Meter';
+import { Sheet } from '../Sheet';
+import { PartArt } from './PartArt';
 import { ordinal } from '../race/Result';
 import { teamAct } from './Business';
 import { PART_NAMES, QUALITY_LINES, QUALITY_NAMES, cash, engineMakerName, partLine } from './businessWords';
 import { driverName } from './names';
 
 /**
- * The car: how it compares with the field, its parts (upgrade, or build a new version), next
- * year's car, and the power units against the season's allowance. Work is done between races.
+ * The car: its parts, each drawn with its level against the field and its reliability as bars
+ * (what each part does, and what working on it costs and gains, a tap away); next year's car; the
+ * power units; and how the car stands against the field. Work is done between races.
  */
+type View = 'parts' | 'next-year' | 'units' | 'field';
+
 export function Garage({ career }: { career: CareerState }) {
   const [message, setMessage] = useState<string | null>(null);
+  const [view, setView] = useState<View>('parts');
+  const [detail, setDetail] = useState<PartId | null>(null);
   const open = canDevelop(career);
   const act = (change: Parameters<typeof teamAct>[0]): void => setMessage(teamAct(change));
+  const nextYear = nextYearView(career);
+  const views: [View, string][] = [
+    ['parts', 'Parts'],
+    ...(nextYear ? [['next-year', `${nextYear.season} car`] as [View, string]] : []),
+    ...(unitViews(career).length > 0 ? [['units', 'Power units'] as [View, string]] : []),
+    ['field', 'Rankings'],
+  ];
   return (
-    <div class="stack">
-      <MoneyStrip career={career} />
-      <FieldCard career={career} />
-      {!open && <p class="muted">The car can be worked on between races.</p>}
+    <div class="garage">
+      <div class="garage__head">
+        <MoneyStrip career={career} />
+        <div class="segmented garage__views" role="group" aria-label="The car">
+          {views.map(([id, label]) => (
+            <button
+              type="button"
+              key={id}
+              class={`segmented__option${view === id ? ' segmented__option--on' : ''}`}
+              aria-pressed={view === id}
+              onClick={() => setView(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {!open && <p class="muted garage__note">The car can be worked on between races.</p>}
       {message && (
         <p class="notice" role="status">
           {message}
         </p>
       )}
-      <PartsCard career={career} open={open} act={act} />
-      <NextYearCard career={career} open={open} act={act} />
-      <UnitsCard career={career} open={open} act={act} />
+      {view === 'parts' && <PartsCard career={career} open={open} act={act} onDetail={setDetail} />}
+      {view === 'next-year' && <NextYearCard career={career} open={open} act={act} />}
+      {view === 'units' && <UnitsCard career={career} open={open} act={act} />}
+      {view === 'field' && <FieldCard career={career} />}
+      {detail && <PartSheet career={career} part={detail} open={open} act={act} onClose={() => setDetail(null)} />}
     </div>
   );
 }
@@ -110,37 +142,40 @@ function FieldCard({ career }: { career: CareerState }) {
 
 type Act = (change: Parameters<typeof teamAct>[0]) => void;
 
-function PartsCard({ career, open, act }: { career: CareerState; open: boolean; act: Act }) {
+/** How full a level bar is: never quite empty, so the last on the grid still shows as a short red bar. */
+const levelFill = (share: number): number => 0.08 + 0.92 * share;
+
+function PartsCard({ career, open, act, onDetail }: { career: CareerState; open: boolean; act: Act; onDetail: (part: PartId) => void }) {
   const parts = partViews(career);
+  const levels = partLevels(career);
   const money = moneyView(career)?.money ?? 0;
-  const season = career.seasonYear;
-  const supplier = career.outfit && career.team && !worksTeam(career.outfit, career.team) ? engineMakerName(career.outfit.engine) : null;
   return (
-    <section class="card" aria-labelledby="parts">
-      <h2 class="card__title" id="parts">
+    <section class="parts-card" aria-labelledby="parts">
+      <h2 class="visually-hidden" id="parts">
         Develop the car
       </h2>
-      <p class="muted">
-        An upgrade is cheap: a little pace, and reliability back. A new version costs more and gains much more, but is
-        fragile at first, and each one this season costs 2 more than the last.
-      </p>
-      <ul class="parts">
+      <ul class="part-tiles">
         {parts.map((part) => {
-          const seconds = lapSeconds(part.part as PartId, part.gain, season);
+          const level = levels[part.part];
           return (
             <li class="part" key={part.part}>
-              <span class="part__head">
+              <button type="button" class="part__look" aria-label={`${PART_NAMES[part.part]}: what it does and what work on it gains`} onClick={() => onDetail(part.part)}>
+                <PartArt part={part.part} class="part__art" />
                 <span class="part__name">{PART_NAMES[part.part]}</span>
-                <Meter fill={part.soundness} size="small" label={`${PART_NAMES[part.part]} reliability`} class="part__meter" />
-              </span>
-              <span class="part__line">{partLine(part.part, season)}</span>
-              <span class="part__line">
-                {part.locked === 'supplier'
-                  ? `Built by ${supplier}: it improves as theirs does. Upgrades fit it better to your car.`
-                  : part.locked === 'frozen'
-                    ? 'Frozen by the rules until 2014: upgrades only.'
-                    : `A new version: about ${seconds.toFixed(2)} s a lap quicker. ${part.builds} built this season.`}
-              </span>
+                <span class="part__bar">
+                  <span class="part__label">Level</span>
+                  <Meter
+                    fill={levelFill(level?.share ?? 0)}
+                    good={level?.share ?? 0}
+                    size="small"
+                    label={`${PART_NAMES[part.part]} level: ${level ? `${ordinal(level.rank)} of ${level.of}` : 'unknown'}`}
+                  />
+                </span>
+                <span class="part__bar">
+                  <span class="part__label">Reliability</span>
+                  <Meter fill={part.soundness} size="small" label={`${PART_NAMES[part.part]} reliability`} class="part__meter" />
+                </span>
+              </button>
               {open && (
                 <span class="part__actions">
                   <button
@@ -167,8 +202,77 @@ function PartsCard({ career, open, act }: { career: CareerState; open: boolean; 
           );
         })}
       </ul>
-      <p class="muted">The bar beside each part is its reliability: new parts lower it, upgrades bring it back.</p>
+      <p class="smallprint">Tap a part for what it does, and what work on it costs and gains.</p>
     </section>
+  );
+}
+
+/** One part, in full: what it does, where it stands, and the two kinds of work on it. */
+function PartSheet({ career, part, open, act, onClose }: { career: CareerState; part: PartId; open: boolean; act: Act; onClose: () => void }) {
+  const view = partViews(career).find((entry) => entry.part === part) as PartView | undefined;
+  const level = partLevels(career)[part];
+  const money = moneyView(career)?.money ?? 0;
+  const season = career.seasonYear;
+  const supplier = career.outfit && career.team && !worksTeam(career.outfit, career.team) ? engineMakerName(career.outfit.engine) : null;
+  if (!view) return null;
+  const seconds = lapSeconds(part, view.gain, season);
+  return (
+    <Sheet title={PART_NAMES[part]} onClose={onClose}>
+      <PartArt part={part} class="part__art part__art--large" />
+      <p class="sheet__text">{partLine(part, season)}</p>
+      <dl class="facts facts--tight">
+        <div class="row row--meter">
+          <dt class="row__label">Level</dt>
+          <dd class="row__value row__value--meter">
+            <Meter fill={levelFill(level?.share ?? 0)} good={level?.share ?? 0} size="small" label={`Level: ${level ? `${ordinal(level.rank)} of ${level.of}` : 'unknown'}`} />
+            <span>{level ? `${ordinal(level.rank)} of ${level.of}` : 'Not known'}</span>
+          </dd>
+        </div>
+        <div class="row row--meter">
+          <dt class="row__label">Reliability</dt>
+          <dd class="row__value row__value--meter">
+            <Meter fill={view.soundness} size="small" label="Reliability" />
+            <span>{view.soundness > 0.8 ? 'sound' : view.soundness > 0.5 ? 'fair' : 'fragile'}</span>
+          </dd>
+        </div>
+      </dl>
+      <p class="sheet__text">
+        {view.locked === 'supplier'
+          ? `Built by ${supplier}: it improves as theirs does. Upgrades fit it better to your car.`
+          : view.locked === 'frozen'
+            ? 'Frozen by the rules until 2014: upgrades only.'
+            : `A new version: about ${seconds.toFixed(2)} s a lap quicker. ${view.builds} built this season.`}
+      </p>
+      <p class="sheet__text">
+        An upgrade is cheap: a little pace, and reliability back. A new version costs more and gains much more, but is fragile at
+        first, and each one this season costs 2 more than the last.
+      </p>
+      <div class="sheet__actions">
+        {open && (
+          <button
+            type="button"
+            class="button button--block button--secondary"
+            disabled={money < view.upgradeCost}
+            onClick={() => act((outfit, ctx) => upgradePart(outfit, ctx, part))}
+          >
+            Upgrade · {cash(view.upgradeCost)}
+          </button>
+        )}
+        {open && view.buildable && (
+          <button
+            type="button"
+            class="button button--block button--secondary"
+            disabled={money < view.buildCost}
+            onClick={() => act((outfit, ctx) => buildPart(outfit, ctx, part))}
+          >
+            New version · {cash(view.buildCost)}
+          </button>
+        )}
+        <button type="button" class="button button--block button--quiet" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </Sheet>
   );
 }
 

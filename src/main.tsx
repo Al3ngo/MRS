@@ -2,6 +2,7 @@ import { render } from 'preact';
 import { startRouter } from './app/router';
 import { boot, startAutosaveOnHide } from './app/session';
 import { startInstallWatch, startOffline } from './platform/pwa';
+import { watchOrientation } from './platform/orientation';
 import { armSound } from './platform/sound';
 import './styles/fonts.css';
 import './styles/tokens.css';
@@ -20,6 +21,7 @@ startRouter();
 startInstallWatch();
 startAutosaveOnHide();
 armSound();
+watchOrientation();
 void startOffline();
 void boot();
 

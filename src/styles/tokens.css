@@ -61,14 +61,15 @@
   --pad: 22px;
   --page: 16px;
   /*
-   * The game is laid out for a phone held upright. A tablet or a desktop window shows the same
-   * column, centred; there are no separate wide layouts.
+   * The game is laid out for a phone held sideways, like a console game: wide and short. Screens
+   * use the width for columns, and keep to one main thing each, so they fit the height without
+   * much scrolling. A tablet or a desktop window shows the same layout, up to this width.
    */
-  --canvas: 528px;
+  --canvas: 1080px;
 
-  /* Every control is a comfortable thumb target. */
-  --control-height: 48px;
-  --bar-height: 56px;
+  /* Every control is a comfortable thumb target, and the bars are slim: height is precious. */
+  --control-height: 44px;
+  --bar-height: 48px;
 
   /* Type */
   --font-text: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;

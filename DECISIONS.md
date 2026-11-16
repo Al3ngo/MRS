@@ -948,3 +948,81 @@ Asked for in chat: the money to spend was only on the Team tab, so buying parts 
 tabs to see what was left. The Car tab now opens with the money to spend (and, from 2021, the room
 left under the budget cap), pinned under the top bar while the parts are scrolled through; after a
 purchase it shows what it cost for a moment ("−3").
+
+## After Stage 8: landscape, race pace, highlight moments, a drawn car (v0.9.0)
+
+Playtest fixes asked for in chat (16 November). The race simulation, the data and the save system
+are untouched: only the screens and the race clock changed.
+
+### Landscape
+
+- **The game plays sideways, like Golden Lap.** The web app manifest asks for landscape, and the
+  game asks the browser to lock the screen sideways on the first touch. Android honours both for
+  an installed app. iPhones and iPads do not let a web app lock its orientation (as of this
+  writing), so wherever the lock is not available, the page shows "Turn your phone sideways"
+  whenever the screen is upright, and a race in progress holds still until it is turned back.
+- **One main thing per screen**, with the rest a tap away:
+  - The top bar carries the screen's name (the team, the season and round) instead of a title
+    row, to save height.
+  - The main action sits at the bottom right, under the right thumb.
+  - Dialogs slide in from the right edge at the full height of the screen.
+  - Most screens are two columns: the main thing, and what goes with it.
+- **The team's home is six tabs**: Home (the coming weekend or the race just run, and what comes
+  next), Money (the bank and the sponsor), Team (drivers, staff, the academy), Car, Calendar and
+  Standings (drivers' and teams' tables side by side).
+- **Practice**: the three settings side by side, each a column. What each end of a setting does,
+  and how to read the driver's arrow, is behind the question mark by its name.
+- **The tutorial's tips** sit beside what they point at when there is room, as there usually is
+  on a screen held sideways. A tip was added for the race's speed controls (22 tips in all).
+
+### The race screen
+
+- **The running order down the left** (place, driver, gap, tyre; tap Order for tyre wear and
+  stops), **the circuit in the middle**, **the player's cars and their orders down the right**
+  (the push level, engine and battery modes, the pit stop). The race's speed is in the top right.
+  Watching without a team, the circuit takes the pit wall's room.
+
+### Race pace
+
+- **At 1x a lap takes about 15 seconds on screen, at every circuit.** The clock is set from the
+  circuit's typical racing lap, so Monaco and Spa both take about 15 seconds a lap. 2x and 4x are
+  twice and four times that, and skip still runs the race out at once. A Grand Prix takes about a
+  quarter of an hour at 1x.
+- **Smooth, whatever the simulation does.** The simulation moves in one-second steps of race
+  time; the screen draws every car part way between its last two steps, at the chosen pace, so the
+  steps never show. Slowing down or pausing works the same way.
+
+### Moments worth watching
+
+- **The race slows down, or holds still, for a moment, with a message over the map**:
+
+  | Moment | What happens |
+  |---|---|
+  | An overtake by or on one of your cars | Slow motion |
+  | A crash or collision | Slow motion; held still if it is one of your cars |
+  | A retirement (a breakdown, or out of fuel) | Slow motion; held still if it is one of your cars |
+  | A safety car, virtual safety car or red flag | Held still |
+
+  Slow motion is a quarter of the chosen speed for about two seconds. A hold lasts a little under
+  two seconds, then the race runs on by itself. The cars involved are ringed on the map. Tapping
+  the message lets the race run on at once.
+- **Only overtakes involving your cars** (the player's choice). Overtakes happen 25 to 90 times a
+  race, depending on the era; the rest are still in the feed.
+
+### The car, drawn
+
+- **The five parts the game develops**, each drawn in flat shapes in the game's own greys, with
+  the team's colour on one piece: aero (a rear wing), chassis (the car from the side), the
+  combustion engine (a V engine from the front), the battery and energy recovery (the
+  motor-generator). The brief listed a gearbox and steering, which the game does not model, and
+  left out aero, which it does. The player chose the game's real parts over adding two new ones.
+- **Each part's level is a bar, not a number or stars**: where that part puts the car against
+  the field, from the slowest (a short red bar) to the best (a full green one). For aero and the
+  chassis, that is the car's own aero and chassis. The engine, battery and energy recovery share
+  the car's power, so each shows the power the car would have if all three were as far along as
+  that one: a part that lags shows lower. Reliability is a second bar.
+- **The longer words are a tap away**: what the part does, its place against the field, what a
+  new version gains, and why a part cannot be rebuilt (frozen by the rules, or built by the engine
+  supplier). The work buttons stay on each part.
+- **The Car tab's other views**: next year's car, the power units, and the rankings of the car's
+  four qualities against the field.

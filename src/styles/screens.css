@@ -34,6 +34,26 @@
   gap: var(--gap);
 }
 
+/* Sideways: the three slots side by side. */
+@media (min-width: 640px) {
+  .slots {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .slots > li {
+    display: flex;
+  }
+
+  .slots > li > .slot {
+    flex: 1;
+  }
+
+  .slot .era {
+    margin-top: auto;
+  }
+}
+
 .slot {
   display: flex;
   flex-direction: column;
@@ -272,6 +292,16 @@ button.slot__main:disabled .slot__go {
   padding: 26px 0;
 }
 
+/* Sideways: what a setting is on the left, the setting itself on the right. */
+@media (min-width: 640px) {
+  .setting {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
+    gap: 28px;
+    padding: 18px 0;
+  }
+}
+
 .setting:first-child {
   padding-top: 4px;
 }
@@ -396,7 +426,8 @@ button.slot__main:disabled .slot__go {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 4px;
   margin-bottom: var(--gap);
   padding: 4px;
@@ -405,7 +436,9 @@ button.slot__main:disabled .slot__go {
 }
 
 .tab {
-  height: 40px;
+  height: 36px;
+  padding: 0 6px;
+  white-space: nowrap;
   border-radius: var(--radius-control);
   color: var(--muted);
   font-weight: 500;
@@ -419,6 +452,29 @@ button.slot__main:disabled .slot__go {
 /* A card whose content is a list running edge to edge. */
 .card--list {
   padding: 6px 0;
+}
+
+/* A long list in two columns, to use the width of a screen held sideways. */
+@media (min-width: 640px) {
+  .card--columns > ol,
+  .card--columns > ul {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .card--columns li {
+    border-top: 1px solid var(--rule);
+  }
+
+  .card--columns > ol > li:nth-child(-n + 2),
+  .card--columns > ul > li:nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  .card--columns > ol > li:nth-child(odd),
+  .card--columns > ul > li:nth-child(odd) {
+    border-right: 1px solid var(--rule);
+  }
 }
 
 .card--gap {
@@ -677,26 +733,34 @@ button.slot__main:disabled .slot__go {
 
 /* ── The race (Stage 4) ────────────────────────────────────────────────────────────────────── */
 
-/* One screen, no page scroll: map, feed and controls keep their place; only the order scrolls. */
+/*
+ * One screen, laid out sideways, nothing scrolling as a whole: the bar along the top, then the
+ * running order, the circuit and the pit wall side by side. Only the running order scrolls.
+ */
 .race {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(136px, 19%) minmax(0, 1fr) minmax(252px, 34%);
+  grid-template-rows: 46px minmax(0, 1fr);
+  grid-template-areas:
+    'bar bar bar'
+    'order map wall';
+  column-gap: 10px;
   width: 100%;
-  max-width: calc(var(--canvas) + 2 * var(--page));
+  max-width: 1280px;
   height: 100dvh;
   margin-inline: auto;
-  padding: env(safe-area-inset-top) max(var(--page), env(safe-area-inset-right)) 0
-    max(var(--page), env(safe-area-inset-left));
+  padding: env(safe-area-inset-top) max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
   overflow: hidden;
 }
 
 .race__bar {
-  flex: none;
+  grid-area: bar;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  height: 52px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .race__left {
@@ -704,8 +768,12 @@ button.slot__main:disabled .slot__go {
   align-items: center;
 }
 
-.race__lap {
-  justify-self: center;
+.race__middle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .race__lap.figure {
@@ -717,30 +785,23 @@ button.slot__main:disabled .slot__go {
   color: var(--faint);
 }
 
-.race__status {
-  justify-self: end;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
 .race__weather {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  line-height: 16px;
   white-space: nowrap;
 }
 
-.race__wet {
-  width: 28px;
+/* The speed of the race: pause, 1x, 2x, 4x and skip, in the top right corner. */
+.race__speed {
+  width: 220px;
 }
 
-/* On the narrowest phones "Leave" is the arrow alone; its name stays for screen readers. */
-@media (max-width: 389px) {
+.race__speed .segmented__option {
+  height: 36px;
+}
+
+/* On the smallest phones "Leave" is the arrow alone; its name stays for screen readers. */
+@media (max-width: 720px) {
   .race__leave {
     position: absolute;
     width: 1px;
@@ -748,11 +809,56 @@ button.slot__main:disabled .slot__go {
     overflow: hidden;
     clip-path: inset(50%);
   }
+
+  .race__speed {
+    width: 188px;
+  }
+}
+
+/* The running order, down the left: place, team, driver, gap and tyre. The rest is a tap away. */
+.race__order {
+  grid-area: order;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.race__order-head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 10px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.race__order-head svg {
+  width: 16px;
+  height: 16px;
+  color: var(--faint);
+  align-self: center;
+}
+
+/* Watching a race with no cars of one's own: the circuit takes the pit wall's room. */
+.race--watch {
+  grid-template-columns: minmax(136px, 19%) minmax(0, 1fr);
+  grid-template-areas:
+    'bar bar'
+    'order map';
 }
 
 .race__map {
-  flex: none;
-  height: clamp(128px, 26dvh, 290px);
+  grid-area: map;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
 }
 
 .race__map canvas {
@@ -761,19 +867,22 @@ button.slot__main:disabled .slot__go {
   height: 100%;
 }
 
+/* The last two lines of the race feed, along the foot of the map. */
 .feed {
-  flex: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
-  flex-direction: column;
-  height: 48px;
-  overflow: hidden;
-  font-size: 13px;
+  flex-direction: column-reverse;
+  font-size: 12px;
+  pointer-events: none;
 }
 
 .feed__line {
   display: flex;
   gap: 8px;
-  line-height: 24px;
+  line-height: 20px;
   white-space: nowrap;
 }
 
@@ -788,9 +897,9 @@ button.slot__main:disabled .slot__go {
 
 .feed__who {
   flex: none;
-  width: 32px;
+  width: 30px;
   font-family: var(--font-figure);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -804,13 +913,83 @@ button.slot__main:disabled .slot__go {
   text-overflow: ellipsis;
 }
 
+/* A moment worth watching: the message over the map while the race slows down for it. */
+.moment {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: min(92%, 340px);
+  padding: 10px 14px;
+  border-radius: var(--radius-inner);
+  background: var(--raised);
+  text-align: left;
+  transform: translateX(-50%);
+  animation: moment-in 160ms var(--ease-out);
+}
+
+.moment__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.moment__title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.moment--crash .moment__title,
+.moment--retired .moment__title {
+  color: var(--pill-negative-ink);
+}
+
+.moment--caution .moment__title {
+  color: var(--warning);
+}
+
+.moment--overtake .moment__title {
+  color: var(--positive);
+}
+
+.moment__pace {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.moment__line {
+  display: flex;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.moment__who {
+  flex: none;
+  font-family: var(--font-figure);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@keyframes moment-in {
+  from {
+    transform: translate(-50%, -6px);
+    opacity: 0;
+  }
+}
+
 .tower {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-radius: var(--radius-inner);
-  background: var(--surface);
 }
 
 .tower__row {
@@ -900,6 +1079,43 @@ button.slot__main:disabled .slot__go {
   text-align: right;
 }
 
+/* The running order beside the map: one short line a car. */
+.tower--compact .tower__row {
+  grid-template-columns: 18px 3px 30px minmax(0, 1fr) 9px;
+  gap: 6px;
+  height: 25px;
+  padding: 0 8px 0 4px;
+  font-size: 12px;
+}
+
+.tower--compact .tower__place {
+  font-size: 14px;
+}
+
+.tower--compact .tower__colour {
+  width: 3px;
+  height: 14px;
+}
+
+.tower--compact .tower__gap {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tower--compact .tyre {
+  width: 9px;
+  height: 9px;
+}
+
+/* The full running order, in a sheet: on the sheet's own surface. */
+.tower--sheet {
+  margin: 0 calc(-1 * var(--pad));
+}
+
+.tower--sheet .tower__head {
+  background: var(--surface);
+}
+
 /* A tyre, as the colour of its sidewall marking. */
 .tyre {
   display: inline-block;
@@ -914,18 +1130,26 @@ button.slot__main:disabled .slot__go {
   height: 16px;
 }
 
+/* The player's two cars and the orders for the one chosen, down the right. */
 .pitwall {
-  flex: none;
+  grid-area: wall;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 10px;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
 }
 
 .pitwall__cars {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
+  gap: 6px;
+}
+
+.pitwall__pit {
+  width: 100%;
+  margin-top: auto;
+  padding: 0 12px;
 }
 
 .carcard {
@@ -933,8 +1157,8 @@ button.slot__main:disabled .slot__go {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  min-height: 76px;
-  padding: 10px;
+  min-height: 70px;
+  padding: 8px 9px 9px;
   border-radius: var(--radius-inner);
   background: var(--surface);
   color: var(--muted);
@@ -1031,9 +1255,9 @@ button.slot__main:disabled .slot__go {
 
 .control {
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr);
+  grid-template-columns: 46px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .control__name {
@@ -1042,14 +1266,42 @@ button.slot__main:disabled .slot__go {
 }
 
 .control--large {
-  grid-template-columns: 50px minmax(0, 1fr);
+  grid-template-columns: 46px minmax(0, 1fr);
 }
 
 /* The push level: the control used most in a race, so the largest. */
 .segmented--large .segmented__option {
-  height: 48px;
-  font-size: 14px;
+  height: 44px;
+  font-size: 13px;
   font-weight: 600;
+}
+
+.pitwall .segmented__option {
+  height: 36px;
+  font-size: 12px;
+}
+
+/* In the pit wall the push level takes the full width, with the driver's stress above it. */
+.pitwall .control--large {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.pitwall .stress {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 18px;
+  font-size: 11px;
+}
+
+.pitwall .stress .meter {
+  width: 64px;
+}
+
+.pitwall .segmented--large .segmented__option {
+  height: 42px;
+  font-size: 13px;
 }
 
 /* Driver stress: the label above its bar. A button: tapping it explains stress. */
@@ -1069,10 +1321,14 @@ button.slot__main:disabled .slot__go {
 
 /* What the chosen setting does, in a line under the controls. */
 .control__help {
-  min-height: 18px;
+  min-height: 16px;
+  overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 11px;
+  line-height: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* The race guide: terms and their meanings. */
@@ -1136,30 +1392,6 @@ button.slot__main:disabled .slot__go {
   color: var(--control);
 }
 
-.dock {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
-}
-
-.dock__pit {
-  flex: 1;
-  min-width: 0;
-  padding: 0 12px;
-}
-
-.dock__speed {
-  flex: none;
-  width: 204px;
-}
-
-.dock__speed:only-child {
-  flex: 1;
-  width: auto;
-}
-
 /* A list of options in a sheet: wells in the surface, the chosen one raised. */
 .choices {
   display: flex;
@@ -1217,23 +1449,11 @@ button.slot__main:disabled .slot__go {
   font-size: 13px;
 }
 
-/* Short phones: a smaller map and a one-line feed, so the running order keeps a few rows. */
-@media (max-height: 740px) {
-  .race__map {
-    height: clamp(112px, 19dvh, 150px);
-  }
-
-  .feed {
-    height: 24px;
-  }
-
-  .feed__line--old {
-    display: none;
-  }
-
+/* A short screen (a small phone on its side): smaller cards, no line of help. */
+@media (max-height: 400px) {
   .carcard {
     min-height: 62px;
-    padding: 8px 10px;
+    padding: 6px 8px 8px;
   }
 
   .carcard__meters {
@@ -1241,22 +1461,16 @@ button.slot__main:disabled .slot__go {
     margin-top: 2px;
   }
 
-  .carcard__label {
-    font-size: 10px;
-    line-height: 12px;
-  }
-
   .control__help {
     display: none;
   }
 
-  .pitwall {
-    gap: 6px;
-    padding-top: 8px;
+  .pitwall .segmented__option {
+    height: 34px;
   }
 
-  .segmented__option {
-    height: 42px;
+  .pitwall .segmented--large .segmented__option {
+    height: 38px;
   }
 }
 
@@ -1370,11 +1584,32 @@ button.slot__main:disabled .slot__go {
   font-size: 18px;
 }
 
-/* Practice: a setup dial, stepped with two large buttons. */
-.dial + .dial {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid var(--rule);
+/* A title row with a control at its end. */
+.title-row--split {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.title-row__end {
+  flex: none;
+  width: 240px;
+  margin-left: auto;
+}
+
+/* Practice: the three setup dials side by side, each a column stepped with two buttons. */
+.dials {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dial {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px 14px 12px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
 }
 
 .dial__head {
@@ -1384,16 +1619,27 @@ button.slot__main:disabled .slot__go {
   min-height: 28px;
 }
 
+/* The setting's name: a tap explains it. */
 .dial__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
   font-weight: 600;
 }
 
-/* What the driver said, in words, beside the setting's name. */
+.dial__name svg {
+  width: 16px;
+  height: 16px;
+  color: var(--faint);
+}
+
+/* What the driver said, in words, under the setting's name. */
 .dial__said {
-  flex: 1;
-  min-width: 0;
+  min-height: 18px;
   color: var(--text);
   font-size: 13px;
+  line-height: 18px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1403,22 +1649,27 @@ button.slot__main:disabled .slot__go {
   color: var(--good);
 }
 
+.dial__said--none {
+  color: var(--faint);
+}
+
 .dial__value {
   margin-left: auto;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .dial__control {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .dial__step {
-  width: 48px;
+  width: 40px;
+  min-height: 40px;
   padding: 0;
-  font-size: 22px;
+  font-size: 20px;
 }
 
 /* The slider: a bar, the thumb where the setting is, and the driver's arrow above the bar. */
@@ -1504,16 +1755,10 @@ button.slot__main:disabled .slot__go {
 }
 
 .dial__ends {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-  margin-top: 8px;
-}
-
-.dial__end {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
   color: var(--muted);
   font-size: 12px;
   line-height: 16px;
@@ -1541,10 +1786,6 @@ button.slot__main:disabled .slot__go {
 }
 
 /* ── Race view: weather strip and the tyre and fuel graph ───────────────────────────────────── */
-
-.race__map {
-  position: relative;
-}
 
 /* Along the top of the map: the track now, then the coming laps. */
 .forecast {
@@ -1610,11 +1851,11 @@ button.slot__main:disabled .slot__go {
 
 .outlook__row {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr);
   align-items: center;
   gap: 6px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 14px;
 }
 
@@ -1634,7 +1875,7 @@ button.slot__main:disabled .slot__go {
   position: absolute;
   top: -2px;
   bottom: -2px;
-  left: 50px;
+  left: 44px;
   right: 0;
 }
 
@@ -1649,7 +1890,7 @@ button.slot__main:disabled .slot__go {
 }
 
 .carcard__meter {
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr);
 }
 
 .carcard__warning {
@@ -1670,23 +1911,19 @@ button.slot__main:disabled .slot__go {
   height: 8px;
 }
 
-@media (max-height: 740px) {
+@media (max-height: 400px) {
   .outlook {
     gap: 3px;
   }
 
   .outlook__strip {
-    height: 11px;
+    height: 10px;
   }
 
   .outlook__row,
   .carcard__warning {
     font-size: 10px;
     line-height: 12px;
-  }
-
-  .race__map {
-    height: clamp(104px, 18dvh, 140px);
   }
 }
 
@@ -1765,8 +2002,11 @@ button.slot__main:disabled .slot__go {
   color: var(--bad);
 }
 
-/* The Car tab's money: pinned under the top bar, so it is in sight at every part. */
-.money-strip {
+/*
+ * The Car tab's head: the money to spend and the budget cap left, then the choice of view, in one
+ * row pinned under the top bar, so the money is in sight at every part.
+ */
+.garage__head {
   position: sticky;
   top: calc(var(--bar-height) + env(safe-area-inset-top));
   z-index: 10;
@@ -1774,10 +2014,31 @@ button.slot__main:disabled .slot__go {
   align-items: center;
   justify-content: space-between;
   gap: var(--gap);
-  margin: 0 calc(-1 * var(--page));
-  padding: 10px var(--page);
+  margin: -6px calc(-1 * var(--page)) 8px;
+  padding: 6px var(--page);
   background: var(--ground);
-  border-bottom: 1px solid var(--border);
+}
+
+.garage__views {
+  flex: 0 1 460px;
+  min-width: 0;
+}
+
+.garage__views .segmented__option {
+  height: 34px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.garage__note {
+  margin-bottom: 10px;
+}
+
+.money-strip {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
 }
 
 .money-strip__item {
@@ -1785,10 +2046,6 @@ button.slot__main:disabled .slot__go {
   align-items: baseline;
   gap: 8px;
   min-width: 0;
-}
-
-.money-strip__item--end {
-  justify-content: flex-end;
 }
 
 .money-strip__label {
@@ -1850,14 +2107,12 @@ button.slot__main:disabled .slot__go {
 }
 
 .people,
-.parts,
 .units {
   display: flex;
   flex-direction: column;
 }
 
 .person,
-.part,
 .unit {
   display: flex;
   flex-direction: column;
@@ -1866,13 +2121,11 @@ button.slot__main:disabled .slot__go {
 }
 
 .person + .person,
-.part + .part,
 .unit + .unit {
   border-top: 1px solid var(--rule);
 }
 
-.person__name,
-.part__head {
+.person__name {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1880,14 +2133,12 @@ button.slot__main:disabled .slot__go {
   font-weight: 500;
 }
 
-.person__skill,
-.part__meter {
+.person__skill {
   flex: none;
   width: 64px;
 }
 
-.person__detail,
-.part__line {
+.person__detail {
   color: var(--muted);
   font-size: 14px;
   line-height: 20px;
@@ -1908,16 +2159,11 @@ button.slot__main:disabled .slot__go {
   line-height: 18px;
 }
 
-.person__actions,
-.part__actions {
+.person__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 6px;
-}
-
-.part__actions .button {
-  flex: 1 1 140px;
 }
 
 .unit__name {
@@ -2196,4 +2442,155 @@ button.slot__main:disabled .slot__go {
 .samples__button {
   padding-inline: 8px;
   font-size: 13px;
+}
+
+/* ── The car's parts, drawn ────────────────────────────────────────────────────────────────── */
+
+/* A flat drawing: greys, the team's colour on one piece, cuts in the ground colour. */
+.art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.art__body {
+  fill: var(--control);
+}
+
+.art__dark {
+  fill: var(--raised);
+}
+
+.art__light {
+  fill: var(--muted);
+}
+
+.art__accent {
+  fill: var(--accent);
+}
+
+.art__ground {
+  fill: var(--ground);
+}
+
+.art__line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.art__accent-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+/* The parts side by side: a drawing, the name, the level and reliability as bars, the work. */
+.part-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.part {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px 10px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.part__look {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+}
+
+.part__art {
+  width: 100%;
+  max-width: 100px;
+  margin: 0 auto;
+  padding: 2px 0;
+  border-radius: var(--radius-inner);
+}
+
+.part__art--large {
+  max-width: 220px;
+  margin: 0;
+  padding: 12px;
+  background: var(--ground);
+}
+
+.part__name {
+  font-weight: 600;
+}
+
+.part__bar {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.part__label {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.part__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.part__actions .button {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+/* ── The team's home, sideways ─────────────────────────────────────────────────────────────── */
+
+.glance__money {
+  font-size: 22px;
+  line-height: 26px;
+}
+
+.glance .muted {
+  margin-top: 10px;
+}
+
+/* The team's home: a little less room above the tabs, for the height of a phone on its side. */
+.hub {
+  padding-top: 10px;
+}
+
+.hub .tabs {
+  margin-bottom: 10px;
+}
+
+/* Drivers and staff in two columns. */
+@media (min-width: 640px) {
+  .hub .people {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 28px;
+  }
+
+  .hub .people > .person {
+    border-top: 1px solid var(--rule);
+  }
+
+  .hub .people > .person:nth-child(-n + 2) {
+    border-top: 0;
+  }
 }

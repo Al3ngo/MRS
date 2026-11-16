@@ -15,8 +15,9 @@ import {
   type RaceState,
 } from '../../game/sim';
 import { useStore } from '../../app/store';
+import { landscape } from '../../platform/orientation';
 import { setSound, soundSettings } from '../../platform/sound';
-import { IconBack, IconHelp, IconMuted, IconPause, IconSkip, IconSound } from '../icons';
+import { IconBack, IconForward, IconHelp, IconMuted, IconPause, IconSkip, IconSound } from '../icons';
 import { Meter, batteryMeter, fuelMeter, stressMeter, tyreMeter } from '../Meter';
 import { Forecast } from './Forecast';
 import { OutlookGraph } from './OutlookGraph';
@@ -24,6 +25,7 @@ import { ConfirmSheet, Sheet } from '../Sheet';
 import { RaceClock, SPEEDS, type Speed } from './clock';
 import { drawScene, trackPath, type CarMark, type Scene } from './draw';
 import { RaceSound } from './raceSound';
+import { momentOf, together, type Moment } from './moments';
 import { fitTrack, trackMap, type Fit } from './track';
 import {
   ENGINE_HELP,
@@ -42,8 +44,10 @@ import {
 } from './words';
 
 /**
- * The race as it runs: the circuit from above, the running order, the player's two cars and the
- * controls for them, all on one screen that does not scroll as a whole.
+ * The race as it runs, laid out sideways: the running order down the left, the circuit from above
+ * in the middle, and the player's two cars with their controls down the right. Nothing scrolls as
+ * a whole; only the running order does. Moments worth watching slow the race and show a message
+ * over the map.
  */
 
 const ENGINE_MODES: readonly EngineMode[] = ['save', 'standard', 'push'];
@@ -79,6 +83,12 @@ const FORECAST_STRIP = 30;
 const FORECAST_LEFT = 62;
 const FORECAST_RIGHT = 54;
 
+/** A moment on screen: the message, and when it ends (in performance.now() time). */
+interface Playing {
+  moment: Moment;
+  until: number;
+}
+
 export function LiveRace({
   state,
   onFinish,
@@ -97,11 +107,14 @@ export function LiveRace({
 
   const [, setBeat] = useState(0);
   const sound = useStore(soundSettings);
+  const upright = !useStore(landscape);
   const [speed, setSpeed] = useState<Speed>(startPaused ? 0 : 1);
   const [selected, setSelected] = useState(0);
-  const [sheet, setSheet] = useState<'pit' | 'skip' | 'leave' | 'guide' | null>(null);
+  const [sheet, setSheet] = useState<'pit' | 'skip' | 'leave' | 'guide' | 'order' | null>(null);
   const [help, setHelp] = useState<Help>('push');
   const [feed, setFeed] = useState<FeedLine[]>([]);
+  const [shown, setShown] = useState<Moment | null>(null);
+  const playing = useRef<Playing | null>(null);
   // Where the weather sits on the map: along the top, or down the sides when the map is wide and short.
   const [forecastAt, setForecastAt] = useState<'top' | 'sides'>('top');
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -123,8 +136,9 @@ export function LiveRace({
     return () => document.removeEventListener('visibilitychange', hidden);
   }, [state]);
 
-  // A sheet stops the clock: nobody should lose places while choosing tyres. So does a tip.
-  clock.speed = sheet || hold ? 0 : speed;
+  // A sheet stops the clock: nobody should lose places while choosing tyres. So does a tip, and
+  // so does a phone turned upright (the game is hidden behind "turn your phone sideways").
+  clock.speed = sheet || hold || upright ? 0 : speed;
 
   useEffect(() => {
     const element = canvas.current;
@@ -145,7 +159,7 @@ export function LiveRace({
       element.height = Math.round(height * ratio);
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       // The weather sits along the top of the map with the circuit below it, unless the map is so
-      // wide and short (a small phone) that the circuit draws bigger with the weather down its sides.
+      // wide and short that the circuit draws bigger with the weather down its sides.
       const top = fitTrack(map, width, height - FORECAST_STRIP, 22);
       const side = fitTrack(map, width - FORECAST_LEFT - FORECAST_RIGHT, height, 22);
       const sides = side.scale > top.scale * 1.12;
@@ -159,7 +173,7 @@ export function LiveRace({
 
     const marks: CarMark[] = state.cars.map((car) => {
       const entrant = setup.grid[car.entrant]!;
-      return { lap: 0, colour: entrant.colour, code: entrant.code, mine: entrant.player, pit: false, gone: false };
+      return { lap: 0, colour: entrant.colour, code: entrant.code, mine: entrant.player, pit: false, gone: false, focus: false };
     });
     const scene: Scene = { cars: marks, safetyCar: null, wetness: 0, caution: 'none' };
 
@@ -172,10 +186,18 @@ export function LiveRace({
     let savedLap = state.lap;
     const loop = (now: number): void => {
       frame = requestAnimationFrame(loop);
+      // A moment being shown slows the race, or holds it still, until it has played.
+      const moment = playing.current;
+      if (moment && now >= moment.until) {
+        playing.current = null;
+        setShown(null);
+      }
+      clock.slow = playing.current ? playing.current.moment.rate : 1;
       const steps = document.hidden ? 0 : clock.run(now - last);
       last = now;
 
       if (fit && path) {
+        const focus = playing.current?.moment.cars ?? [];
         // Marks are kept in running order, so the leaders are drawn on top.
         for (const car of state.cars) {
           const mark = marks[car.position - 1]!;
@@ -186,13 +208,14 @@ export function LiveRace({
           mark.mine = entrant.player;
           mark.pit = car.status === 'pit';
           mark.gone = car.status === 'out' || car.status === 'finished';
+          mark.focus = focus.includes(car.id);
         }
         scene.safetyCar = clock.safetyCar();
         scene.wetness = state.wetness;
         scene.caution = state.flag.kind === 'green' ? 'none' : 'yellow';
         drawScene(context, width, height, map, fit, path, scene);
       }
-      audio.frame(clock, document.hidden ? 0 : clock.speed);
+      audio.frame(clock, document.hidden ? 0 : clock.speed * clock.slow);
 
       if (seen < state.events.length) {
         const fresh: FeedLine[] = [];
@@ -201,6 +224,12 @@ export function LiveRace({
           audio.event(event);
           const line = feedLine(state, event);
           if (line) fresh.push(line);
+          // Not after a skip to the end: the race is over before anything could be watched.
+          const next = state.phase === 'finished' ? null : momentOf(state, event, line);
+          if (next) {
+            playing.current = together(playing.current, next, now);
+            setShown(playing.current.moment);
+          }
         }
         if (fresh.length > 0) setFeed((lines) => [...fresh.reverse(), ...lines].slice(0, 30));
       }
@@ -214,6 +243,8 @@ export function LiveRace({
       }
       if (state.phase === 'finished' && !done) {
         done = true;
+        playing.current = null;
+        setShown(null);
         finished.current();
       }
     };
@@ -233,9 +264,14 @@ export function LiveRace({
     command(state, order);
     setBeat((beat) => beat + 1);
   };
+  // Tapping the message lets the race run on at the chosen speed.
+  const resume = (): void => {
+    playing.current = null;
+    setShown(null);
+  };
 
   return (
-    <div class="race">
+    <div class={`race${mine.length === 0 ? ' race--watch' : ''}`}>
       <header class="race__bar">
         <span class="race__left">
           <button type="button" class="back" aria-label="Leave the race" onClick={() => setSheet('leave')}>
@@ -255,150 +291,15 @@ export function LiveRace({
             {sound.muted ? <IconMuted /> : <IconSound />}
           </button>
         </span>
-        <span class="race__lap figure" aria-label={`Lap ${lap} of ${setup.laps}`}>
-          Lap {lap}
-          <span class="race__laps"> / {setup.laps}</span>
-        </span>
-        <span class="race__status">
+        <span class="race__middle">
+          <span class="race__lap figure" aria-label={`Lap ${lap} of ${setup.laps}`}>
+            Lap {lap}
+            <span class="race__laps"> / {setup.laps}</span>
+          </span>
           <FlagPill state={state} />
           {raining && <span class="race__weather">Raining</span>}
         </span>
-      </header>
-
-      <div class="race__map">
-        <canvas ref={canvas} role="img" aria-label={`${setup.name}: the circuit from above, with every car`} />
-        <Forecast state={state} layout={forecastAt} sureness={sureness} />
-      </div>
-
-      <ol class="feed" aria-label="Race feed" aria-live="polite">
-        {feed.slice(0, 2).map((line, index) => (
-          <li class={`feed__line feed__line--${line.kind}${index > 0 ? ' feed__line--old' : ''}`} key={`${feed.length - index}`}>
-            {line.who && (
-              <span class="feed__who" style={{ color: line.who.colour }}>
-                {line.who.code}
-              </span>
-            )}
-            <span class="feed__text">{line.text}</span>
-          </li>
-        ))}
-      </ol>
-
-      <ol class="tower" aria-label="Running order">
-        <li class="tower__row tower__head" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span class="tower__gap">Gap ahead</span>
-          <span class="tower__tyre">Tyre</span>
-          <span class="tower__stops">Stops</span>
-        </li>
-        {order.map((entry) => (
-          <TowerRow key={entry.id} state={state} car={entry} />
-        ))}
-      </ol>
-
-      {car && (
-        <section class="pitwall" aria-label="Your cars">
-          <div class="pitwall__cars">
-            {mine.map((entry, index) => (
-              <CarCard
-                key={entry.id}
-                state={state}
-                car={entry}
-                on={index === selected}
-                onSelect={() => setSelected(index)}
-              />
-            ))}
-          </div>
-          <div class="control control--large">
-            <button type="button" class="control__name stress" onClick={() => setHelp('stress')}>
-              <span class={car.stress >= 70 ? 'stress__word--high' : undefined}>Stress</span>
-              <Meter {...stressMeter(car.stress)} size="small" label={`Driver stress: ${stressMeter(car.stress).words}`} />
-            </button>
-            <div class="segmented segmented--large" role="group" aria-label={`Push level, ${setup.grid[car.entrant]!.code}`}>
-              {PUSH_LEVELS.map((level) => (
-                <button
-                  type="button"
-                  key={level}
-                  class={`segmented__option${car.push === level ? ' segmented__option--on' : ''}`}
-                  aria-pressed={car.push === level}
-                  disabled={car.status === 'out' || car.status === 'finished'}
-                  onClick={() => {
-                    give({ type: 'push', car: car.id, level });
-                    setHelp('push');
-                  }}
-                >
-                  {PUSH_WORDS[level]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div class="control">
-            <span class="control__name">Engine</span>
-            <div class="segmented" role="group" aria-label={`Engine mode, ${setup.grid[car.entrant]!.code}`}>
-              {ENGINE_MODES.map((mode) => (
-                <button
-                  type="button"
-                  key={mode}
-                  class={`segmented__option${car.engineMode === mode ? ' segmented__option--on' : ''}`}
-                  aria-pressed={car.engineMode === mode}
-                  disabled={car.status === 'out' || car.status === 'finished'}
-                  onClick={() => {
-                    give({ type: 'engine-mode', car: car.id, mode });
-                    setHelp('engine');
-                  }}
-                >
-                  {ENGINE_WORDS[mode]}
-                </button>
-              ))}
-            </div>
-          </div>
-          {setup.rules.recovery !== 'none' && (
-            <div class="control">
-              <span class="control__name">Battery</span>
-              <div class="segmented" role="group" aria-label={`Battery mode, ${setup.grid[car.entrant]!.code}`}>
-                {energyModes(setup.rules.recovery).map((mode) => (
-                  <button
-                    type="button"
-                    key={mode}
-                    class={`segmented__option${car.energyMode === mode ? ' segmented__option--on' : ''}`}
-                    aria-pressed={car.energyMode === mode}
-                    disabled={!energyModeOpen(state, car, mode)}
-                    onClick={() => {
-                      give({ type: 'energy-mode', car: car.id, mode });
-                      setHelp('energy');
-                    }}
-                  >
-                    {energyWords(setup.rules, mode)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <p class="control__help" aria-live="polite">
-            {help === 'stress'
-              ? STRESS_HELP
-              : help === 'engine'
-                ? ENGINE_HELP[car.engineMode]
-                : help === 'energy' && setup.rules.recovery !== 'none'
-                  ? energyHelp(setup.rules, car.energyMode)
-                  : PUSH_HELP[car.push]}
-          </p>
-        </section>
-      )}
-
-      <div class="dock">
-        {car && (
-          <button
-            type="button"
-            class="button button--primary dock__pit"
-            disabled={car.status !== 'running'}
-            onClick={() => setSheet('pit')}
-          >
-            {pitLabel(state, car)}
-          </button>
-        )}
-        <div class="segmented dock__speed" role="group" aria-label="Race speed">
+        <div class="segmented race__speed" role="group" aria-label="Race speed">
           <button
             type="button"
             class={`segmented__option${speed === 0 ? ' segmented__option--on' : ''}`}
@@ -424,9 +325,178 @@ export function LiveRace({
             <IconSkip />
           </button>
         </div>
+      </header>
+
+      <section class="race__order" aria-label="Running order">
+        <button type="button" class="race__order-head" aria-label="Running order: tap for tyres and stops" onClick={() => setSheet('order')}>
+          <span>Order</span>
+          <IconForward />
+        </button>
+        <ol class="tower tower--compact">
+          {order.map((entry) => (
+            <TowerRow key={entry.id} state={state} car={entry} compact />
+          ))}
+        </ol>
+      </section>
+
+      <div class="race__map">
+        <canvas ref={canvas} role="img" aria-label={`${setup.name}: the circuit from above, with every car`} />
+        <Forecast state={state} layout={forecastAt} sureness={sureness} />
+        {shown && (
+          <button type="button" class={`moment moment--${shown.kind}`} aria-live="assertive" onClick={resume}>
+            <span class="moment__head">
+              <span class="moment__title">{shown.title}</span>
+              <span class="moment__pace">{shown.rate === 0 ? 'Paused' : 'Slow motion'}</span>
+            </span>
+            <span class="moment__line">
+              {shown.line.who && (
+                <span class="moment__who" style={{ color: shown.line.who.colour }}>
+                  {shown.line.who.code}
+                </span>
+              )}
+              {shown.line.text}
+            </span>
+          </button>
+        )}
+        <ol class="feed" aria-label="Race feed" aria-live="polite">
+          {feed.slice(0, 2).map((line, index) => (
+            <li class={`feed__line feed__line--${line.kind}${index > 0 ? ' feed__line--old' : ''}`} key={`${feed.length - index}`}>
+              {line.who && (
+                <span class="feed__who" style={{ color: line.who.colour }}>
+                  {line.who.code}
+                </span>
+              )}
+              <span class="feed__text">{line.text}</span>
+            </li>
+          ))}
+        </ol>
       </div>
 
+      {car && (
+      <section class="pitwall" aria-label="Your cars">
+        {(
+          <>
+            <div class="pitwall__cars">
+              {mine.map((entry, index) => (
+                <CarCard
+                  key={entry.id}
+                  state={state}
+                  car={entry}
+                  on={index === selected}
+                  onSelect={() => setSelected(index)}
+                />
+              ))}
+            </div>
+            <div class="control control--large">
+              <button type="button" class="control__name stress" onClick={() => setHelp('stress')}>
+                <span class={car.stress >= 70 ? 'stress__word--high' : undefined}>Stress</span>
+                <Meter {...stressMeter(car.stress)} size="small" label={`Driver stress: ${stressMeter(car.stress).words}`} />
+              </button>
+              <div class="segmented segmented--large" role="group" aria-label={`Push level, ${setup.grid[car.entrant]!.code}`}>
+                {PUSH_LEVELS.map((level) => (
+                  <button
+                    type="button"
+                    key={level}
+                    class={`segmented__option${car.push === level ? ' segmented__option--on' : ''}`}
+                    aria-pressed={car.push === level}
+                    disabled={car.status === 'out' || car.status === 'finished'}
+                    onClick={() => {
+                      give({ type: 'push', car: car.id, level });
+                      setHelp('push');
+                    }}
+                  >
+                    {PUSH_WORDS[level]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div class="control">
+              <span class="control__name">Engine</span>
+              <div class="segmented" role="group" aria-label={`Engine mode, ${setup.grid[car.entrant]!.code}`}>
+                {ENGINE_MODES.map((mode) => (
+                  <button
+                    type="button"
+                    key={mode}
+                    class={`segmented__option${car.engineMode === mode ? ' segmented__option--on' : ''}`}
+                    aria-pressed={car.engineMode === mode}
+                    disabled={car.status === 'out' || car.status === 'finished'}
+                    onClick={() => {
+                      give({ type: 'engine-mode', car: car.id, mode });
+                      setHelp('engine');
+                    }}
+                  >
+                    {ENGINE_WORDS[mode]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {setup.rules.recovery !== 'none' && (
+              <div class="control">
+                <span class="control__name">Battery</span>
+                <div class="segmented" role="group" aria-label={`Battery mode, ${setup.grid[car.entrant]!.code}`}>
+                  {energyModes(setup.rules.recovery).map((mode) => (
+                    <button
+                      type="button"
+                      key={mode}
+                      class={`segmented__option${car.energyMode === mode ? ' segmented__option--on' : ''}`}
+                      aria-pressed={car.energyMode === mode}
+                      disabled={!energyModeOpen(state, car, mode)}
+                      onClick={() => {
+                        give({ type: 'energy-mode', car: car.id, mode });
+                        setHelp('energy');
+                      }}
+                    >
+                      {energyWords(setup.rules, mode)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p class="control__help" aria-live="polite">
+              {help === 'stress'
+                ? STRESS_HELP
+                : help === 'engine'
+                  ? ENGINE_HELP[car.engineMode]
+                  : help === 'energy' && setup.rules.recovery !== 'none'
+                    ? energyHelp(setup.rules, car.energyMode)
+                    : PUSH_HELP[car.push]}
+            </p>
+            <button
+              type="button"
+              class="button button--primary pitwall__pit"
+              disabled={car.status !== 'running'}
+              onClick={() => setSheet('pit')}
+            >
+              {pitLabel(state, car)}
+            </button>
+          </>
+        )}
+      </section>
+      )}
+
       {sheet === 'pit' && car && <PitSheet state={state} car={car} give={give} onClose={() => setSheet(null)} />}
+      {sheet === 'order' && (
+        <Sheet title={`Running order, lap ${lap}`} onClose={() => setSheet(null)}>
+          <ol class="tower tower--sheet">
+            <li class="tower__row tower__head" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+              <span class="tower__gap">Gap ahead</span>
+              <span class="tower__tyre">Tyre</span>
+              <span class="tower__stops">Stops</span>
+            </li>
+            {order.map((entry) => (
+              <TowerRow key={entry.id} state={state} car={entry} />
+            ))}
+          </ol>
+          <div class="sheet__actions">
+            <button type="button" class="button button--block button--secondary" onClick={() => setSheet(null)}>
+              Close
+            </button>
+          </div>
+        </Sheet>
+      )}
       {sheet === 'skip' && (
         <ConfirmSheet
           title="Skip to the end?"
@@ -498,7 +568,7 @@ function pitLabel(state: RaceState, car: CarState): string {
   return next ? `Pit stop (lap ${next.lap})` : 'Pit stop';
 }
 
-function TowerRow({ state, car }: { state: RaceState; car: CarState }) {
+function TowerRow({ state, car, compact = false }: { state: RaceState; car: CarState; compact?: boolean }) {
   const entrant = state.setup.grid[car.entrant]!;
   const tyre = tyreOf(state, car);
   let gap: string;
@@ -509,6 +579,17 @@ function TowerRow({ state, car }: { state: RaceState; car: CarState }) {
   else if (car.lapsDown > 0) gap = `+${car.lapsDown} lap${car.lapsDown === 1 ? '' : 's'}`;
   else gap = `+${car.interval.toFixed(1)}s`;
   const gone = car.status === 'out';
+  if (compact) {
+    return (
+      <li class={`tower__row${entrant.player ? ' tower__row--mine' : ''}${gone ? ' tower__row--out' : ''}`}>
+        <span class="figure tower__place">{gone ? '–' : car.position}</span>
+        <span class="tower__colour" style={{ background: entrant.colour }} />
+        <span class="tower__code">{entrant.code}</span>
+        <span class="figure tower__gap">{gone ? 'Out' : car.status === 'pit' ? 'Pit' : car.position === 1 ? '' : car.lapsDown > 0 ? `+${car.lapsDown}L` : `+${car.interval.toFixed(1)}`}</span>
+        <span class="tyre" style={{ background: tyre.colour }} />
+      </li>
+    );
+  }
   return (
     <li class={`tower__row${entrant.player ? ' tower__row--mine' : ''}${gone ? ' tower__row--out' : ''}`}>
       <span class="figure tower__place">{gone ? '–' : car.position}</span>

@@ -20,7 +20,8 @@ export function Grid({ state, onChange, sureness = 0.5 }: { state: RaceState; on
   const dryStart = state.setup.compounds.find((tyre) => tyre.id === state.cars[0]!.tyre)!.kind === 'dry';
 
   return (
-    <>
+    <div class="split split--list">
+      <div class="split__side">
       <section class="card weather-card" aria-labelledby="grid-weather">
         <h2 class="card__title" id="grid-weather">
           Weather for the first laps
@@ -29,7 +30,7 @@ export function Grid({ state, onChange, sureness = 0.5 }: { state: RaceState; on
       </section>
       {mine.length > 0 && (
 
-        <section class="card stack card--gap" aria-labelledby="grid-plan">
+        <section class="card stack" aria-labelledby="grid-plan">
           <h2 class="card__title" id="grid-plan">
             Your plan
           </h2>
@@ -56,7 +57,9 @@ export function Grid({ state, onChange, sureness = 0.5 }: { state: RaceState; on
         </section>
       )}
 
-      <section class="card card--list card--gap" aria-label="Starting grid">
+      </div>
+
+      <section class="card card--list" aria-label="Starting grid">
         <ol>
           {grid.map((entrant, index) => (
             <li key={entrant.id}>
@@ -83,7 +86,7 @@ export function Grid({ state, onChange, sureness = 0.5 }: { state: RaceState; on
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 

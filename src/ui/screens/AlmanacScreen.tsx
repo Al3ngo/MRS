@@ -118,7 +118,7 @@ export function AlmanacScreen({ season }: { season: number }) {
         </div>
 
         {tab === 'Calendar' && (
-          <section class="card card--list" aria-label="Calendar">
+          <section class="card card--list card--columns" aria-label="Calendar">
             {unfinished && (
               <p class="list-note">
                 Results are in to round {SOURCES.lastSeasonRoundsHeld}. Later rounds are as scheduled.
@@ -151,7 +151,7 @@ export function AlmanacScreen({ season }: { season: number }) {
         )}
 
         {tab === 'Teams' && (
-          <section class="card card--list" aria-label="Teams">
+          <section class="card card--list card--columns" aria-label="Teams">
             <ul>
               {[...data.teams]
                 .sort((a, b) => (a.real?.gap ?? 99) - (b.real?.gap ?? 99))
@@ -170,7 +170,7 @@ export function AlmanacScreen({ season }: { season: number }) {
         )}
 
         {tab === 'Drivers' && (
-          <section class="card card--list" aria-label="Drivers">
+          <section class="card card--list card--columns" aria-label="Drivers">
             <ul>
               {drivers.map((entry) => (
                 <li key={entry.driver.id}>

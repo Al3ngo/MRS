@@ -2,21 +2,33 @@
  * The race clock: runs the simulation at the speed the player has chosen, and smooths what is
  * shown between its one-second steps.
  */
-import { TICK, command, runToEnd, step, type RaceState } from '../../game/sim';
+import { RACE_TRIM, TICK, command, runToEnd, step, type RaceState } from '../../game/sim';
 
 /** 0 is paused. */
 export type Speed = 0 | 1 | 2 | 4;
 export const SPEEDS: readonly Speed[] = [1, 2, 4];
 
-/**
- * Race seconds that pass in one real second at 1x. A Grand Prix takes an hour and a half; at this
- * pace it takes about nine minutes at 1x and a little over two at 4x.
- */
-export const PACE = 10;
+/** Seconds a lap takes on screen at 1x, at every circuit. */
+export const LAP_ON_SCREEN = 15;
 
+/**
+ * Race seconds that pass in one real second at 1x: a typical racing lap of this circuit in
+ * LAP_ON_SCREEN seconds. A Grand Prix takes about a quarter of an hour at 1x, and four minutes at 4x.
+ */
+export const paceOf = (state: RaceState): number => (state.setup.refLap * (1 + RACE_TRIM + 0.03)) / LAP_ON_SCREEN;
+
+/**
+ * The race clock. The simulation moves in steps of TICK race seconds; the screen shows the race
+ * running smoothly at the chosen pace, each car drawn part way between its last two steps, so how
+ * often the simulation steps never shows.
+ */
 export class RaceClock {
   readonly state: RaceState;
+  /** Race seconds per real second at 1x. */
+  readonly pace: number;
   speed: Speed = 0;
+  /** A moment worth watching slows the clock: a share of the chosen speed, 0 to hold it still. */
+  slow = 1;
   /** Race time owed but not yet simulated, in seconds. */
   private carry = 0;
   /** Where each car was one step ago, and the safety car. */
@@ -25,6 +37,7 @@ export class RaceClock {
 
   constructor(state: RaceState) {
     this.state = state;
+    this.pace = paceOf(state);
     this.before = state.cars.map((car) => car.pos);
   }
 
@@ -32,9 +45,9 @@ export class RaceClock {
   run(realMs: number): number {
     const { state } = this;
     const over = (): boolean => state.phase === 'finished';
-    if (this.speed === 0 || over()) return 0;
+    if (this.speed === 0 || this.slow <= 0 || over()) return 0;
     // A stalled tab does not get to catch up all at once.
-    this.carry += (Math.min(realMs, 100) / 1000) * PACE * this.speed;
+    this.carry += (Math.min(realMs, 100) / 1000) * this.pace * this.speed * this.slow;
     let steps = 0;
     while (this.carry >= TICK && !over()) {
       this.remember();

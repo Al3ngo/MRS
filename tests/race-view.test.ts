@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CIRCUITS, calendar, circuit } from '../src/game/data';
 import { classification, command, createRace, quickRace, raceSetup, realEntrants, sessionRules, step, type RaceEvent } from '../src/game/sim';
-import { PACE, RaceClock } from '../src/ui/race/clock';
+import { LAP_ON_SCREEN, RaceClock } from '../src/ui/race/clock';
 import { drawX, drawY, fitTrack, placeOnTrack, trackMap, type TrackPoint } from '../src/ui/race/track';
 import { energyWords, feedLine, radioWords, trackWords } from '../src/ui/race/words';
 
@@ -101,21 +101,49 @@ describe('the race clock', () => {
     clock.speed = 1;
     let steps = 0;
     for (let frame = 0; frame < 60; frame++) steps += clock.run(1000 / 60);
-    // One second of real time is PACE seconds of racing, give or take the frame it falls in.
-    expect(steps).toBeGreaterThanOrEqual(PACE - 1);
-    expect(steps).toBeLessThanOrEqual(PACE);
+    // One second of real time is the clock's pace in seconds of racing, give or take a step.
+    expect(steps).toBeGreaterThanOrEqual(Math.floor(clock.pace) - 1);
+    expect(steps).toBeLessThanOrEqual(Math.ceil(clock.pace));
     expect(clock.state.time).toBe(steps);
     clock.speed = 4;
     steps = 0;
     for (let frame = 0; frame < 60; frame++) steps += clock.run(1000 / 60);
-    expect(steps).toBeGreaterThanOrEqual(4 * PACE - 1);
-    expect(steps).toBeLessThanOrEqual(4 * PACE);
+    expect(steps).toBeGreaterThanOrEqual(Math.floor(4 * clock.pace) - 1);
+    expect(steps).toBeLessThanOrEqual(Math.ceil(4 * clock.pace) + 1);
+  });
+
+  it('takes about fifteen seconds a lap at 1x, at any circuit', () => {
+    for (const [season, round] of [[2018, 4], [2019, 9], [2023, 8]] as const) {
+      const clock = new RaceClock(quickRace(season, round, 3).race);
+      clock.speed = 1;
+      // Run five real minutes of racing, then measure the leader's laps.
+      for (let frame = 0; frame < 60 * 60 * 5 && clock.state.phase !== 'finished'; frame++) clock.run(1000 / 60);
+      const leader = clock.state.cars.reduce((best, car) => (car.pos > best.pos ? car : best));
+      const perLap = 300 / leader.pos;
+      expect(perLap, `${season} round ${round}`).toBeGreaterThan(LAP_ON_SCREEN * 0.85);
+      expect(perLap, `${season} round ${round}`).toBeLessThan(LAP_ON_SCREEN * 1.25);
+    }
+  });
+
+  it('slows down, and holds still, for a moment worth watching', () => {
+    const clock = fresh();
+    clock.speed = 1;
+    clock.slow = 0.25;
+    let steps = 0;
+    for (let frame = 0; frame < 240; frame++) steps += clock.run(1000 / 60);
+    // Four real seconds at a quarter of 1x: one second's worth of racing at 1x.
+    expect(steps).toBeGreaterThanOrEqual(Math.floor(clock.pace) - 1);
+    expect(steps).toBeLessThanOrEqual(Math.ceil(clock.pace) + 1);
+    clock.slow = 0;
+    expect(clock.run(100)).toBe(0);
   });
 
   it('does not try to catch up after a stall', () => {
     const clock = fresh();
     clock.speed = 1;
-    expect(clock.run(60_000)).toBe(1);
+    // A minute's stall counts as a tenth of a second: at most one step.
+    expect(clock.run(60_000)).toBeLessThanOrEqual(1);
+    expect(clock.state.time).toBeLessThanOrEqual(1);
   });
 
   it('shows each car between where it was and where it is', () => {

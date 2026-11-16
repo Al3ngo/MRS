@@ -15,6 +15,8 @@ export interface CarMark {
   pit: boolean;
   /** Not on the circuit: retired or finished. */
   gone: boolean;
+  /** In a moment being shown (an overtake, a crash): ringed and named, whoever's it is. */
+  focus?: boolean;
 }
 
 export interface Scene {
@@ -111,11 +113,19 @@ export function drawScene(
   for (let layer = 0; layer < 2; layer++) {
     for (let i = scene.cars.length - 1; i >= 0; i--) {
       const car = scene.cars[i]!;
-      if (car.gone || car.mine !== (layer === 1)) continue;
+      const front = car.mine || car.focus === true;
+      if ((car.gone && !car.focus) || front !== (layer === 1)) continue;
       placeOnTrack(map, car.lap, spot);
       const side = car.pit ? 11 : 0;
       const x = drawX(fit, spot.x, spot.y) + acrossX(fit, spot) * side;
       const y = drawY(fit, spot.x, spot.y) + acrossY(fit, spot) * side;
+      if (car.focus) {
+        context.strokeStyle = LINE;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.arc(x, y, 12, 0, Math.PI * 2);
+        context.stroke();
+      }
       if (car.mine) {
         context.fillStyle = LINE;
         context.beginPath();
@@ -126,7 +136,7 @@ export function drawScene(
       context.beginPath();
       context.arc(x, y, car.mine ? 5.5 : car.pit ? 3.5 : 4.5, 0, Math.PI * 2);
       context.fill();
-      if (car.mine) {
+      if (front) {
         // The name sits outside the lap, clear of the pit lane.
         const labelX = Math.min(width - 16, Math.max(16, x - acrossX(fit, spot) * 20));
         const labelY = Math.min(height - 9, Math.max(9, y - acrossY(fit, spot) * 16));

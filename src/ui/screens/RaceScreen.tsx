@@ -155,7 +155,7 @@ function TeamList({ season, round, onPick }: { season: number; round: number; on
     return [...byTeam.values()];
   }, [season, round]);
   return (
-    <section class="card card--list" aria-label="Teams">
+    <section class="card card--list card--columns" aria-label="Teams">
       <ul>
         {teams.map((cars) => (
           <li key={cars[0]!.team}>
