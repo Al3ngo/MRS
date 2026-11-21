@@ -12,9 +12,9 @@
  * The game is never reloaded underneath the player.
  */
 
-const VERSION = "4dc67de66051";
+const VERSION = "4d48443c1941";
 /** Every file of this build, as paths relative to the app's folder. */
-const FILES = ["assets/barlow-condensed-latin-500-normal-BgYH2mbd.woff2","assets/barlow-condensed-latin-600-normal-DepVgxBB.woff2","assets/index-Csb_ggMg.js","assets/index-YkdBC89A.css","assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2","assets/inter-latin-wght-normal-Dx4kXJAl.woff2","favicon.svg","icons/apple-touch-icon.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/icon-maskable-192.png","icons/icon-maskable-512.png","index.html","manifest.webmanifest"];
+const FILES = ["assets/barlow-condensed-latin-500-normal-BgYH2mbd.woff2","assets/barlow-condensed-latin-600-normal-DepVgxBB.woff2","assets/index-D3SvawxY.js","assets/index-DY4jViKY.css","assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2","assets/inter-latin-wght-normal-Dx4kXJAl.woff2","favicon.svg","icons/apple-touch-icon.png","icons/favicon-32.png","icons/icon-192.png","icons/icon-512.png","icons/icon-maskable-192.png","icons/icon-maskable-512.png","index.html","manifest.webmanifest"];
 const SHELL = 'index.html';
 
 // Cache names are shared by everything on the same origin, so they carry the app's folder too.
