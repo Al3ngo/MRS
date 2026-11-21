@@ -89,8 +89,9 @@
   --safe-right: env(safe-area-inset-right);
   --safe-bottom: env(safe-area-inset-bottom);
   --safe-left: env(safe-area-inset-left);
-  --land-w: 100vw;
-  --land-h: 100dvh;
+  /* The screen's size: measured by the game (--screen-w, --screen-h), the viewport units until then. */
+  --land-w: var(--screen-w, 100vw);
+  --land-h: var(--screen-h, 100dvh);
 
   /* Motion is feedback only: a press, a sheet opening. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -102,8 +103,8 @@
   --safe-right: env(safe-area-inset-bottom);
   --safe-bottom: env(safe-area-inset-left);
   --safe-left: env(safe-area-inset-top);
-  --land-w: 100dvh;
-  --land-h: 100vw;
+  --land-w: var(--screen-h, 100dvh);
+  --land-h: var(--screen-w, 100vw);
 }
 
 /* Turned anticlockwise: the game's top runs up the screen's left edge. */
@@ -112,6 +113,6 @@
   --safe-right: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-right);
   --safe-left: env(safe-area-inset-bottom);
-  --land-w: 100dvh;
-  --land-h: 100vw;
+  --land-w: var(--screen-h, 100dvh);
+  --land-h: var(--screen-w, 100vw);
 }

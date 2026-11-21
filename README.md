@@ -55,8 +55,9 @@ Open the installed app once while still online, and check that **Settings > Offl
 
 The game plays sideways. An installed app on Android locks itself to landscape. iPhones and iPads
 do not let a web app turn the screen, so held upright (with the rotation lock on, say) the game
-turns itself a quarter: hold the phone sideways and play. Settings > Phone held upright chooses
-which way it turns, or asks for the phone to be turned instead.
+turns itself a quarter: hold the phone sideways, either way round, and play. It follows the
+phone's motion sensor to match the way it is held (the iPhone asks once). Settings > Phone held
+upright fixes a side instead, or asks for the phone to be turned.
 
 Two things worth knowing about saves:
 

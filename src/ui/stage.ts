@@ -43,7 +43,10 @@ export function stageSize(): { width: number; height: number } {
 /** Where an element is on the stage. */
 export function stageBox(element: Element): Box {
   const box = element.getBoundingClientRect();
-  return toStage(box, view.get().turn, { width: window.innerWidth, height: window.innerHeight });
+  const turn = view.get().turn;
+  // The screen's size as the stage was laid out for it: turned, the stage's height runs across it.
+  const { width, height } = stageSize();
+  return toStage(box, turn, turn ? { width: height, height: width } : { width, height });
 }
 
 /** Scrolls the screen to `top` (in stage pixels). */

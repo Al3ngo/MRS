@@ -3,7 +3,7 @@ import { goBack } from '../../app/router';
 import { app, replayTutorialIn, toast, updateNow } from '../../app/session';
 import { useStore } from '../../app/store';
 import { checkForUpdate, install, offline, promptInstall } from '../../platform/pwa';
-import { setView, viewSettings } from '../../platform/orientation';
+import { askForMotion, motionAccess, setView, viewSettings } from '../../platform/orientation';
 import { passBy, setSound, soundSettings, type EngineEra } from '../../platform/sound';
 import { readStorage, requestPersistence, type StorageReport } from '../../platform/storage';
 import { formatBytes } from '../format';
@@ -28,6 +28,7 @@ export function SystemScreen() {
   const home = useStore(install);
   const sound = useStore(soundSettings);
   const upright = useStore(viewSettings);
+  const motion = useStore(motionAccess);
   const { slots } = useStore(app);
   const careers = slots.flatMap((view) => (view.kind === 'career' && view.record.summary?.team ? [{ slot: view.slot, summary: view.record.summary }] : []));
   const [storage, setStorage] = useState<StorageReport | null>(null);
@@ -181,24 +182,33 @@ export function SystemScreen() {
                 </div>
               </div>
               {upright.upright === 'turn' && (
-                <div class="status status--action">
-                  <div>
-                    <p class="status__title">Charging port</p>
-                    <p class="status__text">Which side of the game the phone's charging port goes, held sideways.</p>
-                  </div>
-                  <div class="segmented" role="group" aria-label="Charging port side">
-                    {(['left', 'right'] as const).map((side) => (
+                <div class="status">
+                  <p class="status__title">Which way round</p>
+                  <div class="segmented port-choice" role="group" aria-label="Charging port side">
+                    {(['auto', 'left', 'right'] as const).map((side) => (
                       <button
                         type="button"
                         key={side}
                         class={`segmented__option${upright.port === side ? ' segmented__option--on' : ''}`}
                         aria-pressed={upright.port === side}
-                        onClick={() => setView({ port: side })}
+                        onClick={() => {
+                          setView({ port: side });
+                          if (side === 'auto' && motion !== 'granted' && motion !== 'not-needed') void askForMotion();
+                        }}
                       >
-                        {side === 'left' ? 'Left' : 'Right'}
+                        {side === 'auto' ? 'Follow the phone' : side === 'left' ? 'Port left' : 'Port right'}
                       </button>
                     ))}
                   </div>
+                  <p class="status__text">
+                    {upright.port !== 'auto'
+                      ? `Always turned for the charging port on the ${upright.port}.`
+                      : motion === 'refused'
+                        ? 'The phone did not allow its motion sensor, so the game keeps to the way it last turned. Choose Follow the phone again to be asked, or pick a side.'
+                        : motion === 'not-asked'
+                          ? 'The game turns to match the way you hold the phone, once the phone lets it read its motion sensor: it asks the first time.'
+                          : 'The game turns to match the way you hold the phone, charging port left or right.'}
+                  </p>
                 </div>
               )}
             </div>

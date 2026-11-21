@@ -9,6 +9,7 @@ import { CareersScreen } from './screens/CareersScreen';
 import { RaceScreen } from './screens/RaceScreen';
 import { SystemScreen } from './screens/SystemScreen';
 import { WeekendScreen } from './screens/WeekendScreen';
+import { MotionPrompt } from './MotionPrompt';
 import { Toasts } from './Toasts';
 import { scrollStageTo } from './stage';
 
@@ -45,6 +46,7 @@ export function App() {
       )}
       {current.screen === 'system' && <SystemScreen />}
       </div>
+      <MotionPrompt />
       <Toasts aboveBar={current.screen === 'career' || current.screen === 'weekend' || current.screen === 'race'} />
     </>
   );

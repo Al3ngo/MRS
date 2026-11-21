@@ -1062,3 +1062,28 @@ iPhones do not let a web app turn the screen, so the game turns itself.
   - Turning the phone mid-race keeps the race going.
 
   A real iPhone is the final word on touch: this needs trying there.
+
+### Played upright: filling the screen, either way round (v0.9.2)
+
+From a screenshot on an iPhone 16 Pro, held upright with the rotation lock on:
+
+- **The game stopped 62 points short of the screen's end**, leaving a black band: the phone reported
+  its screen as 812 points long, not 874, short by exactly its status bar. The game now measures
+  the screen itself, and an installed app (which fills the screen) trusts the screen's own size
+  when the two differ by about a status bar. In a browser tab, or an iPad window in split view,
+  the measured window stands.
+- **Empty save slots squeezed their words** into a column a word wide beside their button, in a
+  third of the width. Their words now sit on one line, above the button.
+- **Either way round**: the game follows the phone. Its motion sensor tells which way round the
+  phone is held, charging port left or right, and the game turns to match, as a native landscape
+  game does.
+  - The phone must stay round the other way for a third of a second before the game turns, so
+    a wobble does not flip it. Lying flat or held upright, it keeps the way it was.
+  - iPhones report gravity with every axis the other way round to the standard (and to
+    Android), so their readings are turned round first.
+  - An iPhone asks the player before the game may read the sensor. The game offers this once a
+    visit ("Hold the phone either way round", Allow / Not now), and asks quietly again on the
+    first tap of a later visit if it was allowed before.
+  - Settings > Phone held upright > Which way round: Follow the phone (the default), Port left
+    or Port right. A fixed side ignores the sensor. If the sensor is refused, the game keeps to
+    the way it last turned.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { viewFor } from '../src/platform/orientation';
+import { screenSize, sideFromGravity, viewFor } from '../src/platform/orientation';
 import { toStage } from '../src/ui/stage';
 
 /** A phone held upright: 390 across, 844 down. The stage is 844 across, 390 down. */
@@ -30,10 +30,37 @@ describe('the turned stage', () => {
   });
 
   it('turns the game, or asks for the phone to be turned, only when the phone is upright', () => {
-    expect(viewFor(false, { upright: 'turn', port: 'right' })).toEqual({ upright: false, turn: null, asking: false });
-    expect(viewFor(true, { upright: 'turn', port: 'right' })).toEqual({ upright: true, turn: 'right', asking: false });
-    expect(viewFor(true, { upright: 'turn', port: 'left' })).toEqual({ upright: true, turn: 'left', asking: false });
-    expect(viewFor(true, { upright: 'ask', port: 'left' })).toEqual({ upright: true, turn: null, asking: true });
+    expect(viewFor(false, { upright: 'turn', port: 'right', lastSide: 'right' })).toEqual({ upright: false, turn: null, asking: false });
+    expect(viewFor(true, { upright: 'turn', port: 'right', lastSide: 'left' })).toEqual({ upright: true, turn: 'right', asking: false });
+    expect(viewFor(true, { upright: 'turn', port: 'left', lastSide: 'right' })).toEqual({ upright: true, turn: 'left', asking: false });
+    expect(viewFor(true, { upright: 'ask', port: 'left', lastSide: 'right' })).toEqual({ upright: true, turn: null, asking: true });
+    // Following the phone: the way it was last found held.
+    expect(viewFor(true, { upright: 'turn', port: 'auto', lastSide: 'left' })).toEqual({ upright: true, turn: 'left', asking: false });
+  });
+
+  it('tells which way round the phone is held from the motion sensor, on an iPhone and by the standard', () => {
+    // By the standard, the axis pointing up reads +9.8. Port on the right: the screen's right edge (+x) is up.
+    expect(sideFromGravity({ x: 9.8, y: 0.5, z: 1 }, false)).toBe('right');
+    expect(sideFromGravity({ x: -9.6, y: -1, z: 0.8 }, false)).toBe('left');
+    // An iPhone reads every axis the other way round.
+    expect(sideFromGravity({ x: -9.8, y: 0.5, z: 1 }, true)).toBe('right');
+    expect(sideFromGravity({ x: 9.6, y: -1, z: 0.8 }, true)).toBe('left');
+    // No call when it cannot tell: lying flat, held upright, half way round, or shaken about.
+    expect(sideFromGravity({ x: 1, y: 0.5, z: 9.7 }, false)).toBeNull();
+    expect(sideFromGravity({ x: 1, y: 9.7, z: 1 }, false)).toBeNull();
+    expect(sideFromGravity({ x: 6.5, y: 6.9, z: 1 }, false)).toBeNull();
+    expect(sideFromGravity({ x: 1, y: 1, z: 1 }, false)).toBeNull();
+  });
+
+  it('trusts the screen’s own size over a viewport short by a status bar, but not by more', () => {
+    // An iPhone 16 Pro from its home screen: the viewport reported 62 points short.
+    expect(screenSize({ width: 402, height: 812 }, { width: 402, height: 874 })).toEqual({ width: 402, height: 874 });
+    // Held sideways, the same in the other direction.
+    expect(screenSize({ width: 812, height: 402 }, { width: 402, height: 874 })).toEqual({ width: 874, height: 402 });
+    // An iPad window in split view is much smaller than its screen: the window wins.
+    expect(screenSize({ width: 500, height: 1000 }, { width: 1024, height: 1366 })).toEqual({ width: 500, height: 1000 });
+    // In a browser tab (no screen size given), the measured viewport stands.
+    expect(screenSize({ width: 390, height: 700 }, null)).toEqual({ width: 390, height: 700 });
   });
 });
 

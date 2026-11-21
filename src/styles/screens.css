@@ -49,6 +49,17 @@
     flex: 1;
   }
 
+  /* An empty slot in a third of the width: its words above its button, not squeezed beside it. */
+  .slot--empty .slot__main {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .slot--empty .slot__lines {
+    white-space: nowrap;
+  }
+
   .slot .era {
     margin-top: auto;
   }
@@ -2326,6 +2337,10 @@ button.slot__main:disabled .slot__go {
 .junior__label {
   color: var(--muted);
   font-size: 13px;
+}
+
+.port-choice {
+  margin-top: 8px;
 }
 
 /* A choice whose options are words, not a word each: it takes the room it needs. */

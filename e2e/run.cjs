@@ -1155,7 +1155,10 @@ async function main() {
       await tall.locator('.slots').waitFor();
       expectEqual(await tall.evaluate(() => document.documentElement.getAttribute('data-turn')), 'right', 'turned, with the port on the right');
       const stage = await tall.evaluate(() => ({ w: document.getElementById('app').clientWidth, h: document.getElementById('app').clientHeight }));
-      expectEqual(stage, { w: 844, h: 390 }, 'the game is laid out sideways');
+      expectEqual(stage, { w: 844, h: 390 }, 'the game is laid out sideways, filling the screen');
+      // Empty slots, a third of the width each: their words on one line, above their button.
+      const empty = await tall.locator('.slot--empty').first().locator('.slot__line').evaluate((line) => line.getClientRects().length);
+      expectEqual(empty, 1, '"No career yet" on one line');
       await startNewCareer(tall, 1);
       await tall.getByRole('tab', { name: 'Team' }).tap();
       // Up the game, as the phone is held, is towards the screen's right edge.
@@ -1166,6 +1169,8 @@ async function main() {
       // A dialog, turned with the game, scrolls the same way.
       await tall.getByRole('tab', { name: 'Money' }).tap();
       await tall.getByRole('button', { name: 'See the books' }).tap();
+      await tall.locator('dialog.sheet').waitFor();
+      await tall.waitForTimeout(250);
       const sheet = await tall.locator('dialog.sheet').boundingBox();
       expect(sheet.y > 300 && Math.round(sheet.width) === 390, `the panel is along the game's right edge (the screen's foot): ${JSON.stringify(sheet)}`);
       await tall.locator('dialog').getByRole('button', { name: 'Close' }).tap();
@@ -1190,17 +1195,31 @@ async function main() {
       expectEqual(await tall.getByRole('button', { name: 'Pause' }).getAttribute('aria-pressed'), 'true', 'a tap on the turned race lands');
     });
 
-    await check('upright: the other way round, or ask for the phone to be turned instead', async () => {
+    await check('upright: turned to match the way the phone is held, or fixed, or asking to be turned', async () => {
       await tall.goto(site.url + '#/system');
       await tall.getByRole('heading', { name: 'Settings' }).waitFor();
-      await tall.getByRole('group', { name: 'Charging port side' }).getByRole('button', { name: 'Left' }).tap();
-      expectEqual(await tall.evaluate(() => document.documentElement.getAttribute('data-turn')), 'left', 'turned the other way');
+      // Following the phone (the default): held with the port on the left, the game turns to match.
+      const hold = (x) =>
+        tall.evaluate(async (gx) => {
+          for (let i = 0; i < 30; i++) {
+            window.dispatchEvent(new DeviceMotionEvent('devicemotion', { accelerationIncludingGravity: { x: gx, y: 0.4, z: 1.2 }, interval: 16 }));
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+        }, x);
+      await hold(-9.7);
+      expectEqual(await tall.evaluate(() => document.documentElement.getAttribute('data-turn')), 'left', 'held the other way round, turned to match');
+      await hold(9.7);
+      expectEqual(await tall.evaluate(() => document.documentElement.getAttribute('data-turn')), 'right', 'and back');
+      // Or fixed to one side, whichever way it is held.
+      await tall.getByRole('group', { name: 'Charging port side' }).getByRole('button', { name: 'Port left' }).tap();
+      await hold(9.7);
+      expectEqual(await tall.evaluate(() => document.documentElement.getAttribute('data-turn')), 'left', 'fixed to the other way');
       await tall.getByRole('group', { name: 'When the phone is upright' }).getByRole('button', { name: 'Ask to turn the phone' }).tap();
       await tall.getByText('Turn your phone sideways').waitFor();
       expect(!(await tall.locator('#app').isVisible()), 'the game waits behind the prompt');
       await tall.getByRole('button', { name: 'Turn the game instead' }).tap();
       await tall.getByRole('heading', { name: 'Settings' }).waitFor();
-      expectEqual(await tall.evaluate(() => localStorage.getItem('mrm-view')), '{"upright":"turn","port":"left"}', 'kept on the device');
+      expectEqual(await tall.evaluate(() => JSON.parse(localStorage.getItem('mrm-view'))), { upright: 'turn', port: 'left', lastSide: 'right' }, 'kept on the device');
       // Turned sideways for real: no turning needed, the same layout.
       await tall.setViewportSize({ width: 844, height: 390 });
       await tall.waitForFunction(() => !document.documentElement.hasAttribute('data-turn'));

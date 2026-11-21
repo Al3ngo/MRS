@@ -33,11 +33,11 @@
 }
 
 :root[data-turn='right'] #app {
-  transform: translateX(100vw) rotate(90deg);
+  transform: translateX(var(--screen-w, 100vw)) rotate(90deg);
 }
 
 :root[data-turn='left'] #app {
-  transform: translateY(100dvh) rotate(-90deg);
+  transform: translateY(var(--screen-h, 100dvh)) rotate(-90deg);
 }
 
 .scroller {
@@ -580,7 +580,7 @@ dialog.sheet[open]::backdrop {
 }
 
 :root[data-turn='right'] dialog.sheet {
-  transform: translate(100vw, calc(100dvh - var(--sheet-w))) rotate(90deg);
+  transform: translate(var(--screen-w, 100vw), calc(var(--screen-h, 100dvh) - var(--sheet-w))) rotate(90deg);
 }
 
 :root[data-turn='left'] dialog.sheet {
@@ -756,11 +756,11 @@ dialog.coach {
 }
 
 :root[data-turn='right'] dialog.coach {
-  transform: translateX(100vw) rotate(90deg);
+  transform: translateX(var(--screen-w, 100vw)) rotate(90deg);
 }
 
 :root[data-turn='left'] dialog.coach {
-  transform: translateY(100dvh) rotate(-90deg);
+  transform: translateY(var(--screen-h, 100dvh)) rotate(-90deg);
 }
 
 dialog.coach::backdrop {
@@ -865,4 +865,31 @@ dialog.coach[open] {
 
 .rotate__turn {
   margin-top: 14px;
+}
+
+/* The offer to follow the phone round, at the foot of the turned game. */
+.motion-prompt {
+  position: fixed;
+  left: max(var(--page), var(--safe-left));
+  bottom: calc(10px + var(--safe-bottom));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(520px, calc(100% - 2 * var(--page)));
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--radius-card);
+  background: var(--raised);
+}
+
+.motion-prompt__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.motion-prompt .button {
+  min-height: 36px;
+  padding: 0 14px;
 }
