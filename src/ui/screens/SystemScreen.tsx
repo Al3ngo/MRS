@@ -161,7 +161,8 @@ export function SystemScreen() {
               </h2>
               <p class="setting__text">
                 The game plays sideways. iPhones do not let a web app turn the screen, so with the rotation lock on the game can
-                turn itself instead: hold the phone sideways and play.
+                turn itself instead: hold the phone sideways and play. The phone's time and battery stay in sight that way:
+                iPhones only hide them when the phone turns the screen itself, with the rotation lock off.
               </p>
             </div>
             <div class="card setting__panel">

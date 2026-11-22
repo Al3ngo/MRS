@@ -1068,10 +1068,9 @@ iPhones do not let a web app turn the screen, so the game turns itself.
 From a screenshot on an iPhone 16 Pro, held upright with the rotation lock on:
 
 - **The game stopped 62 points short of the screen's end**, leaving a black band: the phone reported
-  its screen as 812 points long, not 874, short by exactly its status bar. The game now measures
-  the screen itself, and an installed app (which fills the screen) trusts the screen's own size
-  when the two differ by about a status bar. In a browser tab, or an iPad window in split view,
-  the measured window stands.
+  its screen as 812 points long, not 874, short by exactly its status bar. (v0.9.2 trusted the
+  screen's own size instead; the phone does not draw past the short edge, so that cut the end of
+  the game off. See v0.9.3.)
 - **Empty save slots squeezed their words** into a column a word wide beside their button, in a
   third of the width. Their words now sit on one line, above the button.
 - **Either way round**: the game follows the phone. Its motion sensor tells which way round the
@@ -1087,3 +1086,25 @@ From a screenshot on an iPhone 16 Pro, held upright with the rotation lock on:
   - Settings > Phone held upright > Which way round: Follow the phone (the default), Port left
     or Port right. A fixed side ignores the sensor. If the sensor is refused, the game keeps to
     the way it last turned.
+
+### The iPhone's short screen, properly (v0.9.3)
+
+From a second screenshot: with v0.9.2 the game reached the screen's length but its far end was cut
+off (Settings, Restore backup), and the time and battery still showed.
+
+- **The cause is a known iOS 26 bug (WebKit 301108).** A Home Screen app with a see-through status
+  bar, while its page is shorter than the screen, gets a box for fixed elements that stops short
+  of the screen's bottom by the status bar's height, and nothing past that edge is drawn. Other
+  projects hit the same 62 points on an iPhone 16 Pro (47 on notch iPhones).
+- **The fix**, as other projects found: the page is made as tall as the screen in an installed
+  app (`html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top))) }`). That gives the
+  whole box back, and the min() keeps the page from ever growing past the screen, so it cannot
+  scroll. In a simulated installed app with a 62-point status bar the rule changes nothing
+  (no scroll, the same layout), as it should where the bug does not happen.
+- **The game measures the box it may really draw in** (a fixed element covering the screen), not
+  the screen's stated size, so if the phone still comes up short the game fits inside it instead
+  of being cut off.
+- **The time and battery cannot be hidden** with the phone upright. iPhones do not let a web app
+  hide the status bar, and full-screen mode on an iPhone is for videos only (reports up to iOS
+  26.2). iOS hides it on its own when the screen itself turns, with the rotation lock off. Settings
+  says so; the game keeps its content clear of it either way.

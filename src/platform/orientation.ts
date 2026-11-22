@@ -94,29 +94,13 @@ export function setView(change: Partial<ViewSettings>): void {
 // ── The screen's real size ──────────────────────────────────────────────────────────────────
 
 /**
- * The screen's size, measured, for the styles (--screen-w, --screen-h). The CSS viewport units
- * cannot be trusted for this: an iPhone running the game from its home screen reports the screen
- * short by the height of its status bar (62 points on an iPhone 16 Pro), which left a black band
- * along one end of the turned game. An installed app fills the screen, so there the screen's own
- * size wins when the two differ by about a status bar.
+ * The size of the box the game may draw in, measured, for the styles (--screen-w, --screen-h). It
+ * is measured from a fixed element covering the screen, because that box is what the browser
+ * really lays out and draws: on an iPhone 16 Pro running the game from its Home Screen it came up
+ * 62 points short of the screen (WebKit bug 301108, worked around in base.css), and anything drawn
+ * past it, trusting the screen's own size instead, was cut off.
  */
 let probe: HTMLElement | null = null;
-
-const standalone = (): boolean =>
-  (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches) ||
-  (typeof navigator !== 'undefined' && (navigator as Navigator & { standalone?: boolean }).standalone === true);
-
-export function screenSize(measured: { width: number; height: number }, device: { width: number; height: number } | null): { width: number; height: number } {
-  let { width, height } = measured;
-  if (device) {
-    const short = Math.min(device.width, device.height);
-    const long = Math.max(device.width, device.height);
-    const [fullWidth, fullHeight] = height >= width ? [short, long] : [long, short];
-    if (fullHeight > height && fullHeight - height <= 90) height = fullHeight;
-    if (fullWidth > width && fullWidth - width <= 90) width = fullWidth;
-  }
-  return { width, height };
-}
 
 function measureScreen(): void {
   if (typeof document === 'undefined' || !document.body) return;
@@ -126,13 +110,11 @@ function measureScreen(): void {
     probe.style.cssText = 'position:fixed;inset:0;visibility:hidden;pointer-events:none;';
     document.body.appendChild(probe);
   }
-  const size = screenSize(
-    { width: Math.max(probe.offsetWidth, window.innerWidth || 0), height: Math.max(probe.offsetHeight, window.innerHeight || 0) },
-    standalone() && typeof screen !== 'undefined' ? { width: screen.width, height: screen.height } : null,
-  );
+  const width = probe.offsetWidth || window.innerWidth;
+  const height = probe.offsetHeight || window.innerHeight;
   const root = document.documentElement;
-  root.style.setProperty('--screen-w', `${size.width}px`);
-  root.style.setProperty('--screen-h', `${size.height}px`);
+  root.style.setProperty('--screen-w', `${width}px`);
+  root.style.setProperty('--screen-h', `${height}px`);
 }
 
 // ── Which way round the phone is held ───────────────────────────────────────────────────────
@@ -247,6 +229,10 @@ export function watchOrientation(): void {
   window.addEventListener('resize', measureScreen);
   window.visualViewport?.addEventListener('resize', measureScreen);
   window.addEventListener('orientationchange', () => setTimeout(measureScreen, 250));
+  window.addEventListener('pageshow', measureScreen);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') setTimeout(measureScreen, 100);
+  });
   // iPhones settle their sizes a moment after the page opens.
   for (const wait of [100, 500, 1500]) setTimeout(measureScreen, wait);
   window.addEventListener('devicemotion', onMotion);

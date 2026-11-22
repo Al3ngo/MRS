@@ -12,6 +12,19 @@ body {
   overflow: hidden;
 }
 
+/*
+ * iOS 26 Home Screen apps with a see-through status bar (WebKit bug 301108): while the page is
+ * shorter than the screen, the box fixed elements are laid out and drawn in stops short of the
+ * screen's bottom by the status bar's height (62 points on an iPhone 16 Pro), and nothing below it
+ * is drawn. Making the page as tall as the screen gives the full box back. The min() keeps it from
+ * ever growing past the screen, so the page cannot scroll.
+ */
+@media (display-mode: standalone) {
+  html {
+    min-height: min(100lvh, calc(100% + env(safe-area-inset-top, 0px)));
+  }
+}
+
 html {
   background: var(--ground);
   color: var(--text);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screenSize, sideFromGravity, viewFor } from '../src/platform/orientation';
+import { sideFromGravity, viewFor } from '../src/platform/orientation';
 import { toStage } from '../src/ui/stage';
 
 /** A phone held upright: 390 across, 844 down. The stage is 844 across, 390 down. */
@@ -52,16 +52,6 @@ describe('the turned stage', () => {
     expect(sideFromGravity({ x: 1, y: 1, z: 1 }, false)).toBeNull();
   });
 
-  it('trusts the screen’s own size over a viewport short by a status bar, but not by more', () => {
-    // An iPhone 16 Pro from its home screen: the viewport reported 62 points short.
-    expect(screenSize({ width: 402, height: 812 }, { width: 402, height: 874 })).toEqual({ width: 402, height: 874 });
-    // Held sideways, the same in the other direction.
-    expect(screenSize({ width: 812, height: 402 }, { width: 402, height: 874 })).toEqual({ width: 874, height: 402 });
-    // An iPad window in split view is much smaller than its screen: the window wins.
-    expect(screenSize({ width: 500, height: 1000 }, { width: 1024, height: 1366 })).toEqual({ width: 500, height: 1000 });
-    // In a browser tab (no screen size given), the measured viewport stands.
-    expect(screenSize({ width: 390, height: 700 }, null)).toEqual({ width: 390, height: 700 });
-  });
 });
 
 describe('a finger on the turned game', () => {
